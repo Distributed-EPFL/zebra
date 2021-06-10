@@ -5,7 +5,7 @@ use std::ops::Index;
 use super::bytes::Bytes;
 use super::direction::Direction;
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Path(Bytes);
 
 impl Path {

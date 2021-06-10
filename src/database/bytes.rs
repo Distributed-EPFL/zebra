@@ -1,6 +1,6 @@
 use drop::crypto::hash::{Digest, SIZE};
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Bytes(pub [u8; SIZE]);
 
 impl Bytes {
