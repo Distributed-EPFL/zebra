@@ -3,6 +3,7 @@
 mod bytes;
 mod direction;
 mod label;
+mod node;
 mod path;
 mod prefix;
 mod wrap;
