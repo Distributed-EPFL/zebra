@@ -1,8 +1,10 @@
+use std::ops::Index;
+
 use super::direction::Direction;
 use super::path::Path;
 
 #[derive(Debug, Clone, Copy)]
-pub(super) struct Prefix {
+pub(crate) struct Prefix {
     path: Path,
     depth: u8,
 }
@@ -43,5 +45,21 @@ impl Prefix {
 
     pub fn contains(&self, path: &Path) -> bool {
         Path::deepeq(&self.path, path, self.depth)
+    }
+}
+
+impl Index<u8> for Prefix {
+    type Output = Direction;
+
+    fn index(&self, index: u8) -> &Self::Output {
+        debug_assert!(index < self.depth);
+        &self.path[index]
+    }
+}
+
+impl PartialEq for Prefix {
+    fn eq(&self, rho: &Self) -> bool {
+        self.depth == rho.depth
+            && Path::deepeq(&self.path, &rho.path, self.depth)
     }
 }
