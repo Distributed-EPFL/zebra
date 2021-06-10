@@ -1,6 +1,8 @@
 use drop::crypto::hash::{Digest, SIZE};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+use serde::Serialize;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub(crate) struct Bytes(pub [u8; SIZE]);
 
 impl Bytes {
