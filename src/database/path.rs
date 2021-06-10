@@ -61,3 +61,82 @@ impl Index<u8> for Path {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use super::super::bytes::Bytes;
+
+    use drop::crypto::hash;
+    use drop::crypto::hash::SIZE;
+
+    use std::iter;
+    use std::vec::Vec;
+
+    fn path_from_directions(directions: &Vec<Direction>) -> Path {
+        let mut path = Path::empty();
+
+        for index in 0..directions.len() {
+            path.set(index as u8, directions[index]);
+        }
+
+        path
+    }
+
+    fn directions_from_path(path: &Path, until: u8) -> Vec<Direction> {
+        (0..until).map(|index| path[index]).collect()
+    }
+
+    #[test]
+    fn path() {
+        use Direction::{Left as L, Right as R};
+        let reference = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
+
+        assert_eq!(
+            directions_from_path(&Path::empty(), (8 * SIZE - 1) as u8),
+            iter::repeat(Direction::Right)
+                .take(8 * SIZE - 1)
+                .collect::<Vec<Direction>>()
+        );
+        assert_eq!(
+            directions_from_path(
+                &Path::from(Bytes::from(hash(&0u32).unwrap())),
+                reference.len() as u8
+            ),
+            reference
+        );
+        assert_eq!(
+            directions_from_path(
+                &path_from_directions(&reference),
+                reference.len() as u8
+            ),
+            reference
+        );
+    }
+
+    #[test]
+    fn ordering() {
+        use Direction::{Left as L, Right as R};
+
+        assert!(
+            &path_from_directions(&vec![R]) < &path_from_directions(&vec![L])
+        );
+        assert!(
+            &path_from_directions(&vec![R])
+                < &path_from_directions(&vec![R, L])
+        );
+        assert!(
+            &path_from_directions(&vec![L, R, L])
+                < &path_from_directions(&vec![L, L, L, L, L])
+        );
+
+        let lesser = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
+
+        let mut greater = lesser.clone();
+        greater.push(L);
+
+        assert!(
+            &path_from_directions(&lesser) < &path_from_directions(&greater)
+        );
+    }
+}
