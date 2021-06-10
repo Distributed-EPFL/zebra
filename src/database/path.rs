@@ -1,3 +1,5 @@
+use drop::crypto::Digest;
+
 use std::ops::Index;
 
 use super::bytes::Bytes;
@@ -47,6 +49,12 @@ impl From<Bytes> for Path {
     }
 }
 
+impl From<Digest> for Path {
+    fn from(digest: Digest) -> Path {
+        Path::from(Bytes::from(digest))
+    }
+}
+
 impl Index<u8> for Path {
     type Output = Direction;
 
@@ -65,7 +73,6 @@ impl Index<u8> for Path {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use super::super::bytes::Bytes;
 
     use drop::crypto::hash;
     use drop::crypto::hash::SIZE;
@@ -100,7 +107,7 @@ mod tests {
         );
         assert_eq!(
             directions_from_path(
-                &Path::from(Bytes::from(hash(&0u32).unwrap())),
+                &Path::from(hash(&0u32).unwrap()),
                 reference.len() as u8
             ),
             reference
