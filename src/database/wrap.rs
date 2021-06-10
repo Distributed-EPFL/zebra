@@ -8,7 +8,7 @@ use std::rc::Rc;
 use super::bytes::Bytes;
 
 #[derive(Debug, Serialize)]
-pub(super) struct Wrap<Inner: Serialize> {
+pub(crate) struct Wrap<Inner: Serialize> {
     digest: Bytes,
     #[serde(skip)]
     inner: Rc<Inner>,

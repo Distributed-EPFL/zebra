@@ -4,7 +4,7 @@ use super::label::Label;
 use super::wrap::Wrap;
 
 #[derive(Serialize)]
-pub(super) enum Node<Key: Serialize, Value: Serialize> {
+pub(crate) enum Node<Key: Serialize, Value: Serialize> {
     Empty,
     Internal(Label, Label),
     Leaf(Wrap<Key>, Wrap<Value>),
