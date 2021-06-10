@@ -1,6 +1,9 @@
+use drop::crypto::hash;
+
 use serde::Serialize;
 
 use super::bytes::Bytes;
+use super::node::Node;
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {
@@ -22,5 +25,19 @@ impl Label {
                 panic!("called `Label::bytes()` on an `Empty` value")
             }
         }
+    }
+}
+
+pub(crate) fn label<Key, Value>(node: &Node<Key, Value>) -> Label
+where
+    Key: Serialize,
+    Value: Serialize,
+{
+    match node {
+        Node::Empty => Label::Empty,
+        Node::Internal(..) => {
+            Label::Internal(hash::hash(&node).unwrap().into())
+        }
+        Node::Leaf(..) => Label::Leaf(hash::hash(&node).unwrap().into()),
     }
 }
