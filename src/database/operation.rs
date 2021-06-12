@@ -18,7 +18,7 @@ where
     Key: Serialize,
     Value: Serialize,
 {
-    fn set(key: Key, value: Value) -> Result<Self, HashError> {
+    pub fn set(key: Key, value: Value) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
         let value = Wrap::new(value)?;
 
@@ -29,7 +29,7 @@ where
         })
     }
 
-    fn remove(key: Key) -> Result<Self, HashError> {
+    pub fn remove(key: Key) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
         Ok(Operation {
             path: Path::from(*key.digest()),
