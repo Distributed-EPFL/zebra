@@ -59,7 +59,7 @@ where
         }
     }
 
-    pub fn entry(&mut self, label: &Label) -> EntryMapEntry<Key, Value> {
+    pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let (map, hash) = match label {
             Label::Internal(hash) => (0, hash),
             Label::Leaf(map, hash) => (map.crop(self.depth, self.splits), hash),
@@ -68,7 +68,7 @@ where
             }
         };
 
-        self.maps[map].entry(*hash)
+        self.maps[map].entry(hash)
     }
 }
 
@@ -99,7 +99,7 @@ mod tests {
 
         let mut store = Store::<u32, u32>::with_depth(8);
 
-        match store.entry(&label) {
+        match store.entry(label) {
             EntryMapEntry::Vacant(entrymapentry) => {
                 entrymapentry.insert(entry);
             }
@@ -120,7 +120,7 @@ mod tests {
                 Split::Unsplittable(store) => store,
             };
 
-            match store.entry(&label) {
+            match store.entry(label) {
                 EntryMapEntry::Occupied(..) => {}
                 _ => {
                     unreachable!();
