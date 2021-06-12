@@ -1,8 +1,8 @@
+use byteorder::{BigEndian, ByteOrder};
+
 use serde::Serialize;
 
 use super::bytes::Bytes;
-
-use byteorder::{BigEndian, ByteOrder};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize)]
 pub(crate) struct MapId(u16);
