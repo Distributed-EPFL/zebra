@@ -4,7 +4,7 @@ use super::operation::Operation;
 use super::prefix::Prefix;
 use super::task::Task;
 
-pub(super) struct Batch<'a, Key: Serialize, Value: Serialize> {
+pub(crate) struct Batch<'a, Key: Serialize, Value: Serialize> {
     prefix: Prefix,
     operations: &'a [Operation<Key, Value>],
 }

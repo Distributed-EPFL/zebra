@@ -3,7 +3,7 @@ use serde::Serialize;
 use super::wrap::Wrap;
 
 #[derive(Debug)]
-pub(super) enum Action<Value: Serialize> {
+pub(crate) enum Action<Value: Serialize> {
     Set(Wrap<Value>),
     Remove,
 }

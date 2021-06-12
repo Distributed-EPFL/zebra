@@ -7,7 +7,7 @@ use super::path::Path;
 use super::wrap::Wrap;
 
 #[derive(Debug)]
-pub(super) struct Operation<Key: Serialize, Value: Serialize> {
+pub(crate) struct Operation<Key: Serialize, Value: Serialize> {
     pub path: Path,
     pub key: Wrap<Key>,
     pub action: Action<Value>,

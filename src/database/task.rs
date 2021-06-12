@@ -3,7 +3,7 @@ use serde::Serialize;
 use super::operation::Operation;
 
 #[derive(Debug)]
-pub(super) enum Task<'a, Key: Serialize, Value: Serialize> {
+pub(crate) enum Task<'a, Key: Serialize, Value: Serialize> {
     Pass,
     Do(&'a Operation<Key, Value>),
     Split,
