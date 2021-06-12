@@ -7,6 +7,7 @@ mod entry;
 mod label;
 mod map_id;
 mod node;
+mod operation;
 mod path;
 mod prefix;
 mod store;
