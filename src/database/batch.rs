@@ -55,15 +55,60 @@ where
     }
 }
 
+impl<'a, Key, Value> Clone for Batch<'a, Key, Value>
+where
+    Key: Serialize,
+    Value: Serialize,
+{
+    fn clone(&self) -> Self {
+        Batch {
+            prefix: self.prefix.clone(),
+            operations: self.operations.clone(),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use super::super::prefix::Prefix;
     use super::super::action::Action;
+    use super::super::direction::Direction;
+    use super::super::prefix::Prefix;
     use super::super::wrap::Wrap;
 
     use std::vec::Vec;
+
+    fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
+        let mut prefix = Prefix::root();
+
+        for &direction in directions {
+            prefix = if direction == Direction::Left {
+                prefix.left()
+            } else {
+                prefix.right()
+            };
+        }
+
+        prefix
+    }
+
+    fn batch_from_directions<'a, Key: Serialize, Value: Serialize>(
+        root: &Batch<'a, Key, Value>,
+        directions: &Vec<Direction>,
+    ) -> Batch<'a, Key, Value> {
+        let mut batch = root.clone();
+
+        for &direction in directions {
+            batch = if direction == Direction::Left {
+                batch.left()
+            } else {
+                batch.right()
+            };
+        }
+
+        batch
+    }
 
     fn split_recursion(batch: &Batch<u32, u32>) -> (u32, bool) {
         match batch.task() {
@@ -86,23 +131,11 @@ mod tests {
 
     #[test]
     fn operation() {
-        let prefix = Prefix::root()
-            .left()
-            .left()
-            .left()
-            .right()
-            .left()
-            .left()
-            .right()
-            .right()
-            .right()
-            .right()
-            .left()
-            .right()
-            .left()
-            .right()
-            .left()
-            .left();
+        use Direction::{Left as L, Right as R};
+
+        let prefix = prefix_from_directions(&vec![
+            L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L,
+        ]);
 
         let set = Operation::set(0u32, 8u32).unwrap();
         assert!(prefix.contains(&set.path));
@@ -117,29 +150,16 @@ mod tests {
 
     #[test]
     fn prefix() {
+        use Direction::{Left as L, Right as R};
+
         let mut operations: Vec<Operation<u32, u32>> = Vec::new();
         let batch = Batch::new(&mut operations);
 
         assert_eq!(batch.prefix(), &Prefix::root());
         assert_eq!(batch.left().prefix(), &Prefix::root().left());
         assert_eq!(
-            batch
-                .right()
-                .right()
-                .right()
-                .left()
-                .right()
-                .right()
-                .right()
-                .prefix(),
-            &Prefix::root()
-                .right()
-                .right()
-                .right()
-                .left()
-                .right()
-                .right()
-                .right()
+            *batch_from_directions(&batch, &vec![R, R, R, L, R, R, R]).prefix(),
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
         );
     }
 
