@@ -13,10 +13,12 @@ impl MapId {
     }
 
     pub fn crop(&self, depth: u8, splits: u8) -> usize {
-        (if splits < depth {
+        let value = (if splits < depth {
             (self.0 << splits) >> (16 + splits - depth)
         } else {
             0
-        }) as usize
+        }) as usize;
+
+        value
     }
 }
