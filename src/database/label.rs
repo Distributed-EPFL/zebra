@@ -3,12 +3,13 @@ use drop::crypto::hash;
 use serde::Serialize;
 
 use super::bytes::Bytes;
+use super::map_id::MapId;
 use super::node::Node;
 
 #[derive(Clone, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {
     Internal(Bytes),
-    Leaf(Bytes),
+    Leaf(MapId, Bytes),
     Empty,
 }
 
@@ -20,7 +21,7 @@ impl Label {
     pub fn bytes(&self) -> &Bytes {
         match self {
             Label::Internal(bytes) => bytes,
-            Label::Leaf(bytes) => bytes,
+            Label::Leaf(_, bytes) => bytes,
             Label::Empty => {
                 panic!("called `Label::bytes()` on an `Empty` value")
             }
@@ -38,6 +39,10 @@ where
         Node::Internal(..) => {
             Label::Internal(hash::hash(&node).unwrap().into())
         }
-        Node::Leaf(..) => Label::Leaf(hash::hash(&node).unwrap().into()),
+        Node::Leaf(..) => {
+            let hash: Bytes = hash::hash(&node).unwrap().into();
+            let map = MapId::read(&hash);
+            Label::Leaf(map, hash)
+        }
     }
 }
