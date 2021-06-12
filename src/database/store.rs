@@ -21,7 +21,7 @@ pub(crate) struct Store<Key: Serialize, Value: Serialize> {
 
 pub(crate) enum Split<Key: Serialize, Value: Serialize> {
     Split(Store<Key, Value>, Store<Key, Value>),
-    Atom(Store<Key, Value>),
+    Unsplittable(Store<Key, Value>),
 }
 
 impl<Key, Value> Store<Key, Value>
@@ -55,7 +55,7 @@ where
 
             Split::Split(left, right)
         } else {
-            Split::Atom(self)
+            Split::Unsplittable(self)
         }
     }
 
@@ -117,7 +117,7 @@ mod tests {
                         right
                     }
                 }
-                Split::Atom(store) => store,
+                Split::Unsplittable(store) => store,
             };
 
             match store.entry(&label) {
