@@ -29,7 +29,7 @@ where
     Key: Serialize,
     Value: Serialize,
 {
-    fn with_depth(depth: u8) -> Self {
+    pub fn with_depth(depth: u8) -> Self {
         Store {
             depth,
             maps: iter::repeat_with(|| EntryMap::new())
@@ -39,7 +39,7 @@ where
         }
     }
 
-    fn split(mut self) -> Split<Key, Value> {
+    pub fn split(mut self) -> Split<Key, Value> {
         if self.splits < self.depth {
             let left = Store {
                 depth: self.depth,
@@ -59,7 +59,7 @@ where
         }
     }
 
-    fn entry(&mut self, label: &Label) -> EntryMapEntry<Key, Value> {
+    pub fn entry(&mut self, label: &Label) -> EntryMapEntry<Key, Value> {
         let (map, hash) = match label {
             Label::Internal(hash) => (0, hash),
             Label::Leaf(map, hash) => (map.crop(self.depth, self.splits), hash),
