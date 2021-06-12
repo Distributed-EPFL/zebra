@@ -11,4 +11,5 @@ mod operation;
 mod path;
 mod prefix;
 mod store;
+mod task;
 mod wrap;
