@@ -8,4 +8,5 @@ mod map_id;
 mod node;
 mod path;
 mod prefix;
+mod store;
 mod wrap;
