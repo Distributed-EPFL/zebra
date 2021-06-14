@@ -3,25 +3,25 @@ use drop::crypto::hash::HashError;
 
 use serde::Serialize;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::bytes::Bytes;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Wrap<Inner: Serialize> {
+pub(crate) struct Wrap<Inner: Serialize + Sync> {
     digest: Bytes,
     #[serde(skip)]
-    inner: Rc<Inner>,
+    inner: Arc<Inner>,
 }
 
 impl<Inner> Wrap<Inner>
 where
-    Inner: Serialize,
+    Inner: Serialize + Sync,
 {
     pub fn new(inner: Inner) -> Result<Self, HashError> {
         Ok(Wrap {
             digest: hash::hash(&inner)?.into(),
-            inner: Rc::new(inner),
+            inner: Arc::new(inner),
         })
     }
 
@@ -29,14 +29,14 @@ where
         &self.digest
     }
 
-    pub fn inner(&self) -> &Rc<Inner> {
+    pub fn inner(&self) -> &Arc<Inner> {
         &self.inner
     }
 }
 
 impl<Inner> Clone for Wrap<Inner>
 where
-    Inner: Serialize,
+    Inner: Serialize + Sync,
 {
     fn clone(&self) -> Self {
         Wrap {
@@ -48,11 +48,11 @@ where
 
 impl<Inner> PartialEq for Wrap<Inner>
 where
-    Inner: Serialize,
+    Inner: Serialize + Sync,
 {
     fn eq(&self, rho: &Wrap<Inner>) -> bool {
         self.digest == rho.digest
     }
 }
 
-impl<Inner> Eq for Wrap<Inner> where Inner: Serialize {}
+impl<Inner> Eq for Wrap<Inner> where Inner: Serialize + Sync {}

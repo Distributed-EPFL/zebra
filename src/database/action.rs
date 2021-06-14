@@ -3,14 +3,14 @@ use serde::Serialize;
 use super::wrap::Wrap;
 
 #[derive(Debug)]
-pub(crate) enum Action<Value: Serialize> {
+pub(crate) enum Action<Value: Serialize + Sync> {
     Set(Wrap<Value>),
     Remove,
 }
 
 impl<Value> PartialEq for Action<Value>
 where
-    Value: Serialize,
+    Value: Serialize + Sync,
 {
     fn eq(&self, rho: &Self) -> bool {
         match (self, rho) {
@@ -23,4 +23,4 @@ where
     }
 }
 
-impl<Value> Eq for Action<Value> where Value: Serialize {}
+impl<Value> Eq for Action<Value> where Value: Serialize + Sync {}

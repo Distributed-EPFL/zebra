@@ -7,7 +7,7 @@ use super::path::Path;
 use super::wrap::Wrap;
 
 #[derive(Debug)]
-pub(crate) struct Operation<Key: Serialize, Value: Serialize> {
+pub(crate) struct Operation<Key: Serialize + Sync, Value: Serialize + Sync> {
     pub path: Path,
     pub key: Wrap<Key>,
     pub action: Action<Value>,
@@ -15,8 +15,8 @@ pub(crate) struct Operation<Key: Serialize, Value: Serialize> {
 
 impl<Key, Value> Operation<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: Serialize + Sync,
+    Value: Serialize + Sync,
 {
     pub fn set(key: Key, value: Value) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
@@ -41,8 +41,8 @@ where
 
 impl<Key, Value> PartialEq for Operation<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: Serialize + Sync,
+    Value: Serialize + Sync,
 {
     fn eq(&self, rho: &Self) -> bool {
         (self.key == rho.key) && (self.action == rho.action) // `path` is uniquely determined by `key`
@@ -51,7 +51,7 @@ where
 
 impl<Key, Value> Eq for Operation<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: Serialize + Sync,
+    Value: Serialize + Sync,
 {
 }

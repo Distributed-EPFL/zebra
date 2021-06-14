@@ -31,8 +31,8 @@ impl Label {
 
 pub(crate) fn label<Key, Value>(node: &Node<Key, Value>) -> Label
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: Serialize + Sync,
+    Value: Serialize + Sync,
 {
     match node {
         Node::Empty => Label::Empty,

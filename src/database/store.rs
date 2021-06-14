@@ -13,21 +13,21 @@ pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> =
     HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
-pub(crate) struct Store<Key: Serialize, Value: Serialize> {
+pub(crate) struct Store<Key: Serialize + Sync, Value: Serialize + Sync> {
     depth: u8,
     maps: Vec<EntryMap<Key, Value>>,
     splits: u8,
 }
 
-pub(crate) enum Split<Key: Serialize, Value: Serialize> {
+pub(crate) enum Split<Key: Serialize + Sync, Value: Serialize + Sync> {
     Split(Store<Key, Value>, Store<Key, Value>),
     Unsplittable(Store<Key, Value>),
 }
 
 impl<Key, Value> Store<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: Serialize + Sync,
+    Value: Serialize + Sync,
 {
     pub fn with_depth(depth: u8) -> Self {
         Store {
