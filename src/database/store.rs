@@ -39,6 +39,20 @@ where
         }
     }
 
+    pub fn merge(mut left: Self, right: Self) -> Self {
+        debug_assert_eq!(left.depth, right.depth);
+        debug_assert_eq!(left.splits, right.splits);
+
+        let mut maps = right.maps;
+        maps.append(&mut left.maps);
+
+        Store {
+            depth: left.depth,
+            maps,
+            splits: left.splits - 1,
+        }
+    }
+
     pub fn split(mut self) -> Split<Key, Value> {
         if self.splits < self.depth {
             let left = Store {
