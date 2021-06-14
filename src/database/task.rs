@@ -3,7 +3,11 @@ use serde::Serialize;
 use super::operation::Operation;
 
 #[derive(Debug)]
-pub(crate) enum Task<'a, Key: Serialize + Sync, Value: Serialize + Sync> {
+pub(crate) enum Task<
+    'a,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
+> {
     Pass,
     Do(&'a Operation<Key, Value>),
     Split,
@@ -11,8 +15,8 @@ pub(crate) enum Task<'a, Key: Serialize + Sync, Value: Serialize + Sync> {
 
 impl<'a, Key, Value> PartialEq for Task<'a, Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     fn eq(&self, rho: &Self) -> bool {
         match (self, rho) {
@@ -26,7 +30,7 @@ where
 
 impl<'a, Key, Value> Eq for Task<'a, Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
 }

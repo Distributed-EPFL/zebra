@@ -22,7 +22,7 @@ impl References {
     }
 }
 
-struct Entry<Key: Serialize, Value: Serialize> {
+struct Entry<Key: 'static + Serialize + Send + Sync, Value: 'static + Serialize + Send + Sync> {
     label: Label,
     node: Node<Key, Value>,
     references: References,
@@ -30,8 +30,8 @@ struct Entry<Key: Serialize, Value: Serialize> {
 
 impl<Key, Value> Entry<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     fn empty() -> Self {
         Entry {
@@ -47,8 +47,8 @@ fn get<Key, Value>(
     label: Label,
 ) -> Entry<Key, Value>
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -72,8 +72,8 @@ fn incref<Key, Value>(
     label: Label,
     node: Node<Key, Value>,
 ) where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -104,8 +104,8 @@ fn incref<Key, Value>(
 
 fn decref<Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     if !label.is_empty() {
         match store.entry(label) {
@@ -131,8 +131,8 @@ async fn branch<Key, Value>(
     left: Entry<Key, Value>,
     right: Entry<Key, Value>,
 ) where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     let preserve_branches = preserve
         || if let Some(original) = original {
@@ -158,7 +158,7 @@ async fn recur<Key, Value>(
     depth: u8,
     batch: Batch<'_, Key, Value>,
 ) where
-    Key: Serialize,
-    Value: Serialize,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
 }

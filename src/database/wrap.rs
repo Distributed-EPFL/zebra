@@ -8,7 +8,7 @@ use std::sync::Arc;
 use super::bytes::Bytes;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Wrap<Inner: Serialize + Sync> {
+pub(crate) struct Wrap<Inner: 'static + Serialize + Send + Sync> {
     digest: Bytes,
     #[serde(skip)]
     inner: Arc<Inner>,
@@ -16,7 +16,7 @@ pub(crate) struct Wrap<Inner: Serialize + Sync> {
 
 impl<Inner> Wrap<Inner>
 where
-    Inner: Serialize + Sync,
+    Inner: 'static + Serialize + Send + Sync,
 {
     pub fn new(inner: Inner) -> Result<Self, HashError> {
         Ok(Wrap {
@@ -36,7 +36,7 @@ where
 
 impl<Inner> Clone for Wrap<Inner>
 where
-    Inner: Serialize + Sync,
+    Inner: 'static + Serialize + Send + Sync,
 {
     fn clone(&self) -> Self {
         Wrap {
@@ -48,11 +48,11 @@ where
 
 impl<Inner> PartialEq for Wrap<Inner>
 where
-    Inner: Serialize + Sync,
+    Inner: 'static + Serialize + Send + Sync,
 {
     fn eq(&self, rho: &Wrap<Inner>) -> bool {
         self.digest == rho.digest
     }
 }
 
-impl<Inner> Eq for Wrap<Inner> where Inner: Serialize + Sync {}
+impl<Inner> Eq for Wrap<Inner> where Inner: 'static + Serialize + Send + Sync {}

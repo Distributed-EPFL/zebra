@@ -4,15 +4,19 @@ use super::operation::Operation;
 use super::prefix::Prefix;
 use super::task::Task;
 
-pub(crate) struct Batch<'a, Key: Serialize + Sync, Value: Serialize + Sync> {
+pub(crate) struct Batch<
+    'a,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
+> {
     prefix: Prefix,
     operations: &'a [Operation<Key, Value>],
 }
 
 impl<'a, Key, Value> Batch<'a, Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     pub fn new(operations: &'a mut [Operation<Key, Value>]) -> Self {
         operations.sort_unstable_by(|lho, rho| lho.path.cmp(&rho.path)); // TODO: Replace with `rayon`'s parallel sort if this becomes a bottleneck.
@@ -57,8 +61,8 @@ where
 
 impl<'a, Key, Value> Clone for Batch<'a, Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     fn clone(&self) -> Self {
         Batch {
@@ -98,8 +102,8 @@ mod tests {
         directions: &Vec<Direction>,
     ) -> Batch<'a, Key, Value>
     where
-        Key: Serialize + Sync,
-        Value: Serialize + Sync,
+        Key: 'static + Serialize + Send + Sync,
+        Value: 'static + Serialize + Send + Sync,
     {
         let mut batch = root.clone();
 

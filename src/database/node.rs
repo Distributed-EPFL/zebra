@@ -4,7 +4,10 @@ use super::label::Label;
 use super::wrap::Wrap;
 
 #[derive(Serialize)]
-pub(crate) enum Node<Key: Serialize + Sync, Value: Serialize + Sync> {
+pub(crate) enum Node<
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
+> {
     Empty,
     Internal(Label, Label),
     Leaf(Wrap<Key>, Wrap<Value>),
@@ -12,8 +15,8 @@ pub(crate) enum Node<Key: Serialize + Sync, Value: Serialize + Sync> {
 
 impl<Key, Value> Clone for Node<Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     fn clone(&self) -> Self {
         match self {
@@ -26,8 +29,8 @@ where
 
 impl<Key, Value> PartialEq for Node<Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
     fn eq(&self, rho: &Node<Key, Value>) -> bool {
         match (self, rho) {
@@ -47,7 +50,7 @@ where
 
 impl<Key, Value> Eq for Node<Key, Value>
 where
-    Key: Serialize + Sync,
-    Value: Serialize + Sync,
+    Key: 'static + Serialize + Send + Sync,
+    Value: 'static + Serialize + Send + Sync,
 {
 }
