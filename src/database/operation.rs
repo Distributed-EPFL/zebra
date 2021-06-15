@@ -54,3 +54,44 @@ where
     Value: Field,
 {
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use super::super::direction::Direction;
+    use super::super::prefix::Prefix;
+
+    fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
+        let mut prefix = Prefix::root();
+
+        for &direction in directions {
+            prefix = if direction == Direction::Left {
+                prefix.left()
+            } else {
+                prefix.right()
+            };
+        }
+
+        prefix
+    }
+
+    #[test]
+    fn operation() {
+        use Direction::{Left as L, Right as R};
+
+        let prefix = prefix_from_directions(&vec![
+            L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L,
+        ]);
+
+        let set = Operation::set(0u32, 8u32).unwrap();
+        assert!(prefix.contains(&set.path));
+        assert_eq!(set.key, Wrap::new(0u32).unwrap());
+        assert_eq!(set.action, Action::Set(Wrap::new(8u32).unwrap()));
+
+        let remove = Operation::remove(0u32).unwrap();
+        assert_eq!(remove.path, set.path);
+        assert_eq!(remove.key, set.key);
+        assert_eq!(remove.action, Action::<u32>::Remove);
+    }
+}
