@@ -24,3 +24,15 @@ where
         &self.operations
     }
 }
+
+impl<Key, Value> Clone for Batch<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn clone(&self) -> Self {
+        Batch {
+            operations: self.operations.clone(),
+        }
+    }
+}
