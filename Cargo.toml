@@ -11,6 +11,7 @@ byteorder = { version = "1.4.3" }
 drop = { git = "https://github.com/Distributed-EPFL/drop" }
 tokio = { version = "1", features = [ "rt" ] }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
+async-recursion = { version = "0.3.2" }
 
 [dev-dependencies]
 tokio = { version = "1", features = [ "macros", "rt-multi-thread" ] }
