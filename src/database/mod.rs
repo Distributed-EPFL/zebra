@@ -3,6 +3,7 @@
 mod action;
 mod batch;
 mod bytes;
+mod chunk;
 mod direction;
 mod entry;
 mod field;
