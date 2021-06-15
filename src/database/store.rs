@@ -52,7 +52,7 @@ where
             depth: left.depth,
             maps: left.maps,
             splits: left.splits - 1,
-            range: right.range.start..left.range.end
+            range: right.range.start..left.range.end,
         }
     }
 
@@ -66,14 +66,14 @@ where
                 depth: self.depth,
                 maps: self.maps.clone(),
                 splits: self.splits + 1,
-                range: start..mid
+                range: start..mid,
             };
 
             let left = Store {
                 depth: self.depth,
                 maps: self.maps.clone(),
                 splits: self.splits + 1,
-                range: mid..end
+                range: mid..end,
             };
 
             Split::Split(left, right)
@@ -93,8 +93,9 @@ where
 
         unsafe {
             let map = &self.maps[self.range.start + map];
-            let map = map as *const EntryMap<Key, Value> as *mut EntryMap<Key, Value>;
-            let map = &mut * map;
+            let map =
+                map as *const EntryMap<Key, Value> as *mut EntryMap<Key, Value>;
+            let map = &mut *map;
 
             map.entry(hash)
         }
@@ -112,32 +113,39 @@ mod tests {
     use super::super::path::Path;
     use super::super::wrap::Wrap;
 
-    fn store_with_records(mut keys: Vec<u32>, mut values: Vec<u32>) -> (Store<u32, u32>, Vec<Label>) {
+    fn store_with_records(
+        mut keys: Vec<u32>,
+        mut values: Vec<u32>,
+    ) -> (Store<u32, u32>, Vec<Label>) {
         let mut store = Store::<u32, u32>::with_depth(8);
-        
-        let labels = keys.drain(..).zip(values.drain(..)).map(|(key, value)| {
-            let key = Wrap::new(key).unwrap();
-            let value = Wrap::new(value).unwrap();
 
-            let node = Node::Leaf(key, value);
-            let label = label::label(&node);
+        let labels = keys
+            .drain(..)
+            .zip(values.drain(..))
+            .map(|(key, value)| {
+                let key = Wrap::new(key).unwrap();
+                let value = Wrap::new(value).unwrap();
 
-            let entry = Entry {
-                node,
-                references: 1,
-            };
+                let node = Node::Leaf(key, value);
+                let label = label::label(&node);
 
-            match store.entry(label) {
-                EntryMapEntry::Vacant(entrymapentry) => {
-                    entrymapentry.insert(entry);
+                let entry = Entry {
+                    node,
+                    references: 1,
+                };
+
+                match store.entry(label) {
+                    EntryMapEntry::Vacant(entrymapentry) => {
+                        entrymapentry.insert(entry);
+                    }
+                    _ => {
+                        unreachable!();
+                    }
                 }
-                _ => {
-                    unreachable!();
-                }
-            }
-            
-            label
-        }).collect();
+
+                label
+            })
+            .collect();
 
         (store, labels)
     }
@@ -190,10 +198,13 @@ mod tests {
 
     #[test]
     fn merge_safety() {
-        let (store, labels) = store_with_records(vec![0, 1, 2, 3, 4, 5, 6, 7, 8], vec![0, 1, 2, 3, 4, 5, 6, 7, 8]);
+        let (store, labels) = store_with_records(
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+            vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+        );
         let (left, right) = match store.split() {
             Split::Split(l, r) => (l, r),
-            Split::Unsplittable(..) => unreachable!()
+            Split::Unsplittable(..) => unreachable!(),
         };
 
         let mut store = Store::merge(left, right);
