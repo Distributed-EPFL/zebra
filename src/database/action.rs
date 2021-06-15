@@ -1,16 +1,15 @@
-use serde::Serialize;
-
+use super::field::Field;
 use super::wrap::Wrap;
 
 #[derive(Debug)]
-pub(crate) enum Action<Value: 'static + Serialize + Send + Sync> {
+pub(crate) enum Action<Value: Field> {
     Set(Wrap<Value>),
     Remove,
 }
 
 impl<Value> PartialEq for Action<Value>
 where
-    Value: 'static + Serialize + Send + Sync,
+    Value: Field,
 {
     fn eq(&self, rho: &Self) -> bool {
         match (self, rho) {
@@ -23,4 +22,4 @@ where
     }
 }
 
-impl<Value> Eq for Action<Value> where Value: 'static + Serialize + Send + Sync {}
+impl<Value> Eq for Action<Value> where Value: Field {}

@@ -3,6 +3,7 @@ use drop::crypto::hash;
 use serde::Serialize;
 
 use super::bytes::Bytes;
+use super::field::Field;
 use super::map_id::MapId;
 use super::node::Node;
 
@@ -31,8 +32,8 @@ impl Label {
 
 pub(crate) fn label<Key, Value>(node: &Node<Key, Value>) -> Label
 where
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
+    Key: Field,
+    Value: Field,
 {
     match node {
         Node::Empty => Label::Empty,

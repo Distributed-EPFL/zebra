@@ -1,13 +1,11 @@
 use serde::Serialize;
 
+use super::field::Field;
 use super::label::Label;
 use super::wrap::Wrap;
 
 #[derive(Serialize)]
-pub(crate) enum Node<
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
-> {
+pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),
     Leaf(Wrap<Key>, Wrap<Value>),
@@ -15,8 +13,8 @@ pub(crate) enum Node<
 
 impl<Key, Value> Clone for Node<Key, Value>
 where
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
+    Key: Field,
+    Value: Field,
 {
     fn clone(&self) -> Self {
         match self {
@@ -29,8 +27,8 @@ where
 
 impl<Key, Value> PartialEq for Node<Key, Value>
 where
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
+    Key: Field,
+    Value: Field,
 {
     fn eq(&self, rho: &Node<Key, Value>) -> bool {
         match (self, rho) {
@@ -50,7 +48,7 @@ where
 
 impl<Key, Value> Eq for Node<Key, Value>
 where
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
+    Key: Field,
+    Value: Field,
 {
 }

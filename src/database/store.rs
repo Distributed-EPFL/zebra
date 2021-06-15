@@ -1,5 +1,3 @@
-use serde::Serialize;
-
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::HashMap;
 use std::iter;
@@ -7,33 +5,28 @@ use std::vec::Vec;
 
 use super::bytes::Bytes;
 use super::entry::Entry;
+use super::field::Field;
 use super::label::Label;
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> =
     HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
-pub(crate) struct Store<
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
-> {
+pub(crate) struct Store<Key: Field, Value: Field> {
     depth: u8,
     maps: Vec<EntryMap<Key, Value>>,
     splits: u8,
 }
 
-pub(crate) enum Split<
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
-> {
+pub(crate) enum Split<Key: Field, Value: Field> {
     Split(Store<Key, Value>, Store<Key, Value>),
     Unsplittable(Store<Key, Value>),
 }
 
 impl<Key, Value> Store<Key, Value>
 where
-    Key: 'static + Serialize + Send + Sync,
-    Value: 'static + Serialize + Send + Sync,
+    Key: Field,
+    Value: Field,
 {
     pub fn with_depth(depth: u8) -> Self {
         Store {

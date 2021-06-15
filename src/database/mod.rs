@@ -5,6 +5,7 @@ mod batch;
 mod bytes;
 mod direction;
 mod entry;
+mod field;
 mod label;
 mod map_id;
 mod node;

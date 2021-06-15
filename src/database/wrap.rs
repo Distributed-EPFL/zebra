@@ -6,9 +6,10 @@ use serde::Serialize;
 use std::sync::Arc;
 
 use super::bytes::Bytes;
+use super::field::Field;
 
 #[derive(Debug, Serialize)]
-pub(crate) struct Wrap<Inner: 'static + Serialize + Send + Sync> {
+pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
     #[serde(skip)]
     inner: Arc<Inner>,
@@ -16,7 +17,7 @@ pub(crate) struct Wrap<Inner: 'static + Serialize + Send + Sync> {
 
 impl<Inner> Wrap<Inner>
 where
-    Inner: 'static + Serialize + Send + Sync,
+    Inner: Field,
 {
     pub fn new(inner: Inner) -> Result<Self, HashError> {
         Ok(Wrap {
@@ -36,7 +37,7 @@ where
 
 impl<Inner> Clone for Wrap<Inner>
 where
-    Inner: 'static + Serialize + Send + Sync,
+    Inner: Field,
 {
     fn clone(&self) -> Self {
         Wrap {
@@ -48,11 +49,11 @@ where
 
 impl<Inner> PartialEq for Wrap<Inner>
 where
-    Inner: 'static + Serialize + Send + Sync,
+    Inner: Field,
 {
     fn eq(&self, rho: &Wrap<Inner>) -> bool {
         self.digest == rho.digest
     }
 }
 
-impl<Inner> Eq for Wrap<Inner> where Inner: 'static + Serialize + Send + Sync {}
+impl<Inner> Eq for Wrap<Inner> where Inner: Field {}
