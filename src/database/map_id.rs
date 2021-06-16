@@ -12,11 +12,11 @@ impl MapId {
         MapId(BigEndian::read_u16(&bytes.0))
     }
 
-    pub fn crop(&self, depth: u8, splits: u8) -> usize {
-        (if splits < depth {
-            (self.0 << splits) >> (16 + splits - depth)
+    pub fn map(&self, depth: u8) -> usize {
+        if depth > 0 {
+            (self.0 >> (16 - depth)) as usize
         } else {
             0
-        }) as usize
+        }
     }
 }

@@ -84,15 +84,17 @@ where
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let (map, hash) = match label {
-            Label::Internal(hash) => (0, hash),
-            Label::Leaf(map, hash) => (map.crop(self.depth, self.splits), hash),
+            Label::Internal(hash) => (self.range.start, hash),
+            Label::Leaf(map, hash) => (map.map(self.depth), hash),
             Label::Empty => {
                 panic!("called `Store::entry()` on an `Empty` value");
             }
         };
 
+        debug_assert!(self.range.contains(&map));
+
         unsafe {
-            let map = &self.maps[self.range.start + map];
+            let map = &self.maps[map];
             let map =
                 map as *const EntryMap<Key, Value> as *mut EntryMap<Key, Value>;
             let map = &mut *map;
