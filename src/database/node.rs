@@ -4,7 +4,7 @@ use super::field::Field;
 use super::label::Label;
 use super::wrap::Wrap;
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),

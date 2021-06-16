@@ -7,7 +7,7 @@ use super::field::Field;
 use super::map_id::MapId;
 use super::node::Node;
 
-#[derive(Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {
     Internal(Bytes),
     Leaf(MapId, Bytes),
