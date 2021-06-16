@@ -153,7 +153,7 @@ mod tests {
     }
 
     #[test]
-    fn leaf_consistency() {
+    fn split() {
         let key = Wrap::new(0u32).unwrap();
         let value = Wrap::new(1u32).unwrap();
 
@@ -177,7 +177,7 @@ mod tests {
             }
         }
 
-        for depth in 0..=255 {
+        for depth in 0..store.depth {
             store = match store.split() {
                 Split::Split(left, right) => {
                     if path[depth] == Direction::Left {
@@ -186,6 +186,20 @@ mod tests {
                         right
                     }
                 }
+                Split::Unsplittable(_) => unreachable!(),
+            };
+
+            match store.entry(label) {
+                EntryMapEntry::Occupied(..) => {}
+                _ => {
+                    unreachable!();
+                }
+            }
+        }
+
+        for _ in store.depth..=255 {
+            store = match store.split() {
+                Split::Split(_,_) => unreachable!(),
                 Split::Unsplittable(store) => store,
             };
 
@@ -199,21 +213,46 @@ mod tests {
     }
 
     #[test]
-    fn merge_safety() {
+    fn merge() {
+        let keys = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let values = keys.clone();
+
         let (store, labels) = store_with_records(
-            vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
-            vec![0, 1, 2, 3, 4, 5, 6, 7, 8],
+            keys.clone(),
+            values.clone(),
         );
-        let (left, right) = match store.split() {
+
+        let (l, r) = match store.split() {
             Split::Split(l, r) => (l, r),
             Split::Unsplittable(..) => unreachable!(),
         };
 
-        let mut store = Store::merge(left, right);
+        let (ll, lr) = match l.split() {
+            Split::Split(l, r) => (l, r),
+            Split::Unsplittable(..) => unreachable!(),
+        };
+
+        let (rl, rr) = match r.split() {
+            Split::Split(l, r) => (l, r),
+            Split::Unsplittable(..) => unreachable!(),
+        };
+
+        let l = Store::merge(ll, lr);
+        let r = Store::merge(rl, rr);
+
+        let mut store = Store::merge(l, r);
 
         for i in 0..=8 {
             match store.entry(labels[i]) {
-                EntryMapEntry::Occupied(..) => {}
+                EntryMapEntry::Occupied(entry) => {
+                    match &entry.get().node {
+                        Node::Leaf(key, value) => {
+                            assert_eq!(*key, Wrap::new(keys[i]).unwrap());
+                            assert_eq!(*value, Wrap::new(values[i]).unwrap());
+                        }
+                        _ => unreachable!(),
+                    }
+                }
                 _ => {
                     unreachable!();
                 }
