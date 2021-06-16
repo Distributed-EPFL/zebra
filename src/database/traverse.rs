@@ -181,8 +181,10 @@ where
                 .await
             });
 
-            let (left_store, left_label) = left_task.await.unwrap();
-            let (right_store, right_label) = right_task.await.unwrap();
+            let (left_join, right_join) = tokio::join!(left_task, right_task);
+
+            let (left_store, left_label) = left_join.unwrap();
+            let (right_store, right_label) = right_join.unwrap();
 
             let store = Store::merge(left_store, right_store);
             (store, left_label, right_label)
@@ -197,6 +199,7 @@ where
                 chunk.left(batch),
             )
             .await;
+
             let (store, right_label) = recur(
                 store,
                 right,
@@ -340,14 +343,15 @@ where
     }
 }
 
-pub(super) fn traverse<Key, Value>(
+pub(super) async fn traverse<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: &Batch<Key, Value>,
-) where
+) -> (Store<Key, Value>, Label)
+where
     Key: Field,
     Value: Field,
 {
     let root = get(&mut store, root);
-    recur(store, root, false, 0, batch, Chunk::root(batch));
+    recur(store, root, false, 0, batch, Chunk::root(batch)).await
 }
