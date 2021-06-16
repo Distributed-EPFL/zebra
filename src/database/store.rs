@@ -199,7 +199,7 @@ mod tests {
 
         for _ in store.depth..=255 {
             store = match store.split() {
-                Split::Split(_,_) => unreachable!(),
+                Split::Split(_, _) => unreachable!(),
                 Split::Unsplittable(store) => store,
             };
 
@@ -217,10 +217,7 @@ mod tests {
         let keys = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let values = keys.clone();
 
-        let (store, labels) = store_with_records(
-            keys.clone(),
-            values.clone(),
-        );
+        let (store, labels) = store_with_records(keys.clone(), values.clone());
 
         let (l, r) = match store.split() {
             Split::Split(l, r) => (l, r),
@@ -244,15 +241,13 @@ mod tests {
 
         for i in 0..=8 {
             match store.entry(labels[i]) {
-                EntryMapEntry::Occupied(entry) => {
-                    match &entry.get().node {
-                        Node::Leaf(key, value) => {
-                            assert_eq!(*key, Wrap::new(keys[i]).unwrap());
-                            assert_eq!(*value, Wrap::new(values[i]).unwrap());
-                        }
-                        _ => unreachable!(),
+                EntryMapEntry::Occupied(entry) => match &entry.get().node {
+                    Node::Leaf(key, value) => {
+                        assert_eq!(*key, Wrap::new(keys[i]).unwrap());
+                        assert_eq!(*value, Wrap::new(values[i]).unwrap());
                     }
-                }
+                    _ => unreachable!(),
+                },
                 _ => {
                     unreachable!();
                 }
