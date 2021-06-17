@@ -17,8 +17,9 @@ pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> =
     HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
+pub(crate) const DEPTH: u8 = 8;
+
 pub(crate) struct Store<Key: Field, Value: Field> {
-    depth: u8,
     maps: Arc<Vec<EntryMap<Key, Value>>>,
     splits: u8,
     range: Range<usize>,
@@ -34,26 +35,23 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn with_depth(depth: u8) -> Self {
+    pub fn new() -> Self {
         Store {
-            depth,
             maps: Arc::new(
                 iter::repeat_with(|| EntryMap::new())
-                    .take(1 << depth)
+                    .take(1 << DEPTH)
                     .collect(),
             ),
             splits: 0,
-            range: 0..(1 << depth),
+            range: 0..(1 << DEPTH),
         }
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
-        debug_assert_eq!(left.depth, right.depth);
         debug_assert_eq!(left.splits, right.splits);
         debug_assert_eq!(right.range.end, left.range.start);
 
         Store {
-            depth: left.depth,
             maps: left.maps,
             splits: left.splits - 1,
             range: right.range.start..left.range.end,
@@ -61,20 +59,18 @@ where
     }
 
     pub fn split(self) -> Split<Key, Value> {
-        if self.splits < self.depth {
+        if self.splits < DEPTH {
             let start = self.range.start;
             let end = self.range.end;
-            let mid = start + (1 << (self.depth - self.splits - 1));
+            let mid = start + (1 << (DEPTH - self.splits - 1));
 
             let right = Store {
-                depth: self.depth,
                 maps: self.maps.clone(),
                 splits: self.splits + 1,
                 range: start..mid,
             };
 
             let left = Store {
-                depth: self.depth,
                 maps: self.maps.clone(),
                 splits: self.splits + 1,
                 range: mid..end,
@@ -87,7 +83,7 @@ where
     }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
-        let map = label.map().map(self.depth);
+        let map = label.map().map(DEPTH);
         let hash = *label.hash();
 
         debug_assert!(self.range.contains(&map));
@@ -106,7 +102,7 @@ where
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                let map = MapId::internal(self.depth, self.range.start);
+                let map = MapId::internal(DEPTH, self.range.start);
                 let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }
@@ -133,7 +129,7 @@ mod tests {
         mut keys: Vec<u32>,
         mut values: Vec<u32>,
     ) -> (Store<u32, u32>, Vec<Label>) {
-        let mut store = Store::<u32, u32>::with_depth(8);
+        let mut store = Store::<u32, u32>::new();
 
         let labels = keys
             .drain(..)
@@ -168,7 +164,7 @@ mod tests {
 
     #[test]
     fn split() {
-        let mut store = Store::<u32, u32>::with_depth(8);
+        let mut store = Store::<u32, u32>::new();
 
         let key = Wrap::new(0u32).unwrap();
         let value = Wrap::new(1u32).unwrap();
@@ -191,10 +187,10 @@ mod tests {
             }
         }
 
-        for depth in 0..store.depth {
+        for splits in 0..DEPTH {
             store = match store.split() {
                 Split::Split(left, right) => {
-                    if path[depth] == Direction::Left {
+                    if path[splits] == Direction::Left {
                         left
                     } else {
                         right
@@ -211,7 +207,7 @@ mod tests {
             }
         }
 
-        for _ in store.depth..=255 {
+        for _ in DEPTH..=255 {
             store = match store.split() {
                 Split::Split(_, _) => unreachable!(),
                 Split::Unsplittable(store) => store,

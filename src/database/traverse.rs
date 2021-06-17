@@ -417,7 +417,7 @@ mod tests {
     #[tokio::test]
     async fn develop() {
         println!("\n\n\n\n\n");
-        let store = Store::<u32, u32>::with_depth(0);
+        let store = Store::<u32, u32>::new();
 
         let batch = Batch::new(vec![
             set(0, 0),
