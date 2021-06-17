@@ -5,7 +5,7 @@ use super::map_id::MapId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {
-    Internal(Bytes),
+    Internal(MapId, Bytes),
     Leaf(MapId, Bytes),
     Empty,
 }
@@ -15,12 +15,22 @@ impl Label {
         *self == Label::Empty
     }
 
-    pub fn bytes(&self) -> &Bytes {
+    pub fn map(&self) -> &MapId {
         match self {
-            Label::Internal(bytes) => bytes,
-            Label::Leaf(_, bytes) => bytes,
+            Label::Internal(map, _) => map,
+            Label::Leaf(map, _) => map,
             Label::Empty => {
-                panic!("called `Label::bytes()` on an `Empty` value")
+                panic!("called `Label::map()` on an `Empty` value")
+            }
+        }
+    }
+
+    pub fn hash(&self) -> &Bytes {
+        match self {
+            Label::Internal(_, hash) => hash,
+            Label::Leaf(_, hash) => hash,
+            Label::Empty => {
+                panic!("called `Label::hash()` on an `Empty` value")
             }
         }
     }

@@ -229,7 +229,7 @@ where
 
                     let label = store.label(&node);
                     incref(&mut store, label, node);
-                    Label::Internal(*label.bytes())
+                    label
                 }
             }
         }

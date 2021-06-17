@@ -87,13 +87,8 @@ where
     }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
-        let (map, hash) = match label {
-            Label::Internal(hash) => (self.range.start, hash),
-            Label::Leaf(map, hash) => (map.map(self.depth), hash),
-            Label::Empty => {
-                panic!("called `Store::entry()` on an `Empty` value");
-            }
-        };
+        let map = label.map().map(self.depth);
+        let hash = *label.hash();
 
         debug_assert!(self.range.contains(&map));
 
@@ -111,11 +106,13 @@ where
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                Label::Internal(hash::hash(&node).unwrap().into())
+                let map = self.range.start.into();
+                let hash = hash::hash(&node).unwrap().into();
+                Label::Internal(map, hash)
             }
             Node::Leaf(key, _) => {
-                let hash: Bytes = hash::hash(&node).unwrap().into();
                 let map = MapId::read(&key.digest());
+                let hash: Bytes = hash::hash(&node).unwrap().into();
                 Label::Leaf(map, hash)
             }
         }

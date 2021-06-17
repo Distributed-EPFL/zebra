@@ -8,7 +8,7 @@ use super::bytes::Bytes;
 pub(crate) struct MapId(u16);
 
 impl MapId {
-    pub fn read(bytes: &Bytes) -> MapId {
+    pub fn read(bytes: &Bytes) -> Self {
         MapId(BigEndian::read_u16(&bytes.0))
     }
 
@@ -18,5 +18,11 @@ impl MapId {
         } else {
             0
         }
+    }
+}
+
+impl From<usize> for MapId {
+    fn from(map: usize) -> MapId {
+        MapId(map as u16)
     }
 }
