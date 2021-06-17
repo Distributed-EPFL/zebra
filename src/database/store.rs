@@ -83,7 +83,7 @@ where
     }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
-        let map = label.map().map(DEPTH);
+        let map = label.map().id();
         let hash = *label.hash();
 
         debug_assert!(self.range.contains(&map));
@@ -102,7 +102,7 @@ where
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                let map = MapId::internal(DEPTH, self.range.start);
+                let map = MapId::internal(self.range.start);
                 let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }
