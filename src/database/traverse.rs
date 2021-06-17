@@ -358,52 +358,28 @@ where
 mod tests {
     use super::*;
 
-    use ptree::TreeBuilder;
-
     use super::super::operation::Operation;
-
-    fn feed_builder(
-        builder: &mut TreeBuilder,
-        store: &mut Store<u32, u32>,
-        label: Label,
-    ) {
-        if !label.is_empty() {
-            match get(store, label) {
-                Node::Internal(left, right) => {
-                    builder.begin_child("(internal)".to_string());
-                    feed_builder(builder, store, left);
-                    feed_builder(builder, store, right);
-                    builder.end_child();
-                }
-                Node::Leaf(key, value) => {
-                    builder.add_empty_child(format!(
-                        "[leaf key: {:?}, value: {:?}]",
-                        key.inner(),
-                        value.inner()
-                    ));
-                }
-                Node::Empty => {
-                    unreachable!();
-                }
-            }
-        } else {
-            builder.add_empty_child("(empty)".to_string());
-        }
-    }
-
-    fn print_tree(store: &mut Store<u32, u32>, root: Label) {
-        let mut builder = TreeBuilder::new("Store<u32, u32>".to_string());
-        feed_builder(&mut builder, store, root);
-        ptree::print_tree(&builder.build())
-            .expect("failed to print store tree");
-        println!("\n-----------------------\n");
-    }
+    use super::super::wrap::Wrap;
 
     fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
         match store.entry(label) {
             Occupied(entry) => entry.get().node.clone(),
             Vacant(..) => unreachable!(),
         }
+    }
+
+    fn get_internal(
+        store: &mut Store<u32, u32>,
+        label: Label,
+    ) -> (Label, Label) {
+        match get(store, label) {
+            Node::Internal(left, right) => (left, right),
+            _ => unreachable!(),
+        }
+    }
+
+    fn leaf(key: u32, value: u32) -> Node<u32, u32> {
+        Node::Leaf(Wrap::new(key).unwrap(), Wrap::new(value).unwrap())
     }
 
     fn set(key: u32, value: u32) -> Operation<u32, u32> {
@@ -415,9 +391,49 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn develop() {
-        println!("\n\n\n\n\n");
+    async fn single_map() {
         let store = Store::<u32, u32>::new();
+
+        // {0: 1}
+
+        let batch = Batch::new(vec![set(0, 1)]);
+        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        assert_eq!(get(&mut store, root), leaf(0, 1));
+
+        // {0: 0}
+
+        let batch = Batch::new(vec![set(0, 0)]);
+        let (mut store, root) = traverse(store, root, &batch).await;
+        assert_eq!(get(&mut store, root), leaf(0, 0));
+
+        // {0: 0, 1: 0}
+
+        let batch = Batch::new(vec![set(1, 0)]);
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        let (l, r) = get_internal(&mut store, root);
+        assert_eq!(r, Label::Empty);
+
+        let (ll, lr) = get_internal(&mut store, l);
+        assert_eq!(lr, Label::Empty);
+
+        let (lll, llr) = get_internal(&mut store, ll);
+        assert_eq!(get(&mut store, lll), leaf(0, 0));
+        assert_eq!(get(&mut store, llr), leaf(1, 0));
+
+        // {1: 1}
+
+        let batch = Batch::new(vec![set(1, 1), remove(0)]);
+        let (mut store, root) = traverse(store, root, &batch).await;
+        assert_eq!(get(&mut store, root), leaf(1, 1));
+
+        // {}
+
+        let batch = Batch::new(vec![remove(1)]);
+        let (store, root) = traverse(store, root, &batch).await;
+        assert_eq!(root, Label::Empty);
+
+        // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
 
         let batch = Batch::new(vec![
             set(0, 0),
@@ -429,9 +445,40 @@ mod tests {
             set(6, 6),
             set(7, 7),
         ]);
-        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
-        print_tree(&mut store, root);
+        let (mut store, root) = traverse(store, root, &batch).await;
 
-        println!("\n\n\n\n\n");
+        let (l, r) = get_internal(&mut store, root);
+        assert_eq!(get(&mut store, r), leaf(4, 4));
+
+        let (ll, lr) = get_internal(&mut store, l);
+        assert_eq!(get(&mut store, lr), leaf(3, 3));
+
+        let (lll, llr) = get_internal(&mut store, ll);
+        assert_eq!(get(&mut store, llr), leaf(1, 1));
+
+        let (llll, lllr) = get_internal(&mut store, lll);
+
+        let (lllll, llllr) = get_internal(&mut store, llll);
+        assert_eq!(lllll, Label::Empty);
+
+        let (llllrl, llllrr) = get_internal(&mut store, llllr);
+        assert_eq!(llllrl, Label::Empty);
+
+        let (llllrrl, llllrrr) = get_internal(&mut store, llllrr);
+        assert_eq!(get(&mut store, llllrrl), leaf(7, 7));
+        assert_eq!(get(&mut store, llllrrr), leaf(2, 2));
+
+        let (lllrl, lllrr) = get_internal(&mut store, lllr);
+        assert_eq!(lllrr, Label::Empty);
+
+        let (lllrll, lllrlr) = get_internal(&mut store, lllrl);
+        assert_eq!(get(&mut store, lllrlr), leaf(5, 5));
+
+        let (lllrlll, lllrllr) = get_internal(&mut store, lllrll);
+        assert_eq!(lllrlll, Label::Empty);
+
+        let (lllrllrl, lllrllrr) = get_internal(&mut store, lllrllr);
+        assert_eq!(get(&mut store, lllrllrl), leaf(6, 6));
+        assert_eq!(get(&mut store, lllrllrr), leaf(0, 0));
     }
 }
