@@ -8,8 +8,16 @@ use super::bytes::Bytes;
 pub(crate) struct MapId(u16);
 
 impl MapId {
-    pub fn read(bytes: &Bytes) -> Self {
-        MapId(BigEndian::read_u16(&bytes.0))
+    pub fn internal(depth: u8, map: usize) -> Self {
+        if depth > 0 {
+            MapId((map as u16) << (16 - depth))
+        } else {
+            MapId(0)
+        }
+    }
+
+    pub fn leaf(key_hash: &Bytes) -> Self {
+        MapId(BigEndian::read_u16(&key_hash.0))
     }
 
     pub fn map(&self, depth: u8) -> usize {
@@ -18,11 +26,5 @@ impl MapId {
         } else {
             0
         }
-    }
-}
-
-impl From<usize> for MapId {
-    fn from(map: usize) -> MapId {
-        MapId(map as u16)
     }
 }

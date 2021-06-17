@@ -106,12 +106,12 @@ where
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                let map = self.range.start.into();
+                let map = MapId::internal(self.depth, self.range.start);
                 let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }
             Node::Leaf(key, _) => {
-                let map = MapId::read(&key.digest());
+                let map = MapId::leaf(&key.digest());
                 let hash: Bytes = hash::hash(&node).unwrap().into();
                 Label::Leaf(map, hash)
             }
