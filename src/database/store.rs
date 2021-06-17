@@ -1,3 +1,5 @@
+use drop::crypto::hash;
+
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::HashMap;
 use std::iter;
@@ -8,6 +10,8 @@ use super::bytes::Bytes;
 use super::entry::Entry;
 use super::field::Field;
 use super::label::Label;
+use super::map_id::MapId;
+use super::node::Node;
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> =
@@ -102,6 +106,20 @@ where
             map.entry(hash)
         }
     }
+
+    pub fn label(&self, node: &Node<Key, Value>) -> Label {
+        match node {
+            Node::Empty => Label::Empty,
+            Node::Internal(..) => {
+                Label::Internal(hash::hash(&node).unwrap().into())
+            }
+            Node::Leaf(key, _) => {
+                let hash: Bytes = hash::hash(&node).unwrap().into();
+                let map = MapId::read(&key.digest());
+                Label::Leaf(map, hash)
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -110,7 +128,6 @@ mod tests {
 
     use super::super::direction::Direction;
     use super::super::entry::Entry;
-    use super::super::label;
     use super::super::node::Node;
     use super::super::path::Path;
     use super::super::wrap::Wrap;
@@ -129,7 +146,7 @@ mod tests {
                 let value = Wrap::new(value).unwrap();
 
                 let node = Node::Leaf(key, value);
-                let label = label::label(&node);
+                let label = store.label(&node);
 
                 let entry = Entry {
                     node,
@@ -154,19 +171,19 @@ mod tests {
 
     #[test]
     fn split() {
+        let mut store = Store::<u32, u32>::with_depth(8);
+
         let key = Wrap::new(0u32).unwrap();
         let value = Wrap::new(1u32).unwrap();
 
+        let path: Path = (*key.digest()).into();
         let node = Node::Leaf(key, value);
-        let label = label::label(&node);
-        let path: Path = (*label.bytes()).into();
+        let label = store.label(&node);
 
         let entry = Entry {
             node,
             references: 1,
         };
-
-        let mut store = Store::<u32, u32>::with_depth(8);
 
         match store.entry(label) {
             EntryMapEntry::Vacant(entrymapentry) => {

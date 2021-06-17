@@ -8,7 +8,6 @@ use super::chunk::Chunk;
 use super::direction::Direction;
 use super::entry::Entry as StoreEntry;
 use super::field::Field;
-use super::label;
 use super::label::Label;
 use super::node::Node;
 use super::path::Path;
@@ -228,7 +227,7 @@ where
                 _ => {
                     // New or modified `original`
 
-                    let label = label::label(&node);
+                    let label = store.label(&node);
                     incref(&mut store, label, node);
                     Label::Internal(*label.bytes())
                 }
@@ -264,7 +263,7 @@ where
         (Node::Empty, Task::Do(operation)) => match &operation.action {
             Action::Set(value) => {
                 let node = Node::Leaf(operation.key.clone(), value.clone());
-                let label = label::label(&node);
+                let label = store.label(&node);
 
                 incref(&mut store, label, node);
                 (store, label)
@@ -292,7 +291,7 @@ where
                 Action::Set(new_value) if new_value != original_value => {
                     let node =
                         Node::Leaf(operation.key.clone(), new_value.clone());
-                    let label = label::label(&node);
+                    let label = store.label(&node);
                     incref(&mut store, label, node);
 
                     if !preserve {
@@ -311,14 +310,13 @@ where
                 }
             }
         }
-        (Node::Leaf(..), _) => {
-            let (left, right) = if Path::from(*target.label.bytes())[depth]
-                == Direction::Left
-            {
-                (target, Entry::empty())
-            } else {
-                (Entry::empty(), target)
-            };
+        (Node::Leaf(key, _), _) => {
+            let (left, right) =
+                if Path::from(*key.digest())[depth] == Direction::Left {
+                    (target, Entry::empty())
+                } else {
+                    (Entry::empty(), target)
+                };
 
             branch(store, None, preserve, depth, batch, chunk, left, right)
                 .await
@@ -354,4 +352,86 @@ where
 {
     let root = get(&mut store, root);
     recur(store, root, false, 0, batch, Chunk::root(batch)).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use ptree::TreeBuilder;
+
+    use super::super::operation::Operation;
+
+    fn feed_builder(
+        builder: &mut TreeBuilder,
+        store: &mut Store<u32, u32>,
+        label: Label,
+    ) {
+        if !label.is_empty() {
+            match get(store, label) {
+                Node::Internal(left, right) => {
+                    builder.begin_child("(internal)".to_string());
+                    feed_builder(builder, store, left);
+                    feed_builder(builder, store, right);
+                    builder.end_child();
+                }
+                Node::Leaf(key, value) => {
+                    builder.add_empty_child(format!(
+                        "[leaf key: {:?}, value: {:?}]",
+                        key.inner(),
+                        value.inner()
+                    ));
+                }
+                Node::Empty => {
+                    unreachable!();
+                }
+            }
+        } else {
+            builder.add_empty_child("(empty)".to_string());
+        }
+    }
+
+    fn print_tree(store: &mut Store<u32, u32>, root: Label) {
+        let mut builder = TreeBuilder::new("Store<u32, u32>".to_string());
+        feed_builder(&mut builder, store, root);
+        ptree::print_tree(&builder.build())
+            .expect("failed to print store tree");
+        println!("\n-----------------------\n");
+    }
+
+    fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
+        match store.entry(label) {
+            Occupied(entry) => entry.get().node.clone(),
+            Vacant(..) => unreachable!(),
+        }
+    }
+
+    fn set(key: u32, value: u32) -> Operation<u32, u32> {
+        Operation::set(key, value).unwrap()
+    }
+
+    fn remove(key: u32) -> Operation<u32, u32> {
+        Operation::remove(key).unwrap()
+    }
+
+    #[tokio::test]
+    async fn develop() {
+        println!("\n\n\n\n\n");
+        let store = Store::<u32, u32>::with_depth(0);
+
+        let batch = Batch::new(vec![
+            set(0, 0),
+            set(1, 1),
+            set(2, 2),
+            set(3, 3),
+            set(4, 4),
+            set(5, 5),
+            set(6, 6),
+            set(7, 7),
+        ]);
+        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        print_tree(&mut store, root);
+
+        println!("\n\n\n\n\n");
+    }
 }
