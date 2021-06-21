@@ -828,4 +828,197 @@ mod tests {
             check_size(&mut store, vec![root]);
         }
     }
+
+    #[tokio::test]
+    async fn multiple_distinct() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((128..256).map(|i| set(i, i)).collect());
+        let (mut store, second_root) =
+            traverse(store, Label::Empty, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (128..256).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_insert_then_match() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (mut store, second_root) =
+            traverse(store, Label::Empty, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_insert_then_overflow_by_one() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..129).map(|i| set(i, i)).collect());
+        let (mut store, second_root) =
+            traverse(store, Label::Empty, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (0..129).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_insert_then_double() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..256).map(|i| set(i, i)).collect());
+        let (mut store, second_root) =
+            traverse(store, Label::Empty, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (0..256).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_match_then_empty() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..128).map(|i| remove(i)).collect());
+        let (mut store, second_root) =
+            traverse(store, second_root, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(&mut store, second_root, &mut HashMap::new());
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_match_then_leave_one() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..127).map(|i| remove(i)).collect());
+        let (mut store, second_root) =
+            traverse(store, second_root, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (127..128).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
+
+    #[tokio::test]
+    async fn multiple_match_then_leave_half() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..64).map(|i| remove(i)).collect());
+        let (mut store, second_root) =
+            traverse(store, second_root, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (64..128).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
 }
