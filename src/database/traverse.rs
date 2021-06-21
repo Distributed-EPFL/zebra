@@ -433,7 +433,7 @@ mod tests {
         match label {
             Label::Internal(..) => {
                 check_internal(store, label);
-                
+
                 let (left, right) = get_internal(store, label);
                 check_tree(store, left, prefix.left());
                 check_tree(store, right, prefix.right());
@@ -446,7 +446,61 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_map() {
+    async fn single_static() {
+        let store = Store::<u32, u32>::new();
+
+        // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
+
+        let batch = Batch::new(vec![
+            set(0, 0),
+            set(1, 1),
+            set(2, 2),
+            set(3, 3),
+            set(4, 4),
+            set(5, 5),
+            set(6, 6),
+            set(7, 7),
+        ]);
+        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
+
+        let (l, r) = get_internal(&mut store, root);
+        assert_eq!(get(&mut store, r), leaf(4, 4));
+
+        let (ll, lr) = get_internal(&mut store, l);
+        assert_eq!(get(&mut store, lr), leaf(3, 3));
+
+        let (lll, llr) = get_internal(&mut store, ll);
+        assert_eq!(get(&mut store, llr), leaf(1, 1));
+
+        let (llll, lllr) = get_internal(&mut store, lll);
+
+        let (lllll, llllr) = get_internal(&mut store, llll);
+        assert_eq!(lllll, Label::Empty);
+
+        let (llllrl, llllrr) = get_internal(&mut store, llllr);
+        assert_eq!(llllrl, Label::Empty);
+
+        let (llllrrl, llllrrr) = get_internal(&mut store, llllrr);
+        assert_eq!(get(&mut store, llllrrl), leaf(7, 7));
+        assert_eq!(get(&mut store, llllrrr), leaf(2, 2));
+
+        let (lllrl, lllrr) = get_internal(&mut store, lllr);
+        assert_eq!(lllrr, Label::Empty);
+
+        let (lllrll, lllrlr) = get_internal(&mut store, lllrl);
+        assert_eq!(get(&mut store, lllrlr), leaf(5, 5));
+
+        let (lllrlll, lllrllr) = get_internal(&mut store, lllrll);
+        assert_eq!(lllrlll, Label::Empty);
+
+        let (lllrllrl, lllrllrr) = get_internal(&mut store, lllrllr);
+        assert_eq!(get(&mut store, lllrllrl), leaf(6, 6));
+        assert_eq!(get(&mut store, lllrllrr), leaf(0, 0));
+    }
+
+    #[tokio::test]
+    async fn single_dynamic() {
         let store = Store::<u32, u32>::new();
 
         // {0: 1}
@@ -492,54 +546,5 @@ mod tests {
         let (mut store, root) = traverse(store, root, &batch).await;
         check_tree(&mut store, root, Prefix::root());
         assert_eq!(root, Label::Empty);
-
-        // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
-
-        let batch = Batch::new(vec![
-            set(0, 0),
-            set(1, 1),
-            set(2, 2),
-            set(3, 3),
-            set(4, 4),
-            set(5, 5),
-            set(6, 6),
-            set(7, 7),
-        ]);
-        let (mut store, root) = traverse(store, root, &batch).await;
-        check_tree(&mut store, root, Prefix::root());
-
-        let (l, r) = get_internal(&mut store, root);
-        assert_eq!(get(&mut store, r), leaf(4, 4));
-
-        let (ll, lr) = get_internal(&mut store, l);
-        assert_eq!(get(&mut store, lr), leaf(3, 3));
-
-        let (lll, llr) = get_internal(&mut store, ll);
-        assert_eq!(get(&mut store, llr), leaf(1, 1));
-
-        let (llll, lllr) = get_internal(&mut store, lll);
-
-        let (lllll, llllr) = get_internal(&mut store, llll);
-        assert_eq!(lllll, Label::Empty);
-
-        let (llllrl, llllrr) = get_internal(&mut store, llllr);
-        assert_eq!(llllrl, Label::Empty);
-
-        let (llllrrl, llllrrr) = get_internal(&mut store, llllrr);
-        assert_eq!(get(&mut store, llllrrl), leaf(7, 7));
-        assert_eq!(get(&mut store, llllrrr), leaf(2, 2));
-
-        let (lllrl, lllrr) = get_internal(&mut store, lllr);
-        assert_eq!(lllrr, Label::Empty);
-
-        let (lllrll, lllrlr) = get_internal(&mut store, lllrl);
-        assert_eq!(get(&mut store, lllrlr), leaf(5, 5));
-
-        let (lllrlll, lllrllr) = get_internal(&mut store, lllrll);
-        assert_eq!(lllrlll, Label::Empty);
-
-        let (lllrllrl, lllrllrr) = get_internal(&mut store, lllrllr);
-        assert_eq!(get(&mut store, lllrllrl), leaf(6, 6));
-        assert_eq!(get(&mut store, lllrllrr), leaf(0, 0));
     }
 }
