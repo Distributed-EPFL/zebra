@@ -82,6 +82,11 @@ where
         }
     }
 
+    pub fn size(&self) -> usize {
+        debug_assert_eq!(self.splits, 0);
+        self.maps.iter().map(|map| map.len()).sum()
+    }
+
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id();
         let hash = *label.hash();
@@ -263,5 +268,17 @@ mod tests {
                 }
             }
         }
+    }
+
+    #[test]
+    fn size() {
+        let store = Store::<u32, u32>::new();
+        assert_eq!(store.size(), 0);
+
+        let keys = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let values = keys.clone();
+
+        let (store, _) = store_with_records(keys.clone(), values.clone());
+        assert_eq!(store.size(), 9);
     }
 }
