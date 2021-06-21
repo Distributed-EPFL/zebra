@@ -358,6 +358,9 @@ where
 mod tests {
     use super::*;
 
+    use rand::seq::IteratorRandom;
+    use rand::Rng;
+
     use super::super::operation::Operation;
     use super::super::prefix::Prefix;
     use super::super::wrap::Wrap;
@@ -469,7 +472,7 @@ mod tests {
     fn check_records(
         store: &mut Store<u32, u32>,
         label: Label,
-        expected: &mut HashMap<u32, u32>,
+        expected: &HashMap<u32, u32>,
     ) {
         let mut actual = HashMap::new();
         read_records(store, label, &mut actual);
@@ -588,7 +591,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_insert() {
+    async fn single_insert() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -599,7 +602,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_modify() {
+    async fn single_modify() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -617,7 +620,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_all() {
+    async fn single_remove_all() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -630,7 +633,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_half() {
+    async fn single_remove_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -648,7 +651,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_all_but_one() {
+    async fn single_remove_all_but_one() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -666,7 +669,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_half_insert_half() {
+    async fn single_remove_half_insert_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
@@ -688,7 +691,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_half_modify_half() {
+    async fn single_remove_half_modify_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
@@ -710,7 +713,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_batch_remove_quarter_modify_quarter_insert_half() {
+    async fn single_remove_quarter_modify_quarter_insert_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
@@ -729,5 +732,41 @@ mod tests {
             root,
             &mut (32..128).map(|i| (i, i + 1)).collect(),
         )
+    }
+
+    #[tokio::test]
+    async fn single_stress() {
+        let mut reference = HashMap::new();
+
+        let mut store = Store::<u32, u32>::new();
+        let mut root = Label::Empty;
+
+        let mut rng = rand::thread_rng();
+
+        for round in 0..32 {
+            let keys = (0..1024).choose_multiple(&mut rng, 128);
+
+            let operations: Vec<Operation<u32, u32>> = keys
+                .iter()
+                .map(|&key| {
+                    if rng.gen::<bool>() {
+                        reference.insert(key, round);
+                        set(key, round)
+                    } else {
+                        reference.remove(&key);
+                        remove(key)
+                    }
+                })
+                .collect();
+
+            let batch = Batch::new(operations);
+            let next = traverse(store, root, &batch).await;
+
+            store = next.0;
+            root = next.1;
+
+            check_tree(&mut store, root, Prefix::root());
+            check_records(&mut store, root, &reference);
+        }
     }
 }
