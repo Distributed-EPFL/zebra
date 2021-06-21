@@ -3,7 +3,7 @@ use serde::Serialize;
 use super::bytes::Bytes;
 use super::map_id::MapId;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {
     Internal(MapId, Bytes),
     Leaf(MapId, Bytes),
