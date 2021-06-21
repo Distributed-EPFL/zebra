@@ -414,11 +414,10 @@ mod tests {
         }
 
         for &child in [left, right].iter() {
-            match store.entry(child) {
-                Vacant(..) if child != Label::Empty => {
-                    panic!("check_internal: child not found")
+            if child != Label::Empty {
+                if let Vacant(..) = store.entry(child) {
+                    panic!("check_internal: child not found");
                 }
-                _ => {}
             }
         }
     }
@@ -430,6 +429,22 @@ mod tests {
         }
     }
 
+    fn check_tree(store: &mut Store<u32, u32>, label: Label, prefix: Prefix) {
+        match label {
+            Label::Internal(..) => {
+                check_internal(store, label);
+                
+                let (left, right) = get_internal(store, label);
+                check_tree(store, left, prefix.left());
+                check_tree(store, right, prefix.right());
+            }
+            Label::Leaf(..) => {
+                check_leaf(store, label, prefix);
+            }
+            Label::Empty => {}
+        }
+    }
+
     #[tokio::test]
     async fn single_map() {
         let store = Store::<u32, u32>::new();
@@ -438,18 +453,21 @@ mod tests {
 
         let batch = Batch::new(vec![set(0, 1)]);
         let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
         assert_eq!(get(&mut store, root), leaf(0, 1));
 
         // {0: 0}
 
         let batch = Batch::new(vec![set(0, 0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
         assert_eq!(get(&mut store, root), leaf(0, 0));
 
         // {0: 0, 1: 0}
 
         let batch = Batch::new(vec![set(1, 0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
 
         let (l, r) = get_internal(&mut store, root);
         assert_eq!(r, Label::Empty);
@@ -465,12 +483,14 @@ mod tests {
 
         let batch = Batch::new(vec![set(1, 1), remove(0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
         assert_eq!(get(&mut store, root), leaf(1, 1));
 
         // {}
 
         let batch = Batch::new(vec![remove(1)]);
-        let (store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
         assert_eq!(root, Label::Empty);
 
         // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
@@ -486,6 +506,7 @@ mod tests {
             set(7, 7),
         ]);
         let (mut store, root) = traverse(store, root, &batch).await;
+        check_tree(&mut store, root, Prefix::root());
 
         let (l, r) = get_internal(&mut store, root);
         assert_eq!(get(&mut store, r), leaf(4, 4));
