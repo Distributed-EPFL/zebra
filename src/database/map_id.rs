@@ -1,9 +1,11 @@
 use serde::Serialize;
 
+use std::fmt::{Debug, Error, Formatter, LowerHex};
+
 use super::bytes::Bytes;
 use super::store::DEPTH;
 
-#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize)]
 pub(crate) struct MapId(u8);
 
 impl MapId {
@@ -25,5 +27,19 @@ impl MapId {
         } else {
             0
         }
+    }
+}
+
+impl LowerHex for MapId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "{:x}", self.0)?;
+        Ok(())
+    }
+}
+
+impl Debug for MapId {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "MapId({:x})", self)?;
+        Ok(())
     }
 }
