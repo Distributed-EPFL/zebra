@@ -450,6 +450,35 @@ mod tests {
         }
     }
 
+    fn read_labels(
+        store: &mut Store<u32, u32>,
+        label: Label,
+        labels: &mut HashSet<Label>,
+    ) {
+        if !label.is_empty() {
+            labels.insert(label);
+        }
+
+        match label {
+            Label::Internal(..) => {
+                let (left, right) = get_internal(store, label);
+                read_labels(store, left, labels);
+                read_labels(store, right, labels);
+            }
+            _ => {}
+        }
+    }
+
+    fn check_size(store: &mut Store<u32, u32>, roots: Vec<Label>) {
+        let mut labels = HashSet::new();
+
+        for root in roots {
+            read_labels(store, root, &mut labels);
+        }
+
+        assert_eq!(store.size(), labels.len());
+    }
+
     fn read_records(
         store: &mut Store<u32, u32>,
         label: Label,
@@ -489,7 +518,8 @@ mod tests {
 
     #[tokio::test]
     async fn single_static_tree() {
-        let store = Store::<u32, u32>::new();
+        let mut store = Store::<u32, u32>::new();
+        check_size(&mut store, vec![Label::Empty]);
 
         // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
 
@@ -503,8 +533,10 @@ mod tests {
             set(6, 6),
             set(7, 7),
         ]);
+
         let (mut store, root) = traverse(store, Label::Empty, &batch).await;
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
 
         let (l, r) = get_internal(&mut store, root);
         assert_eq!(get(&mut store, r), leaf(4, 4));
@@ -549,21 +581,29 @@ mod tests {
 
         let batch = Batch::new(vec![set(0, 1)]);
         let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
+
         assert_eq!(get(&mut store, root), leaf(0, 1));
 
         // {0: 0}
 
         let batch = Batch::new(vec![set(0, 0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
+
         assert_eq!(get(&mut store, root), leaf(0, 0));
 
         // {0: 0, 1: 0}
 
         let batch = Batch::new(vec![set(1, 0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
 
         let (l, r) = get_internal(&mut store, root);
         assert_eq!(r, Label::Empty);
@@ -579,14 +619,20 @@ mod tests {
 
         let batch = Batch::new(vec![set(1, 1), remove(0)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
+
         assert_eq!(get(&mut store, root), leaf(1, 1));
 
         // {}
 
         let batch = Batch::new(vec![remove(1)]);
         let (mut store, root) = traverse(store, root, &batch).await;
+
         check_tree(&mut store, root, Prefix::root());
+        check_size(&mut store, vec![root]);
+
         assert_eq!(root, Label::Empty);
     }
 
@@ -598,7 +644,12 @@ mod tests {
         let (mut store, root) = traverse(store, Label::Empty, &batch).await;
 
         check_tree(&mut store, root, Prefix::root());
-        check_records(&mut store, root, &mut (0..128).map(|i| (i, i)).collect())
+        check_records(
+            &mut store,
+            root,
+            &mut (0..128).map(|i| (i, i)).collect(),
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -616,7 +667,8 @@ mod tests {
             &mut store,
             root,
             &mut (0..128).map(|i| (i, i + 1)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -627,9 +679,10 @@ mod tests {
         let (store, root) = traverse(store, Label::Empty, &batch).await;
 
         let batch = Batch::new((0..128).map(|i| remove(i)).collect());
-        let (_, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, &batch).await;
 
         assert_eq!(root, Label::Empty);
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -647,7 +700,8 @@ mod tests {
             &mut store,
             root,
             &mut (64..128).map(|i| (i, i)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -665,7 +719,8 @@ mod tests {
             &mut store,
             root,
             &mut (127..128).map(|i| (i, i)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -687,7 +742,8 @@ mod tests {
             &mut store,
             root,
             &mut (64..128).map(|i| (i, i)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -709,7 +765,8 @@ mod tests {
             &mut store,
             root,
             &mut (64..128).map(|i| (i, i + 1)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -731,7 +788,8 @@ mod tests {
             &mut store,
             root,
             &mut (32..128).map(|i| (i, i + 1)).collect(),
-        )
+        );
+        check_size(&mut store, vec![root]);
     }
 
     #[tokio::test]
@@ -767,6 +825,7 @@ mod tests {
 
             check_tree(&mut store, root, Prefix::root());
             check_records(&mut store, root, &reference);
+            check_size(&mut store, vec![root]);
         }
     }
 }
