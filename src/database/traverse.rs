@@ -362,6 +362,8 @@ mod tests {
     use super::super::prefix::Prefix;
     use super::super::wrap::Wrap;
 
+    use std::collections::{HashMap, HashSet};
+
     fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
         match store.entry(label) {
             Occupied(entry) => entry.get().node.clone(),
@@ -445,8 +447,45 @@ mod tests {
         }
     }
 
+    fn read_records(
+        store: &mut Store<u32, u32>,
+        label: Label,
+        map: &mut HashMap<u32, u32>,
+    ) {
+        match label {
+            Label::Internal(..) => {
+                let (left, right) = get_internal(store, label);
+                read_records(store, left, map);
+                read_records(store, right, map);
+            }
+            Label::Leaf(..) => {
+                let (key, value) = get_leaf(store, label);
+                map.insert(**key.inner(), **value.inner());
+            }
+            Label::Empty => {}
+        }
+    }
+
+    fn check_records(
+        store: &mut Store<u32, u32>,
+        label: Label,
+        expected: &mut HashMap<u32, u32>,
+    ) {
+        let mut actual = HashMap::new();
+        read_records(store, label, &mut actual);
+
+        let actual: HashSet<(u32, u32)> =
+            actual.iter().map(|(k, v)| (*k, *v)).collect();
+        let expected: HashSet<(u32, u32)> =
+            expected.iter().map(|(k, v)| (*k, *v)).collect();
+
+        let differences: HashSet<(u32, u32)> =
+            expected.symmetric_difference(&actual).map(|r| *r).collect();
+        assert_eq!(differences, HashSet::new());
+    }
+
     #[tokio::test]
-    async fn single_static() {
+    async fn single_static_tree() {
         let store = Store::<u32, u32>::new();
 
         // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
@@ -500,7 +539,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn single_dynamic() {
+    async fn single_dynamic_tree() {
         let store = Store::<u32, u32>::new();
 
         // {0: 1}
@@ -546,5 +585,149 @@ mod tests {
         let (mut store, root) = traverse(store, root, &batch).await;
         check_tree(&mut store, root, Prefix::root());
         assert_eq!(root, Label::Empty);
+    }
+
+    #[tokio::test]
+    async fn single_batch_insert() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(&mut store, root, &mut (0..128).map(|i| (i, i)).collect())
+    }
+
+    #[tokio::test]
+    async fn single_batch_modify() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..128).map(|i| set(i, i + 1)).collect());
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (0..128).map(|i| (i, i + 1)).collect(),
+        )
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_all() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..128).map(|i| remove(i)).collect());
+        let (_, root) = traverse(store, root, &batch).await;
+
+        assert_eq!(root, Label::Empty);
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_half() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..64).map(|i| remove(i)).collect());
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (64..128).map(|i| (i, i)).collect(),
+        )
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_all_but_one() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((0..127).map(|i| remove(i)).collect());
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (127..128).map(|i| (i, i)).collect(),
+        )
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_half_insert_half() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new(
+            (0..128)
+                .map(|i| if i < 64 { remove(i) } else { set(i, i) })
+                .collect(),
+        );
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (64..128).map(|i| (i, i)).collect(),
+        )
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_half_modify_half() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new(
+            (0..128)
+                .map(|i| if i < 64 { remove(i) } else { set(i, i + 1) })
+                .collect(),
+        );
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (64..128).map(|i| (i, i + 1)).collect(),
+        )
+    }
+
+    #[tokio::test]
+    async fn single_batch_remove_quarter_modify_quarter_insert_half() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
+        let (store, root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new(
+            (0..128)
+                .map(|i| if i < 32 { remove(i) } else { set(i, i + 1) })
+                .collect(),
+        );
+        let (mut store, root) = traverse(store, root, &batch).await;
+
+        check_tree(&mut store, root, Prefix::root());
+        check_records(
+            &mut store,
+            root,
+            &mut (32..128).map(|i| (i, i + 1)).collect(),
+        )
     }
 }
