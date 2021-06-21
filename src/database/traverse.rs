@@ -359,12 +359,13 @@ mod tests {
     use super::*;
 
     use super::super::operation::Operation;
+    use super::super::prefix::Prefix;
     use super::super::wrap::Wrap;
 
     fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
         match store.entry(label) {
             Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => unreachable!(),
+            Vacant(..) => panic!("get: node not found"),
         }
     }
 
@@ -374,7 +375,17 @@ mod tests {
     ) -> (Label, Label) {
         match get(store, label) {
             Node::Internal(left, right) => (left, right),
-            _ => unreachable!(),
+            _ => panic!("get_internal: node not internal"),
+        }
+    }
+
+    fn get_leaf(
+        store: &mut Store<u32, u32>,
+        label: Label,
+    ) -> (Wrap<u32>, Wrap<u32>) {
+        match get(store, label) {
+            Node::Leaf(key, value) => (key.clone(), value.clone()),
+            _ => panic!("get_leaf: node not leaf"),
         }
     }
 
@@ -388,6 +399,35 @@ mod tests {
 
     fn remove(key: u32) -> Operation<u32, u32> {
         Operation::remove(key).unwrap()
+    }
+
+    fn check_internal(store: &mut Store<u32, u32>, label: Label) {
+        let (left, right) = get_internal(store, label);
+
+        match (left, right) {
+            (Label::Empty, Label::Empty)
+            | (Label::Empty, Label::Leaf(..))
+            | (Label::Leaf(..), Label::Empty) => {
+                panic!("check_internal: children violate topology")
+            }
+            _ => {}
+        }
+
+        for &child in [left, right].iter() {
+            match store.entry(child) {
+                Vacant(..) if child != Label::Empty => {
+                    panic!("check_internal: child not found")
+                }
+                _ => {}
+            }
+        }
+    }
+
+    fn check_leaf(store: &mut Store<u32, u32>, label: Label, prefix: Prefix) {
+        let (key, _) = get_leaf(store, label);
+        if !prefix.contains(&Path::from(*key.digest())) {
+            panic!("check_leaf: leaf outside of path")
+        }
     }
 
     #[tokio::test]
