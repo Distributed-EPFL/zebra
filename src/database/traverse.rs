@@ -14,6 +14,7 @@ use super::path::Path;
 use super::store::{Split, Store};
 use super::task::Task;
 
+#[derive(Eq, PartialEq)]
 enum References {
     Applicable(usize),
     NotApplicable,
@@ -73,11 +74,34 @@ where
     }
 }
 
-fn incref<Key, Value>(
+fn populate<Key, Value>(
     store: &mut Store<Key, Value>,
     label: Label,
     node: Node<Key, Value>,
-) where
+) -> bool
+where
+    Key: Field,
+    Value: Field,
+{
+    if !label.is_empty() {
+        match store.entry(label) {
+            Vacant(entry) => {
+                entry.insert(StoreEntry {
+                    node,
+                    references: 0,
+                });
+
+                true
+            }
+            Occupied(..) => false,
+        }
+    } else {
+        false
+    }
+}
+
+fn incref<Key, Value>(store: &mut Store<Key, Value>, label: Label)
+where
     Key: Field,
     Value: Field,
 {
@@ -85,31 +109,17 @@ fn incref<Key, Value>(
         match store.entry(label) {
             Occupied(mut entry) => {
                 entry.get_mut().references += 1;
-
-                // This `match` is tied to the traversal of a `MerkleTable`'s tree:
-                // increfing an internal node implies a previous incref of its children,
-                // which needs to be correct upon deduplication.
-                // A normal `incref` method would not have this.
-                match node {
-                    Node::Internal(left, right) => {
-                        decref(store, left);
-                        decref(store, right);
-                    }
-                    _ => {}
-                }
             }
-            Vacant(entry) => {
-                entry.insert(StoreEntry {
-                    node,
-                    references: 1,
-                });
-            }
+            Vacant(..) => panic!("called `incref` on non-existing node"),
         }
     }
 }
 
-fn decref<Key, Value>(store: &mut Store<Key, Value>, label: Label)
-where
+fn decref<Key, Value>(
+    store: &mut Store<Key, Value>,
+    label: Label,
+    preserve: bool,
+) where
     Key: Field,
     Value: Field,
 {
@@ -119,11 +129,11 @@ where
                 let value = entry.get_mut();
                 value.references -= 1;
 
-                if value.references == 0 {
+                if value.references == 0 && !preserve {
                     entry.remove_entry();
                 }
             }
-            Vacant(_) => unreachable!(),
+            Vacant(..) => panic!("called `decref` on non-existing node"),
         }
     }
 }
@@ -150,7 +160,7 @@ where
             false
         };
 
-    let (mut store, left, right) = match store.split() {
+    let (mut store, new_left, new_right) = match store.split() {
         Split::Split(left_store, right_store) => {
             let (left_chunk, right_chunk) =
                 (chunk.left(batch), chunk.right(batch));
@@ -213,35 +223,54 @@ where
         }
     };
 
-    let new = match (left, right) {
-        (Label::Empty, Label::Empty) => Label::Empty,
+    let (new_label, adopt) = match (new_left, new_right) {
+        (Label::Empty, Label::Empty) => (Label::Empty, false),
         (Label::Empty, Label::Leaf(map, hash))
-        | (Label::Leaf(map, hash), Label::Empty) => Label::Leaf(map, hash),
-        (left, right) => {
-            let node = Node::<Key, Value>::Internal(left, right);
-            match original {
-                Some(original) if node == original.node => {
-                    // Unchanged `original`
-                    original.label
-                }
-                _ => {
-                    // New or modified `original`
+        | (Label::Leaf(map, hash), Label::Empty) => {
+            (Label::Leaf(map, hash), false)
+        }
+        (new_left, new_right) => {
+            let node = Node::<Key, Value>::Internal(new_left, new_right);
+            let label = store.label(&node);
+            let adopt = populate(&mut store, label, node);
 
-                    let label = store.label(&node);
-                    incref(&mut store, label, node);
-                    label
-                }
-            }
+            (label, adopt)
         }
     };
 
-    if let Some(original) = original {
-        if new != original.label && !preserve {
-            decref(&mut store, original.label);
+    if match original {
+        // This `match` is `true` iff `original` has changed
+        // (`None` `original` changes implicitly)
+        Some(original) => new_label != original.label,
+        _ => true,
+    } {
+        if adopt {
+            // If `adopt`, then `node` is guaranteed to be
+            // `Internal(new_left, new_right)` (see above)
+            incref(&mut store, new_left);
+            incref(&mut store, new_right);
+        }
+
+        if let Some(original) = original {
+            if !preserve && original.references == References::Applicable(1) {
+                if let Node::Internal(old_left, old_right) = original.node {
+                    // If `original` has only one reference, then its parent
+                    // will `decref` it to 0 references and remove it,
+                    // hence its children need to be `decref`-ed
+
+                    // If `new_label == old_child`, then a `Leaf` is being pulled up,
+                    // and will eventually be adopted either by an `Internal` node
+                    // or by a root handle. Hence, it is left on the `store` to be
+                    // `incref`-ed (adopted) later, even if its references
+                    // are temporarily 0.
+                    decref(&mut store, old_left, new_label == old_left);
+                    decref(&mut store, old_right, new_label == old_right);
+                }
+            }
         }
     }
 
-    (store, new)
+    (store, new_label)
 }
 
 #[async_recursion]
@@ -265,7 +294,7 @@ where
                 let node = Node::Leaf(operation.key.clone(), value.clone());
                 let label = store.label(&node);
 
-                incref(&mut store, label, node);
+                populate(&mut store, label, node);
                 (store, label)
             }
             Action::Remove => (store, Label::Empty),
@@ -292,22 +321,12 @@ where
                     let node =
                         Node::Leaf(operation.key.clone(), new_value.clone());
                     let label = store.label(&node);
-                    incref(&mut store, label, node);
-
-                    if !preserve {
-                        decref(&mut store, target.label);
-                    }
+                    populate(&mut store, label, node);
 
                     (store, label)
                 }
                 Action::Set(_) => (store, target.label),
-                Action::Remove => {
-                    if !preserve {
-                        decref(&mut store, target.label);
-                    }
-
-                    (store, Label::Empty)
-                }
+                Action::Remove => (store, Label::Empty),
             }
         }
         (Node::Leaf(key, _), _) => {
@@ -350,8 +369,17 @@ where
     Key: Field,
     Value: Field,
 {
-    let root = get(&mut store, root);
-    recur(store, root, false, 0, batch, Chunk::root(batch)).await
+    let root_node = get(&mut store, root);
+    let (mut store, new_root) =
+        recur(store, root_node, false, 0, batch, Chunk::root(batch)).await;
+
+    let old_root = root;
+    if new_root != old_root {
+        incref(&mut store, new_root);
+        decref(&mut store, old_root, false);
+    }
+
+    (store, new_root)
 }
 
 #[cfg(test)]
@@ -453,17 +481,17 @@ mod tests {
     fn read_labels(
         store: &mut Store<u32, u32>,
         label: Label,
-        labels: &mut HashSet<Label>,
+        collector: &mut HashSet<Label>,
     ) {
         if !label.is_empty() {
-            labels.insert(label);
+            collector.insert(label);
         }
 
         match label {
             Label::Internal(..) => {
                 let (left, right) = get_internal(store, label);
-                read_labels(store, left, labels);
-                read_labels(store, right, labels);
+                read_labels(store, left, collector);
+                read_labels(store, right, collector);
             }
             _ => {}
         }
@@ -482,17 +510,17 @@ mod tests {
     fn read_records(
         store: &mut Store<u32, u32>,
         label: Label,
-        map: &mut HashMap<u32, u32>,
+        collector: &mut HashMap<u32, u32>,
     ) {
         match label {
             Label::Internal(..) => {
                 let (left, right) = get_internal(store, label);
-                read_records(store, left, map);
-                read_records(store, right, map);
+                read_records(store, left, collector);
+                read_records(store, right, collector);
             }
             Label::Leaf(..) => {
                 let (key, value) = get_leaf(store, label);
-                map.insert(**key.inner(), **value.inner());
+                collector.insert(**key.inner(), **value.inner());
             }
             Label::Empty => {}
         }
@@ -500,11 +528,11 @@ mod tests {
 
     fn check_records(
         store: &mut Store<u32, u32>,
-        label: Label,
+        root: Label,
         expected: &HashMap<u32, u32>,
     ) {
         let mut actual = HashMap::new();
-        read_records(store, label, &mut actual);
+        read_records(store, root, &mut actual);
 
         let actual: HashSet<(u32, u32)> =
             actual.iter().map(|(k, v)| (*k, *v)).collect();
