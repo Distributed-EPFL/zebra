@@ -1049,4 +1049,37 @@ mod tests {
 
         check_size(&mut store, vec![first_root, second_root]);
     }
+
+    #[tokio::test]
+    async fn multiple_match_then_split() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+
+        let batch = Batch::new((64..128).map(|i| remove(i)).collect());
+        let (store, first_root) =
+            traverse(store, first_root, &batch).await;
+
+        let batch = Batch::new((0..64).map(|i| remove(i)).collect());
+        let (mut store, second_root) =
+            traverse(store, second_root, &batch).await;
+
+        check_tree(&mut store, first_root, Prefix::root());
+        check_records(
+            &mut store,
+            first_root,
+            &mut (0..64).map(|i| (i, i)).collect(),
+        );
+
+        check_tree(&mut store, second_root, Prefix::root());
+        check_records(
+            &mut store,
+            second_root,
+            &mut (64..128).map(|i| (i, i)).collect(),
+        );
+
+        check_size(&mut store, vec![first_root, second_root]);
+    }
 }
