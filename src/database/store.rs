@@ -1,10 +1,10 @@
 use drop::crypto::hash;
 
+use oh_snap::Snap;
+
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::HashMap;
 use std::iter;
-use std::ops::Range;
-use std::sync::Arc;
 
 use super::bytes::Bytes;
 use super::entry::Entry;
@@ -20,9 +20,8 @@ pub(crate) type EntryMapEntry<'a, Key, Value> =
 pub(crate) const DEPTH: u8 = 8;
 
 pub(crate) struct Store<Key: Field, Value: Field> {
-    maps: Arc<Vec<EntryMap<Key, Value>>>,
+    maps: Snap<EntryMap<Key, Value>>,
     splits: u8,
-    range: Range<usize>,
 }
 
 pub(crate) enum Split<Key: Field, Value: Field> {
@@ -37,43 +36,36 @@ where
 {
     pub fn new() -> Self {
         Store {
-            maps: Arc::new(
+            maps: Snap::new(
                 iter::repeat_with(|| EntryMap::new())
                     .take(1 << DEPTH)
                     .collect(),
             ),
             splits: 0,
-            range: 0..(1 << DEPTH),
         }
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
-        debug_assert_eq!(left.splits, right.splits);
-        debug_assert_eq!(right.range.end, left.range.start);
-
         Store {
-            maps: left.maps,
+            maps: Snap::merge(right.maps, left.maps),
             splits: left.splits - 1,
-            range: right.range.start..left.range.end,
         }
     }
 
     pub fn split(self) -> Split<Key, Value> {
         if self.splits < DEPTH {
-            let start = self.range.start;
-            let end = self.range.end;
-            let mid = start + (1 << (DEPTH - self.splits - 1));
+            let mid = 1 << (DEPTH - self.splits - 1);
 
-            let right = Store {
-                maps: self.maps.clone(),
-                splits: self.splits + 1,
-                range: start..mid,
-            };
+            let (right_maps, left_maps) = self.maps.snap(mid);
 
             let left = Store {
-                maps: self.maps.clone(),
+                maps: left_maps,
                 splits: self.splits + 1,
-                range: mid..end,
+            };
+
+            let right = Store {
+                maps: right_maps,
+                splits: self.splits + 1,
             };
 
             Split::Split(left, right)
@@ -83,31 +75,21 @@ where
     }
 
     pub fn size(&self) -> usize {
-        debug_assert_eq!(self.splits, 0);
+        debug_assert!(self.maps.is_complete());
         self.maps.iter().map(|map| map.len()).sum()
     }
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
-        let map = label.map().id();
+        let map = label.map().id() - self.maps.range().start;
         let hash = *label.hash();
-
-        debug_assert!(self.range.contains(&map));
-
-        unsafe {
-            let map = &self.maps[map];
-            let map =
-                map as *const EntryMap<Key, Value> as *mut EntryMap<Key, Value>;
-            let map = &mut *map;
-
-            map.entry(hash)
-        }
+        self.maps[map].entry(hash)
     }
 
     pub fn label(&self, node: &Node<Key, Value>) -> Label {
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                let map = MapId::internal(self.range.start);
+                let map = MapId::internal(self.maps.range().start);
                 let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }
