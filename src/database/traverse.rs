@@ -10,6 +10,7 @@ use super::entry::Entry as StoreEntry;
 use super::field::Field;
 use super::label::Label;
 use super::node::Node;
+use super::operation::Operation;
 use super::path::Path;
 use super::store::{Split, Store};
 use super::task::Task;
@@ -290,6 +291,12 @@ where
         (_, Task::Pass) => (store, target.label),
 
         (Node::Empty, Task::Do(operation)) => match &operation.action {
+            Action::Get(sender) => {
+                let sender = sender.lock().unwrap().take().unwrap();
+                let _ = sender.send(None);
+
+                (store, Label::Empty)
+            }
             Action::Set(value) => {
                 let node = Node::Leaf(operation.key.clone(), value.clone());
                 let label = store.label(&node);
@@ -317,6 +324,12 @@ where
             if *key == operation.key =>
         {
             match &operation.action {
+                Action::Get(sender) => {
+                    let sender = sender.lock().unwrap().take().unwrap();
+                    let _ = sender.send(Some(original_value.clone()));
+
+                    (store, target.label)
+                }
                 Action::Set(new_value) if new_value != original_value => {
                     let node =
                         Node::Leaf(operation.key.clone(), new_value.clone());
@@ -328,6 +341,18 @@ where
                 Action::Set(_) => (store, target.label),
                 Action::Remove => (store, Label::Empty),
             }
+        }
+        (
+            Node::Leaf(..),
+            Task::Do(Operation {
+                action: Action::Get(sender),
+                ..
+            }),
+        ) => {
+            let sender = sender.lock().unwrap().take().unwrap();
+            let _ = sender.send(None);
+
+            (store, target.label)
         }
         (Node::Leaf(key, _), _) => {
             let (left, right) =
@@ -1059,8 +1084,7 @@ mod tests {
         let (store, second_root) = traverse(store, Label::Empty, &batch).await;
 
         let batch = Batch::new((64..128).map(|i| remove(i)).collect());
-        let (store, first_root) =
-            traverse(store, first_root, &batch).await;
+        let (store, first_root) = traverse(store, first_root, &batch).await;
 
         let batch = Batch::new((0..64).map(|i| remove(i)).collect());
         let (mut store, second_root) =

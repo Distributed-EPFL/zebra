@@ -1,9 +1,14 @@
 use drop::crypto::hash::HashError;
 
+use std::sync::Mutex;
+
 use super::action::Action;
 use super::field::Field;
 use super::path::Path;
 use super::wrap::Wrap;
+
+use tokio::sync::oneshot;
+use tokio::sync::oneshot::Receiver;
 
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
@@ -17,6 +22,22 @@ where
     Key: Field,
     Value: Field,
 {
+    pub fn get(
+        key: Key,
+    ) -> Result<(Self, Receiver<Option<Wrap<Value>>>), HashError> {
+        let (sender, receiver) = oneshot::channel();
+        let key = Wrap::new(key)?;
+
+        Ok((
+            Operation {
+                path: Path::from(*key.digest()),
+                key,
+                action: Action::Get(Mutex::new(Some(sender))),
+            },
+            receiver,
+        ))
+    }
+
     pub fn set(key: Key, value: Value) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
         let value = Wrap::new(value)?;
