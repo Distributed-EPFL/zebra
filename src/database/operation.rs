@@ -1,7 +1,5 @@
 use drop::crypto::hash::HashError;
 
-use std::sync::Mutex;
-
 use super::action::Action;
 use super::field::Field;
 use super::path::Path;
@@ -32,7 +30,7 @@ where
             Operation {
                 path: Path::from(*key.digest()),
                 key,
-                action: Action::Get(Mutex::new(Some(sender))),
+                action: Action::Get(Some(sender)),
             },
             receiver,
         ))

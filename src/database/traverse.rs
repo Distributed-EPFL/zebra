@@ -291,9 +291,9 @@ where
     match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, Some(batch), target.label),
 
-        (Node::Empty, Task::Do(operation)) => match &operation.action {
+        (Node::Empty, Task::Do(operation)) => match &mut operation.action {
             Action::Get(sender) => {
-                let sender = sender.lock().unwrap().take().unwrap();
+                let sender = sender.take().unwrap();
                 let _ = sender.send(None);
 
                 (store, Some(batch), Label::Empty)
@@ -324,9 +324,9 @@ where
         (Node::Leaf(key, original_value), Task::Do(operation))
             if *key == operation.key =>
         {
-            match &operation.action {
+            match &mut operation.action {
                 Action::Get(sender) => {
-                    let sender = sender.lock().unwrap().take().unwrap();
+                    let sender = sender.take().unwrap();
                     let _ = sender.send(Some(original_value.clone()));
 
                     (store, Some(batch), target.label)
@@ -350,7 +350,7 @@ where
                 ..
             }),
         ) => {
-            let sender = sender.lock().unwrap().take().unwrap();
+            let sender = sender.take().unwrap();
             let _ = sender.send(None);
 
             (store, Some(batch), target.label)
