@@ -29,4 +29,8 @@ where
     pub fn operations(&self) -> &[Operation<Key, Value>] {
         &self.operations
     }
+
+    pub fn operations_mut(&mut self) -> &mut [Operation<Key, Value>] {
+        &mut self.operations
+    }
 }

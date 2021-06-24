@@ -4,7 +4,7 @@ use super::operation::Operation;
 #[derive(Debug)]
 pub(crate) enum Task<'a, Key: Field, Value: Field> {
     Pass,
-    Do(&'a Operation<Key, Value>),
+    Do(&'a mut Operation<Key, Value>),
     Split,
 }
 

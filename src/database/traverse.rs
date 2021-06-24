@@ -281,14 +281,14 @@ async fn recur<Key, Value>(
     target: Entry<Key, Value>,
     preserve: bool,
     depth: u8,
-    batch: Batch<Key, Value>,
+    mut batch: Batch<Key, Value>,
     chunk: Chunk,
 ) -> (Store<Key, Value>, Option<Batch<Key, Value>>, Label)
 where
     Key: Field,
     Value: Field,
 {
-    match (&target.node, chunk.task(&batch)) {
+    match (&target.node, chunk.task(&mut batch)) {
         (_, Task::Pass) => (store, Some(batch), target.label),
 
         (Node::Empty, Task::Do(operation)) => match &operation.action {
