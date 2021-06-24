@@ -145,11 +145,11 @@ async fn branch<Key, Value>(
     original: Option<&'async_recursion Entry<Key, Value>>,
     preserve: bool,
     depth: u8,
-    batch: &Batch<Key, Value>,
+    batch: Batch<Key, Value>,
     chunk: Chunk,
     left: Entry<Key, Value>,
     right: Entry<Key, Value>,
-) -> (Store<Key, Value>, Label)
+) -> (Store<Key, Value>, Option<Batch<Key, Value>>, Label)
 where
     Key: Field,
     Value: Field,
@@ -161,11 +161,10 @@ where
             false
         };
 
-    let (mut store, new_left, new_right) = match store.split() {
+    let (mut store, batch, new_left, new_right) = match store.split() {
         Split::Split(left_store, right_store) => {
-            let (left_chunk, right_chunk) =
-                (chunk.left(batch), chunk.right(batch));
-            let (left_batch, right_batch) = (batch.clone(), batch.clone());
+            let (left_batch, left_chunk, right_batch, right_chunk) =
+                chunk.snap(batch);
 
             let left_task = tokio::spawn(async move {
                 recur(
@@ -173,7 +172,7 @@ where
                     left,
                     preserve_branches,
                     depth + 1,
-                    &left_batch,
+                    left_batch,
                     left_chunk,
                 )
                 .await
@@ -185,7 +184,7 @@ where
                     right,
                     preserve_branches,
                     depth + 1,
-                    &right_batch,
+                    right_batch,
                     right_chunk,
                 )
                 .await
@@ -193,34 +192,36 @@ where
 
             let (left_join, right_join) = tokio::join!(left_task, right_task);
 
-            let (left_store, left_label) = left_join.unwrap();
-            let (right_store, right_label) = right_join.unwrap();
+            let (left_store, _, left_label) = left_join.unwrap();
+            let (right_store, _, right_label) = right_join.unwrap();
 
             let store = Store::merge(left_store, right_store);
-            (store, left_label, right_label)
+            (store, None, left_label, right_label)
         }
         Split::Unsplittable(store) => {
-            let (store, left_label) = recur(
+            let (left_chunk, right_chunk) = chunk.split(&batch);
+
+            let (store, batch, left_label) = recur(
                 store,
                 left,
                 preserve_branches,
                 depth + 1,
                 batch,
-                chunk.left(batch),
+                left_chunk,
             )
             .await;
 
-            let (store, right_label) = recur(
+            let (store, batch, right_label) = recur(
                 store,
                 right,
                 preserve_branches,
                 depth + 1,
-                batch,
-                chunk.right(batch),
+                batch.unwrap(),
+                right_chunk,
             )
             .await;
 
-            (store, left_label, right_label)
+            (store, batch, left_label, right_label)
         }
     };
 
@@ -271,7 +272,7 @@ where
         }
     }
 
-    (store, new_label)
+    (store, batch, new_label)
 }
 
 #[async_recursion]
@@ -280,31 +281,31 @@ async fn recur<Key, Value>(
     target: Entry<Key, Value>,
     preserve: bool,
     depth: u8,
-    batch: &Batch<Key, Value>,
+    batch: Batch<Key, Value>,
     chunk: Chunk,
-) -> (Store<Key, Value>, Label)
+) -> (Store<Key, Value>, Option<Batch<Key, Value>>, Label)
 where
     Key: Field,
     Value: Field,
 {
-    match (&target.node, chunk.task(batch)) {
-        (_, Task::Pass) => (store, target.label),
+    match (&target.node, chunk.task(&batch)) {
+        (_, Task::Pass) => (store, Some(batch), target.label),
 
         (Node::Empty, Task::Do(operation)) => match &operation.action {
             Action::Get(sender) => {
                 let sender = sender.lock().unwrap().take().unwrap();
                 let _ = sender.send(None);
 
-                (store, Label::Empty)
+                (store, Some(batch), Label::Empty)
             }
             Action::Set(value) => {
                 let node = Node::Leaf(operation.key.clone(), value.clone());
                 let label = store.label(&node);
 
                 populate(&mut store, label, node);
-                (store, label)
+                (store, Some(batch), label)
             }
-            Action::Remove => (store, Label::Empty),
+            Action::Remove => (store, Some(batch), Label::Empty),
         },
         (Node::Empty, Task::Split) => {
             branch(
@@ -328,7 +329,7 @@ where
                     let sender = sender.lock().unwrap().take().unwrap();
                     let _ = sender.send(Some(original_value.clone()));
 
-                    (store, target.label)
+                    (store, Some(batch), target.label)
                 }
                 Action::Set(new_value) if new_value != original_value => {
                     let node =
@@ -336,10 +337,10 @@ where
                     let label = store.label(&node);
                     populate(&mut store, label, node);
 
-                    (store, label)
+                    (store, Some(batch), label)
                 }
-                Action::Set(_) => (store, target.label),
-                Action::Remove => (store, Label::Empty),
+                Action::Set(_) => (store, Some(batch), target.label),
+                Action::Remove => (store, Some(batch), Label::Empty),
             }
         }
         (
@@ -352,7 +353,7 @@ where
             let sender = sender.lock().unwrap().take().unwrap();
             let _ = sender.send(None);
 
-            (store, target.label)
+            (store, Some(batch), target.label)
         }
         (Node::Leaf(key, _), _) => {
             let (left, right) =
@@ -388,15 +389,17 @@ where
 pub(super) async fn traverse<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
-    batch: &Batch<Key, Value>,
+    batch: Batch<Key, Value>,
 ) -> (Store<Key, Value>, Label)
 where
     Key: Field,
     Value: Field,
 {
     let root_node = get(&mut store, root);
-    let (mut store, new_root) =
-        recur(store, root_node, false, 0, batch, Chunk::root(batch)).await;
+    let root_chunk = Chunk::root(&batch);
+
+    let (mut store, _, new_root) =
+        recur(store, root_node, false, 0, batch, root_chunk).await;
 
     let old_root = root;
     if new_root != old_root {
@@ -587,7 +590,7 @@ mod tests {
             set(7, 7),
         ]);
 
-        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        let (mut store, root) = traverse(store, Label::Empty, batch).await;
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
@@ -633,7 +636,7 @@ mod tests {
         // {0: 1}
 
         let batch = Batch::new(vec![set(0, 1)]);
-        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        let (mut store, root) = traverse(store, Label::Empty, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -643,7 +646,7 @@ mod tests {
         // {0: 0}
 
         let batch = Batch::new(vec![set(0, 0)]);
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -653,7 +656,7 @@ mod tests {
         // {0: 0, 1: 0}
 
         let batch = Batch::new(vec![set(1, 0)]);
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -671,7 +674,7 @@ mod tests {
         // {1: 1}
 
         let batch = Batch::new(vec![set(1, 1), remove(0)]);
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -681,7 +684,7 @@ mod tests {
         // {}
 
         let batch = Batch::new(vec![remove(1)]);
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -694,7 +697,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (mut store, root) = traverse(store, Label::Empty, &batch).await;
+        let (mut store, root) = traverse(store, Label::Empty, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -710,10 +713,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| set(i, i + 1)).collect());
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -729,10 +732,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| remove(i)).collect());
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         assert_eq!(root, Label::Empty);
         check_size(&mut store, vec![root]);
@@ -743,10 +746,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..64).map(|i| remove(i)).collect());
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -762,10 +765,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..127).map(|i| remove(i)).collect());
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -781,14 +784,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { remove(i) } else { set(i, i) })
                 .collect(),
         );
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -804,14 +807,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { remove(i) } else { set(i, i + 1) })
                 .collect(),
         );
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -827,14 +830,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set(i, i)).collect());
-        let (store, root) = traverse(store, Label::Empty, &batch).await;
+        let (store, root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 32 { remove(i) } else { set(i, i + 1) })
                 .collect(),
         );
-        let (mut store, root) = traverse(store, root, &batch).await;
+        let (mut store, root) = traverse(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -871,7 +874,7 @@ mod tests {
                 .collect();
 
             let batch = Batch::new(operations);
-            let next = traverse(store, root, &batch).await;
+            let next = traverse(store, root, batch).await;
 
             store = next.0;
             root = next.1;
@@ -887,11 +890,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, first_root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((128..256).map(|i| set(i, i)).collect());
         let (mut store, second_root) =
-            traverse(store, Label::Empty, &batch).await;
+            traverse(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -914,10 +917,10 @@ mod tests {
     async fn multiple_insert_then_match() {
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let batch = || Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, batch()).await;
         let (mut store, second_root) =
-            traverse(store, Label::Empty, &batch).await;
+            traverse(store, Label::Empty, batch()).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -941,11 +944,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, first_root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..129).map(|i| set(i, i)).collect());
         let (mut store, second_root) =
-            traverse(store, Label::Empty, &batch).await;
+            traverse(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -969,11 +972,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
+        let (store, first_root) = traverse(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..256).map(|i| set(i, i)).collect());
         let (mut store, second_root) =
-            traverse(store, Label::Empty, &batch).await;
+            traverse(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -996,13 +999,13 @@ mod tests {
     async fn multiple_match_then_empty() {
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
-        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+        let batch = || Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, batch()).await;
+        let (store, second_root) = traverse(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..128).map(|i| remove(i)).collect());
         let (mut store, second_root) =
-            traverse(store, second_root, &batch).await;
+            traverse(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1021,13 +1024,13 @@ mod tests {
     async fn multiple_match_then_leave_one() {
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
-        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+        let batch = || Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, batch()).await;
+        let (store, second_root) = traverse(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..127).map(|i| remove(i)).collect());
         let (mut store, second_root) =
-            traverse(store, second_root, &batch).await;
+            traverse(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1050,13 +1053,13 @@ mod tests {
     async fn multiple_match_then_leave_half() {
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
-        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+        let batch = || Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, batch()).await;
+        let (store, second_root) = traverse(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..64).map(|i| remove(i)).collect());
         let (mut store, second_root) =
-            traverse(store, second_root, &batch).await;
+            traverse(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1079,16 +1082,16 @@ mod tests {
     async fn multiple_match_then_split() {
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| set(i, i)).collect());
-        let (store, first_root) = traverse(store, Label::Empty, &batch).await;
-        let (store, second_root) = traverse(store, Label::Empty, &batch).await;
+        let batch = || Batch::new((0..128).map(|i| set(i, i)).collect());
+        let (store, first_root) = traverse(store, Label::Empty, batch()).await;
+        let (store, second_root) = traverse(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((64..128).map(|i| remove(i)).collect());
-        let (store, first_root) = traverse(store, first_root, &batch).await;
+        let (store, first_root) = traverse(store, first_root, batch).await;
 
         let batch = Batch::new((0..64).map(|i| remove(i)).collect());
         let (mut store, second_root) =
-            traverse(store, second_root, &batch).await;
+            traverse(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
