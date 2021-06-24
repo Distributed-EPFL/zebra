@@ -149,7 +149,7 @@ async fn branch<Key, Value>(
     chunk: Chunk,
     left: Entry<Key, Value>,
     right: Entry<Key, Value>,
-) -> (Store<Key, Value>, Option<Batch<Key, Value>>, Label)
+) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
     Key: Field,
     Value: Field,
@@ -192,11 +192,13 @@ where
 
             let (left_join, right_join) = tokio::join!(left_task, right_task);
 
-            let (left_store, _, left_label) = left_join.unwrap();
-            let (right_store, _, right_label) = right_join.unwrap();
+            let (left_store, left_batch, left_label) = left_join.unwrap();
+            let (right_store, right_batch, right_label) = right_join.unwrap();
 
             let store = Store::merge(left_store, right_store);
-            (store, None, left_label, right_label)
+            let batch = Batch::merge(left_batch, right_batch);
+
+            (store, batch, left_label, right_label)
         }
         Split::Unsplittable(store) => {
             let (left_chunk, right_chunk) = chunk.split(&batch);
@@ -216,7 +218,7 @@ where
                 right,
                 preserve_branches,
                 depth + 1,
-                batch.unwrap(),
+                batch,
                 right_chunk,
             )
             .await;
@@ -283,29 +285,24 @@ async fn recur<Key, Value>(
     depth: u8,
     mut batch: Batch<Key, Value>,
     chunk: Chunk,
-) -> (Store<Key, Value>, Option<Batch<Key, Value>>, Label)
+) -> (Store<Key, Value>, Batch<Key, Value>, Label)
 where
     Key: Field,
     Value: Field,
 {
     match (&target.node, chunk.task(&mut batch)) {
-        (_, Task::Pass) => (store, Some(batch), target.label),
+        (_, Task::Pass) => (store, batch, target.label),
 
         (Node::Empty, Task::Do(operation)) => match &mut operation.action {
-            Action::Get(sender) => {
-                let sender = sender.take().unwrap();
-                let _ = sender.send(None);
-
-                (store, Some(batch), Label::Empty)
-            }
+            Action::Get(..) => (store, batch, Label::Empty),
             Action::Set(value) => {
                 let node = Node::Leaf(operation.key.clone(), value.clone());
                 let label = store.label(&node);
 
                 populate(&mut store, label, node);
-                (store, Some(batch), label)
+                (store, batch, label)
             }
-            Action::Remove => (store, Some(batch), Label::Empty),
+            Action::Remove => (store, batch, Label::Empty),
         },
         (Node::Empty, Task::Split) => {
             branch(
@@ -325,11 +322,9 @@ where
             if *key == operation.key =>
         {
             match &mut operation.action {
-                Action::Get(sender) => {
-                    let sender = sender.take().unwrap();
-                    let _ = sender.send(Some(original_value.clone()));
-
-                    (store, Some(batch), target.label)
+                Action::Get(holder) => {
+                    *holder = Some(original_value.clone());
+                    (store, batch, target.label)
                 }
                 Action::Set(new_value) if new_value != original_value => {
                     let node =
@@ -337,24 +332,19 @@ where
                     let label = store.label(&node);
                     populate(&mut store, label, node);
 
-                    (store, Some(batch), label)
+                    (store, batch, label)
                 }
-                Action::Set(_) => (store, Some(batch), target.label),
-                Action::Remove => (store, Some(batch), Label::Empty),
+                Action::Set(_) => (store, batch, target.label),
+                Action::Remove => (store, batch, Label::Empty),
             }
         }
         (
             Node::Leaf(..),
             Task::Do(Operation {
-                action: Action::Get(sender),
+                action: Action::Get(..),
                 ..
             }),
-        ) => {
-            let sender = sender.take().unwrap();
-            let _ = sender.send(None);
-
-            (store, Some(batch), target.label)
-        }
+        ) => (store, batch, target.label),
         (Node::Leaf(key, _), _) => {
             let (left, right) =
                 if Path::from(*key.digest())[depth] == Direction::Left {

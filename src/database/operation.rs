@@ -5,9 +5,6 @@ use super::field::Field;
 use super::path::Path;
 use super::wrap::Wrap;
 
-use tokio::sync::oneshot;
-use tokio::sync::oneshot::Receiver;
-
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
     pub path: Path,
@@ -20,20 +17,14 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn get(
-        key: Key,
-    ) -> Result<(Self, Receiver<Option<Wrap<Value>>>), HashError> {
-        let (sender, receiver) = oneshot::channel();
+    pub fn get(key: Key) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
 
-        Ok((
-            Operation {
-                path: Path::from(*key.digest()),
-                key,
-                action: Action::Get(Some(sender)),
-            },
-            receiver,
-        ))
+        Ok(Operation {
+            path: Path::from(*key.digest()),
+            key,
+            action: Action::Get(None),
+        })
     }
 
     pub fn set(key: Key, value: Value) -> Result<Self, HashError> {

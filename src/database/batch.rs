@@ -26,6 +26,12 @@ where
         (Batch { operations: left }, Batch { operations: right })
     }
 
+    pub fn merge(left: Self, right: Self) -> Self {
+        Batch {
+            operations: Snap::merge(right.operations, left.operations), // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
+        }
+    }
+
     pub fn operations(&self) -> &[Operation<Key, Value>] {
         &self.operations
     }

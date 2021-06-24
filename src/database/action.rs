@@ -1,11 +1,9 @@
 use super::field::Field;
 use super::wrap::Wrap;
 
-use tokio::sync::oneshot::Sender;
-
 #[derive(Debug)]
 pub(crate) enum Action<Value: Field> {
-    Get(Option<Sender<Option<Wrap<Value>>>>),
+    Get(Option<Wrap<Value>>),
     Set(Wrap<Value>),
     Remove,
 }
