@@ -40,3 +40,35 @@ where
         &mut self.operations
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn snap_merge() {
+        let operations: Vec<Operation<u32, u32>> =
+            (0..128).map(|i| Operation::set(i, i).unwrap()).collect();
+        let batch = Batch::new(operations);
+
+        let reference: Vec<u32> = batch
+            .operations()
+            .iter()
+            .map(|operation| **operation.key.inner())
+            .collect();
+
+        let (l, r) = batch.snap(64);
+
+        let (ll, lr) = l.snap(32);
+        let (rl, rr) = r.snap(32);
+
+        let l = Batch::merge(ll, lr);
+        let r = Batch::merge(rl, rr);
+
+        let batch = Batch::merge(l, r);
+
+        assert!(batch.operations().iter().zip(reference.iter()).all(
+            |(operation, reference)| **operation.key.inner() == *reference
+        ));
+    }
+}
