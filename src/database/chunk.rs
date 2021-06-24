@@ -24,11 +24,7 @@ impl Chunk {
         }
     }
 
-    pub fn prefix(&self) -> &Prefix {
-        &self.prefix
-    }
-
-    pub fn operations<'a, Key, Value>(
+    fn operations<'a, Key, Value>(
         &self,
         batch: &'a Batch<Key, Value>,
     ) -> &'a [Operation<Key, Value>]
@@ -66,26 +62,50 @@ impl Chunk {
             .partition_point(|operation| right.contains(&operation.path))
     }
 
-    pub fn left<Key, Value>(&self, batch: &Batch<Key, Value>) -> Self
+    pub fn split<Key, Value>(&self, batch: &Batch<Key, Value>) -> (Self, Self)
     where
         Key: Field,
         Value: Field,
     {
-        Chunk {
+        let partition = self.partition(batch);
+
+        let left = Chunk {
             prefix: self.prefix.left(),
-            range: (self.range.start + self.partition(batch))..self.range.end,
-        }
+            range: (self.range.start + partition)..self.range.end,
+        };
+
+        let right = Chunk {
+            prefix: self.prefix.right(),
+            range: self.range.start..(self.range.start + partition),
+        };
+
+        (left, right)
     }
 
-    pub fn right<Key, Value>(&self, batch: &Batch<Key, Value>) -> Self
+    pub fn snap<Key, Value>(
+        &self,
+        batch: Batch<Key, Value>,
+    ) -> (Batch<Key, Value>, Self, Batch<Key, Value>, Self)
     where
         Key: Field,
         Value: Field,
     {
-        Chunk {
+        debug_assert_eq!(self.range, 0..batch.operations().len());
+
+        let partition = self.partition(&batch);
+        let (left_batch, right_batch) = batch.snap(partition);
+
+        let left_chunk = Chunk {
+            prefix: self.prefix.left(),
+            range: 0..left_batch.operations().len(),
+        };
+
+        let right_chunk = Chunk {
             prefix: self.prefix.right(),
-            range: self.range.start..(self.range.start + self.partition(batch)),
-        }
+            range: 0..right_batch.operations().len(),
+        };
+
+        (left_batch, left_chunk, right_batch, right_chunk)
     }
 }
 
@@ -110,42 +130,75 @@ mod tests {
     }
 
     fn chunk_from_directions<Key, Value>(
-        batch: &Batch<Key, Value>,
-        directions: &Vec<Direction>,
-    ) -> Chunk
+        mut batch: Batch<Key, Value>,
+        snaps: &Vec<Direction>,
+        splits: &Vec<Direction>,
+    ) -> (Batch<Key, Value>, Chunk)
     where
         Key: Field,
         Value: Field,
     {
-        let mut chunk = Chunk::root(batch);
+        let mut chunk = Chunk::root(&batch);
 
-        for &direction in directions {
-            chunk = if direction == Direction::Left {
-                chunk.left(batch)
+        for &direction in snaps {
+            let (left_batch, left_chunk, right_batch, right_chunk) =
+                chunk.snap(batch);
+
+            if direction == Direction::Left {
+                batch = left_batch;
+                chunk = left_chunk;
             } else {
-                chunk.right(batch)
+                batch = right_batch;
+                chunk = right_chunk;
             };
         }
 
-        chunk
+        for &direction in splits {
+            let (left, right) = chunk.split(&batch);
+            chunk = if direction == Direction::Left {
+                left
+            } else {
+                right
+            };
+        }
+
+        (batch, chunk)
     }
 
-    fn split_recursion(batch: &Batch<u32, u32>, chunk: Chunk) -> (u32, bool) {
-        match chunk.task(batch) {
-            Task::Pass => (0, true),
+    fn check_recursion(
+        batch: Batch<u32, u32>,
+        chunk: Chunk,
+        snap_ttl: usize,
+    ) -> (Option<Batch<u32, u32>>, u32, bool) {
+        match chunk.task(&batch) {
+            Task::Pass => (Some(batch), 0, true),
             Task::Do(operation) => {
-                if chunk.prefix().contains(&operation.path) {
-                    (1, true)
+                if chunk.prefix.contains(&operation.path) {
+                    (Some(batch), 1, true)
                 } else {
-                    (1, false)
+                    (Some(batch), 1, false)
                 }
             }
             Task::Split => {
-                let (lcount, lpass) = split_recursion(batch, chunk.left(batch));
-                let (rcount, rpass) =
-                    split_recursion(batch, chunk.right(batch));
+                if snap_ttl > 0 {
+                    let (left_batch, left_chunk, right_batch, right_chunk) =
+                        chunk.snap(batch);
 
-                (lcount + rcount, lpass && rpass)
+                    let (_, lcount, lpass) =
+                        check_recursion(left_batch, left_chunk, snap_ttl - 1);
+                    let (_, rcount, rpass) =
+                        check_recursion(right_batch, right_chunk, snap_ttl - 1);
+
+                    (None, lcount + rcount, lpass && rpass)
+                } else {
+                    let (left_chunk, right_chunk) = chunk.split(&batch);
+                    let (batch, lcount, lpass) =
+                        check_recursion(batch, left_chunk, 0);
+                    let (batch, rcount, rpass) =
+                        check_recursion(batch.unwrap(), right_chunk, 0);
+
+                    (batch, lcount + rcount, lpass && rpass)
+                }
             }
         }
     }
@@ -154,85 +207,358 @@ mod tests {
     fn prefix() {
         use Direction::{Left as L, Right as R};
 
-        let operations: Vec<Operation<u32, u32>> = Vec::new();
-        let batch = Batch::new(operations);
+        let new_batch = || Batch::<u32, u32>::new(Vec::new());
 
-        assert_eq!(Chunk::root(&batch).prefix(), &Prefix::root());
         assert_eq!(
-            Chunk::root(&batch).left(&batch).prefix(),
-            &Prefix::root().left()
+            chunk_from_directions(new_batch(), &vec![], &vec![])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![])
         );
+
         assert_eq!(
-            *chunk_from_directions(&batch, &vec![R, R, R, L, R, R, R]).prefix(),
+            chunk_from_directions(new_batch(), &vec![], &vec![L])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![L])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![L], &vec![])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![L])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![], &vec![R])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![R], &vec![])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![L], &vec![L])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![L, L])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![L], &vec![R])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![L, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![R], &vec![L])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![R, L])
+        );
+
+        assert_eq!(
+            chunk_from_directions(new_batch(), &vec![R], &vec![R])
+                .1
+                .prefix,
+            prefix_from_directions(&vec![R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![],
+                &vec![R, R, R, L, R, R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R,],
+                &vec![R, R, L, R, R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R,],
+                &vec![R, L, R, R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R, R,],
+                &vec![L, R, R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R, R, L,],
+                &vec![R, R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R, R, L, R,],
+                &vec![R, R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R, R, L, R, R,],
+                &vec![R]
+            )
+            .1
+            .prefix,
+            prefix_from_directions(&vec![R, R, R, L, R, R, R])
+        );
+
+        assert_eq!(
+            chunk_from_directions(
+                new_batch(),
+                &vec![R, R, R, L, R, R, R],
+                &vec![]
+            )
+            .1
+            .prefix,
             prefix_from_directions(&vec![R, R, R, L, R, R, R])
         );
     }
 
     #[test]
-    fn task() {
-        let operations: Vec<Operation<u32, u32>> = (0u32..4u32)
-            .map(|index| Operation::set(index, index).unwrap())
-            .collect();
-        let batch = Batch::new(operations);
+    fn tree() {
+        use Direction::{Left as L, Right as R};
 
-        assert_eq!(Chunk::root(&batch).task(&batch), Task::Split);
+        let new_batch = || {
+            let operations: Vec<Operation<u32, u32>> = (0u32..4u32)
+                .map(|index| Operation::set(index, index).unwrap())
+                .collect();
 
-        assert_eq!(Chunk::root(&batch).left(&batch).task(&batch), Task::Split);
-        assert_eq!(Chunk::root(&batch).right(&batch).task(&batch), Task::Pass);
+            Batch::new(operations)
+        };
 
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![R]);
+        assert_eq!(chunk.task(&batch), Task::Pass);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![R], &vec![]);
+        assert_eq!(chunk.task(&batch), Task::Pass);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L], &vec![]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, R]);
         assert_eq!(
-            Chunk::root(&batch).left(&batch).left(&batch).task(&batch),
-            Task::Split
-        );
-        assert_eq!(
-            Chunk::root(&batch).left(&batch).right(&batch).task(&batch),
+            chunk.task(&batch),
             Task::Do(&Operation::set(3u32, 3u32).unwrap())
         );
 
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![R]);
         assert_eq!(
-            Chunk::root(&batch)
-                .left(&batch)
-                .left(&batch)
-                .left(&batch)
-                .task(&batch),
-            Task::Split
+            chunk.task(&batch),
+            Task::Do(&Operation::set(3u32, 3u32).unwrap())
         );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, R], &vec![]);
         assert_eq!(
-            Chunk::root(&batch)
-                .left(&batch)
-                .left(&batch)
-                .right(&batch)
-                .task(&batch),
+            chunk.task(&batch),
+            Task::Do(&Operation::set(3u32, 3u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, L, L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![L, L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L], &vec![L]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, L], &vec![]);
+        assert_eq!(chunk.task(&batch), Task::Split);
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, L, R]);
+        assert_eq!(
+            chunk.task(&batch),
             Task::Do(&Operation::set(1u32, 1u32).unwrap())
         );
 
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![L, R]);
         assert_eq!(
-            Chunk::root(&batch)
-                .left(&batch)
-                .left(&batch)
-                .left(&batch)
-                .left(&batch)
-                .task(&batch),
+            chunk.task(&batch),
+            Task::Do(&Operation::set(1u32, 1u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L], &vec![R]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(1u32, 1u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, R], &vec![]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(1u32, 1u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, L, L, L]);
+        assert_eq!(
+            chunk.task(&batch),
             Task::Do(&Operation::set(2u32, 2u32).unwrap())
         );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![L, L, L]);
         assert_eq!(
-            Chunk::root(&batch)
-                .left(&batch)
-                .left(&batch)
-                .left(&batch)
-                .right(&batch)
-                .task(&batch),
+            chunk.task(&batch),
+            Task::Do(&Operation::set(2u32, 2u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L], &vec![L, L]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(2u32, 2u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, L], &vec![L]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(2u32, 2u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, L, L], &vec![]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(2u32, 2u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![], &vec![L, L, L, R]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(0u32, 0u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L], &vec![L, L, R]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(0u32, 0u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L], &vec![L, R]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(0u32, 0u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, L], &vec![R]);
+        assert_eq!(
+            chunk.task(&batch),
+            Task::Do(&Operation::set(0u32, 0u32).unwrap())
+        );
+
+        let (batch, chunk) =
+            chunk_from_directions(new_batch(), &vec![L, L, L, R], &vec![]);
+        assert_eq!(
+            chunk.task(&batch),
             Task::Do(&Operation::set(0u32, 0u32).unwrap())
         );
     }
 
     #[test]
     fn distribution() {
-        let operations: Vec<Operation<u32, u32>> = (0u32..64u32)
-            .map(|index| Operation::set(index, index).unwrap())
-            .collect();
-        let batch = Batch::new(operations);
+        let new_batch = || {
+            let operations: Vec<Operation<u32, u32>> = (0u32..64u32)
+                .map(|index| Operation::set(index, index).unwrap())
+                .collect();
 
-        assert_eq!(split_recursion(&batch, Chunk::root(&batch)), (64, true));
+            Batch::new(operations)
+        };
+
+        for snap_ttl in 0..8 {
+            let (_, count, pass) = check_recursion(
+                new_batch(),
+                Chunk::root(&new_batch()),
+                snap_ttl,
+            );
+
+            assert_eq!((count, pass), (64, true));
+        }
     }
 }
