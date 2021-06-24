@@ -56,7 +56,7 @@ where
         if self.splits < DEPTH {
             let mid = 1 << (DEPTH - self.splits - 1);
 
-            let (right_maps, left_maps) = self.maps.snap(mid);
+            let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
                 maps: left_maps,
