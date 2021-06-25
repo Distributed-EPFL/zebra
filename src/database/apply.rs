@@ -376,7 +376,7 @@ where
     }
 }
 
-pub(super) async fn apply<Key, Value>(
+pub(crate) async fn apply<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: Batch<Key, Value>,
@@ -1070,8 +1070,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch()).await;
         let (mut store, _, second_root) =
             apply(store, Label::Empty, batch()).await;
 
@@ -1153,10 +1152,8 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) =
-            apply(store, Label::Empty, batch()).await;
-        let (store, _, second_root) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch()).await;
+        let (store, _, second_root) = apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..128).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
@@ -1180,10 +1177,8 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) =
-            apply(store, Label::Empty, batch()).await;
-        let (store, _, second_root) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch()).await;
+        let (store, _, second_root) = apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..127).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
@@ -1211,10 +1206,8 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) =
-            apply(store, Label::Empty, batch()).await;
-        let (store, _, second_root) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch()).await;
+        let (store, _, second_root) = apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..64).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
@@ -1242,10 +1235,8 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) =
-            apply(store, Label::Empty, batch()).await;
-        let (store, _, second_root) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch()).await;
+        let (store, _, second_root) = apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((64..128).map(|i| opremove(i)).collect());
         let (store, _, first_root) = apply(store, first_root, batch).await;
