@@ -32,7 +32,7 @@ where
         let mut guard = self.database.store.lock().unwrap();
         let store = guard.take().unwrap();
 
-        let (store, batch, root) = apply::apply(store, self.root, batch).await;
+        let (store, root, batch) = apply::apply(store, self.root, batch).await;
 
         *guard = Some(store);
         self.root = root;
