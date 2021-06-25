@@ -1,6 +1,7 @@
 #![allow(dead_code)] // TODO: Remove this attribute, make sure there is no dead code.
 
 mod action;
+mod apply;
 mod batch;
 mod bytes;
 mod chunk;
@@ -15,5 +16,4 @@ mod path;
 mod prefix;
 mod store;
 mod task;
-mod traverse;
 mod wrap;

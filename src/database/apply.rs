@@ -376,7 +376,7 @@ where
     }
 }
 
-pub(super) async fn traverse<Key, Value>(
+pub(super) async fn apply<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: Batch<Key, Value>,
@@ -618,7 +618,7 @@ mod tests {
             opset(7, 7),
         ]);
 
-        let (mut store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (mut store, _, root) = apply(store, Label::Empty, batch).await;
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
@@ -664,7 +664,7 @@ mod tests {
         // {0: 1}
 
         let batch = Batch::new(vec![opset(0, 1)]);
-        let (mut store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (mut store, _, root) = apply(store, Label::Empty, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -674,7 +674,7 @@ mod tests {
         // {0: 0}
 
         let batch = Batch::new(vec![opset(0, 0)]);
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -684,7 +684,7 @@ mod tests {
         // {0: 0, 1: 0}
 
         let batch = Batch::new(vec![opset(1, 0)]);
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -702,7 +702,7 @@ mod tests {
         // {1: 1}
 
         let batch = Batch::new(vec![opset(1, 1), opremove(0)]);
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -712,7 +712,7 @@ mod tests {
         // {}
 
         let batch = Batch::new(vec![opremove(1)]);
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
@@ -725,7 +725,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (mut store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (mut store, _, root) = apply(store, Label::Empty, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -741,10 +741,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| opget(i)).collect());
-        let (_, batch, _) = traverse(store, root, batch).await;
+        let (_, batch, _) = apply(store, root, batch).await;
 
         check_gets(&batch, &(0..128).map(|i| (i, Some(i))).collect());
     }
@@ -754,10 +754,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..64).map(|i| opget(i)).collect());
-        let (_, batch, _) = traverse(store, root, batch).await;
+        let (_, batch, _) = apply(store, root, batch).await;
 
         check_gets(&batch, &(0..64).map(|i| (i, Some(i))).collect());
     }
@@ -767,10 +767,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((128..256).map(|i| opget(i)).collect());
-        let (_, batch, _) = traverse(store, root, batch).await;
+        let (_, batch, _) = apply(store, root, batch).await;
 
         check_gets(&batch, &(128..256).map(|i| (i, None)).collect());
     }
@@ -780,10 +780,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((64..192).map(|i| opget(i)).collect());
-        let (_, batch, _) = traverse(store, root, batch).await;
+        let (_, batch, _) = apply(store, root, batch).await;
 
         check_gets(
             &batch,
@@ -798,10 +798,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| opset(i, i + 1)).collect());
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -817,13 +817,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| opset(i, i + 1)).collect());
-        let (store, _, root) = traverse(store, root, batch).await;
+        let (store, _, root) = apply(store, root, batch).await;
 
         let batch = Batch::new((64..192).map(|i| opget(i)).collect());
-        let (_, batch, _) = traverse(store, root, batch).await;
+        let (_, batch, _) = apply(store, root, batch).await;
 
         check_gets(
             &batch,
@@ -838,7 +838,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..192).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
@@ -847,7 +847,7 @@ mod tests {
                 .collect(),
         );
 
-        let (mut store, batch, root) = traverse(store, root, batch).await;
+        let (mut store, batch, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -872,10 +872,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..128).map(|i| opremove(i)).collect());
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         assert_eq!(root, Label::Empty);
         check_size(&mut store, vec![root]);
@@ -886,10 +886,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..64).map(|i| opremove(i)).collect());
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -905,10 +905,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..127).map(|i| opremove(i)).collect());
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -924,14 +924,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { opremove(i) } else { opset(i, i) })
                 .collect(),
         );
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -947,14 +947,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { opremove(i) } else { opset(i, i + 1) })
                 .collect(),
         );
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -970,14 +970,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| opset(i, i)).collect());
-        let (store, _, root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 32 { opremove(i) } else { opset(i, i + 1) })
                 .collect(),
         );
-        let (mut store, _, root) = traverse(store, root, batch).await;
+        let (mut store, _, root) = apply(store, root, batch).await;
 
         check_tree(&mut store, root, Prefix::root());
         check_records(
@@ -1023,7 +1023,7 @@ mod tests {
                 .collect();
 
             let batch = Batch::new(operations);
-            let next = traverse(store, root, batch).await;
+            let next = apply(store, root, batch).await;
 
             store = next.0;
             let batch = next.1;
@@ -1042,11 +1042,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((128..256).map(|i| opset(i, i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, Label::Empty, batch).await;
+            apply(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1071,9 +1071,9 @@ mod tests {
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
         let (store, _, first_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
         let (mut store, _, second_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1097,11 +1097,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..129).map(|i| opset(i, i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, Label::Empty, batch).await;
+            apply(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1125,11 +1125,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| opset(i, i)).collect());
-        let (store, _, first_root) = traverse(store, Label::Empty, batch).await;
+        let (store, _, first_root) = apply(store, Label::Empty, batch).await;
 
         let batch = Batch::new((0..256).map(|i| opset(i, i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, Label::Empty, batch).await;
+            apply(store, Label::Empty, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1154,13 +1154,13 @@ mod tests {
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
         let (store, _, first_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
         let (store, _, second_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..128).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, second_root, batch).await;
+            apply(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1181,13 +1181,13 @@ mod tests {
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
         let (store, _, first_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
         let (store, _, second_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..127).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, second_root, batch).await;
+            apply(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1212,13 +1212,13 @@ mod tests {
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
         let (store, _, first_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
         let (store, _, second_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((0..64).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, second_root, batch).await;
+            apply(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1243,16 +1243,16 @@ mod tests {
 
         let batch = || Batch::new((0..128).map(|i| opset(i, i)).collect());
         let (store, _, first_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
         let (store, _, second_root) =
-            traverse(store, Label::Empty, batch()).await;
+            apply(store, Label::Empty, batch()).await;
 
         let batch = Batch::new((64..128).map(|i| opremove(i)).collect());
-        let (store, _, first_root) = traverse(store, first_root, batch).await;
+        let (store, _, first_root) = apply(store, first_root, batch).await;
 
         let batch = Batch::new((0..64).map(|i| opremove(i)).collect());
         let (mut store, _, second_root) =
-            traverse(store, second_root, batch).await;
+            apply(store, second_root, batch).await;
 
         check_tree(&mut store, first_root, Prefix::root());
         check_records(
@@ -1313,7 +1313,7 @@ mod tests {
                     .collect();
 
                 let batch = Batch::new(operations);
-                let next = traverse(store, *root, batch).await;
+                let next = apply(store, *root, batch).await;
 
                 store = next.0;
                 let batch = next.1;
