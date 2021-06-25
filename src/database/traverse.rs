@@ -1270,4 +1270,62 @@ mod tests {
 
         check_size(&mut store, vec![first_root, second_root]);
     }
+
+    #[tokio::test]
+    async fn multiple_stress() {
+        let mut first_record_reference = HashMap::new();
+        let mut second_record_reference = HashMap::new();
+
+        let mut store = Store::<u32, u32>::new();
+
+        let mut first_root = Label::Empty;
+        let mut second_root = Label::Empty;
+
+        let mut rng = rand::thread_rng();
+
+        for round in 0..32 {
+            for (record_reference, root) in vec![
+                (&mut first_record_reference, &mut first_root),
+                (&mut second_record_reference, &mut second_root),
+            ] {
+                let keys = (0..1024).choose_multiple(&mut rng, 128);
+                let mut get_reference = HashMap::new();
+
+                let operations: Vec<Operation<u32, u32>> = keys
+                    .iter()
+                    .map(|&key| {
+                        if rng.gen::<bool>() {
+                            if rng.gen::<bool>() {
+                                record_reference.insert(key, round);
+                                opset(key, round)
+                            } else {
+                                record_reference.remove(&key);
+                                opremove(key)
+                            }
+                        } else {
+                            get_reference.insert(
+                                key,
+                                record_reference.get(&key).map(|value| *value),
+                            );
+                            opget(key)
+                        }
+                    })
+                    .collect();
+
+                let batch = Batch::new(operations);
+                let next = traverse(store, *root, batch).await;
+
+                store = next.0;
+                let batch = next.1;
+                *root = next.2;
+
+                check_tree(&mut store, *root, Prefix::root());
+                check_records(&mut store, *root, &record_reference);
+
+                check_gets(&batch, &get_reference);
+            }
+
+            check_size(&mut store, vec![first_root, second_root]);
+        }
+    }
 }
