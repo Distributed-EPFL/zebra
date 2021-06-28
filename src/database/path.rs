@@ -7,7 +7,7 @@ use super::direction::Direction;
 use super::field::Field;
 use super::wrap::Wrap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Path(Bytes);
 
 impl Path {
