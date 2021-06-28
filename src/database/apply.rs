@@ -455,7 +455,7 @@ mod tests {
     }
 
     fn op_remove(key: u32) -> Operation<u32, u32> {
-        Operation::remove(key).unwrap()
+        Operation::remove(&key).unwrap()
     }
 
     fn check_internal(store: &mut Store<u32, u32>, label: Label) {

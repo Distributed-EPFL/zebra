@@ -19,7 +19,7 @@ where
     Value: Field,
 {
     pub fn get(key: &Key) -> Result<Self, HashError> {
-        let hash: Bytes = hash::hash(&key)?.into();
+        let hash: Bytes = hash::hash(key)?.into();
 
         Ok(Operation {
             path: Path::from(hash),
@@ -37,8 +37,8 @@ where
         })
     }
 
-    pub fn remove(key: Key) -> Result<Self, HashError> {
-        let hash: Bytes = hash::hash(&key)?.into();
+    pub fn remove(key: &Key) -> Result<Self, HashError> {
+        let hash: Bytes = hash::hash(key)?.into();
 
         Ok(Operation {
             path: Path::from(hash),
@@ -101,7 +101,7 @@ mod tests {
             Action::Set(Wrap::new(0u32).unwrap(), Wrap::new(8u32).unwrap())
         );
 
-        let remove = Operation::remove(0u32).unwrap();
+        let remove = Operation::remove(&0u32).unwrap();
         assert_eq!(remove.path, set.path);
         assert_eq!(remove.action, Action::<u32, u32>::Remove);
     }
