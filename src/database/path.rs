@@ -64,6 +64,12 @@ impl From<Digest> for Path {
     }
 }
 
+impl Into<Bytes> for Path {
+    fn into(self) -> Bytes {
+        self.0
+    }
+}
+
 impl Index<u8> for Path {
     type Output = Direction;
 
