@@ -4,6 +4,8 @@ use std::ops::Index;
 
 use super::bytes::Bytes;
 use super::direction::Direction;
+use super::field::Field;
+use super::wrap::Wrap;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Path(Bytes);
@@ -11,6 +13,13 @@ pub(crate) struct Path(Bytes);
 impl Path {
     pub fn empty() -> Self {
         Path(Bytes::empty())
+    }
+
+    pub fn reaches<Key>(&self, key: &Wrap<Key>) -> bool
+    where
+        Key: Field,
+    {
+        self.0 == *key.digest()
     }
 
     pub fn set(&mut self, index: u8, value: Direction) {

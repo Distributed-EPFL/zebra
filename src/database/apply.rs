@@ -951,7 +951,13 @@ mod tests {
 
         let batch = Batch::new(
             (0..128)
-                .map(|i| if i < 64 { op_remove(i) } else { op_set(i, i + 1) })
+                .map(|i| {
+                    if i < 64 {
+                        op_remove(i)
+                    } else {
+                        op_set(i, i + 1)
+                    }
+                })
                 .collect(),
         );
         let (mut store, root, _) = apply(store, root, batch).await;
@@ -974,7 +980,13 @@ mod tests {
 
         let batch = Batch::new(
             (0..128)
-                .map(|i| if i < 32 { op_remove(i) } else { op_set(i, i + 1) })
+                .map(|i| {
+                    if i < 32 {
+                        op_remove(i)
+                    } else {
+                        op_set(i, i + 1)
+                    }
+                })
                 .collect(),
         );
         let (mut store, root, _) = apply(store, root, batch).await;
