@@ -17,6 +17,7 @@ mod operation;
 mod path;
 mod prefix;
 mod query;
+mod response;
 mod store;
 mod table;
 mod task;

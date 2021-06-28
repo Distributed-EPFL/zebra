@@ -4,16 +4,19 @@ use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::vec::Vec;
 
+use super::batch::Batch;
 use super::errors::{HashError, KeyCollision, QueryError};
 use super::field::Field;
 use super::operation::Operation;
 use super::path::Path;
 use super::query::Query;
 
+pub(crate) type Tid = usize;
+
 static TID: AtomicUsize = AtomicUsize::new(0);
 
 pub struct Transaction<Key: Field, Value: Field> {
-    tid: usize,
+    tid: Tid,
     operations: Vec<Operation<Key, Value>>,
     paths: HashSet<Path>,
 }
@@ -67,5 +70,9 @@ where
         } else {
             KeyCollision.fail()
         }
+    }
+
+    pub(crate) fn finalize(self) -> (Tid, Batch<Key, Value>) {
+        (self.tid, Batch::new(self.operations))
     }
 }
