@@ -24,7 +24,7 @@ where
     }
 
     pub fn empty_table(&self) -> Table<Key, Value> {
-        Table::new(self)
+        Table::empty(self)
     }
 }
 

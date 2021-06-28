@@ -18,7 +18,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn new(database: &Database<Key, Value>) -> Self {
+    pub(crate) fn empty(database: &Database<Key, Value>) -> Self {
         Table {
             database: database.clone(),
             root: Label::Empty,
