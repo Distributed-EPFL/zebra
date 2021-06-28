@@ -12,6 +12,7 @@ tokio = { version = "1", features = [ "rt" ] }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
 async-recursion = { version = "0.3.2" }
 oh-snap = { version = "0.0.2" }
+snafu = { version = "~0.6" }
 
 [dev-dependencies]
 tokio = { version = "1", features = [ "macros", "rt-multi-thread" ] }
