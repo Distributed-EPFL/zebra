@@ -45,16 +45,18 @@ where
 mod tests {
     use super::*;
 
+    use super::super::path::Path;
+
     #[test]
     fn snap_merge() {
         let operations: Vec<Operation<u32, u32>> =
             (0..128).map(|i| Operation::set(i, i).unwrap()).collect();
         let batch = Batch::new(operations);
 
-        let reference: Vec<u32> = batch
+        let reference: Vec<Path> = batch
             .operations()
             .iter()
-            .map(|operation| **operation.key.inner())
+            .map(|operation| operation.path)
             .collect();
 
         let (l, r) = batch.snap(64);
@@ -67,8 +69,10 @@ mod tests {
 
         let batch = Batch::merge(l, r);
 
-        assert!(batch.operations().iter().zip(reference.iter()).all(
-            |(operation, reference)| **operation.key.inner() == *reference
-        ));
+        assert!(batch
+            .operations()
+            .iter()
+            .zip(reference.iter())
+            .all(|(operation, reference)| operation.path == *reference));
     }
 }

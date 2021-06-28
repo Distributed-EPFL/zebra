@@ -1,27 +1,35 @@
 use super::field::Field;
 use super::wrap::Wrap;
+use std::sync::Arc;
 
 #[derive(Debug)]
-pub(crate) enum Action<Value: Field> {
-    Get(Option<Wrap<Value>>),
-    Set(Wrap<Value>),
+pub(crate) enum Action<Key: Field, Value: Field> {
+    Get(Option<Arc<Value>>),
+    Set(Wrap<Key>, Wrap<Value>),
     Remove,
 }
 
-impl<Value> PartialEq for Action<Value>
+impl<Key, Value> PartialEq for Action<Key, Value>
 where
+    Key: Field,
     Value: Field,
 {
     fn eq(&self, rho: &Self) -> bool {
         match (self, rho) {
             (Action::Get(..), Action::Get(..)) => true,
-            (Action::Set(self_value), Action::Set(rho_value)) => {
-                self_value == rho_value
-            }
+            (
+                Action::Set(self_key, self_value),
+                Action::Set(rho_key, rho_value),
+            ) => self_key == rho_key && self_value == rho_value,
             (Action::Remove, Action::Remove) => true,
             _ => false,
         }
     }
 }
 
-impl<Value> Eq for Action<Value> where Value: Field {}
+impl<Key, Value> Eq for Action<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+}

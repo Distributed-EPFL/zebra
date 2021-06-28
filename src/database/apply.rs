@@ -295,8 +295,8 @@ where
 
         (Node::Empty, Task::Do(operation)) => match &mut operation.action {
             Action::Get(..) => (store, batch, Label::Empty),
-            Action::Set(value) => {
-                let node = Node::Leaf(operation.key.clone(), value.clone());
+            Action::Set(key, value) => {
+                let node = Node::Leaf(key.clone(), value.clone());
                 let label = store.label(&node);
 
                 populate(&mut store, label, node);
@@ -319,22 +319,21 @@ where
         }
 
         (Node::Leaf(key, original_value), Task::Do(operation))
-            if *key == operation.key =>
+            if operation.path.reaches(key) =>
         {
             match &mut operation.action {
                 Action::Get(holder) => {
-                    *holder = Some(original_value.clone());
+                    *holder = Some(original_value.inner().clone());
                     (store, batch, target.label)
                 }
-                Action::Set(new_value) if new_value != original_value => {
-                    let node =
-                        Node::Leaf(operation.key.clone(), new_value.clone());
+                Action::Set(_, new_value) if new_value != original_value => {
+                    let node = Node::Leaf(key.clone(), new_value.clone());
                     let label = store.label(&node);
                     populate(&mut store, label, node);
 
                     (store, batch, label)
                 }
-                Action::Set(_) => (store, batch, target.label),
+                Action::Set(..) => (store, batch, target.label),
                 Action::Remove => (store, batch, Label::Empty),
             }
         }
@@ -404,9 +403,12 @@ where
 mod tests {
     use super::*;
 
+    use drop::crypto::hash;
+
     use rand::seq::IteratorRandom;
     use rand::Rng;
 
+    use super::super::bytes::Bytes;
     use super::super::operation::Operation;
     use super::super::prefix::Prefix;
     use super::super::wrap::Wrap;
@@ -445,7 +447,7 @@ mod tests {
     }
 
     fn op_get(key: u32) -> Operation<u32, u32> {
-        Operation::get(key).unwrap()
+        Operation::get(&key).unwrap()
     }
 
     fn op_set(key: u32, value: u32) -> Operation<u32, u32> {
@@ -568,14 +570,14 @@ mod tests {
         assert_eq!(differences, HashSet::new());
     }
 
-    fn read_gets(batch: &Batch<u32, u32>) -> HashMap<u32, Option<u32>> {
+    fn read_gets(batch: &Batch<u32, u32>) -> HashMap<Bytes, Option<u32>> {
         batch
             .operations()
             .iter()
             .filter_map(|operation| match &operation.action {
                 Action::Get(holder) => Some((
-                    **operation.key.inner(),
-                    holder.clone().map(|value| **value.inner()),
+                    operation.path.into(),
+                    holder.clone().map(|value| *value),
                 )),
                 _ => None,
             })
@@ -586,17 +588,40 @@ mod tests {
         batch: &Batch<u32, u32>,
         reference: &HashMap<u32, Option<u32>>,
     ) {
+        let preimage: HashMap<Bytes, u32> = reference
+            .iter()
+            .map(|(k, _)| (Bytes::from(hash::hash(k).unwrap()), *k))
+            .collect();
+
         let actual = read_gets(batch);
 
-        let actual: HashSet<(u32, Option<u32>)> =
+        let actual: HashSet<(Bytes, Option<u32>)> =
             actual.iter().map(|(k, v)| (*k, *v)).collect();
-        let reference: HashSet<(u32, Option<u32>)> =
-            reference.iter().map(|(k, v)| (*k, *v)).collect();
-
-        let differences: HashSet<(u32, Option<u32>)> = reference
-            .symmetric_difference(&actual)
-            .map(|r| *r)
+        let reference: HashSet<(Bytes, Option<u32>)> = reference
+            .iter()
+            .map(|(k, v)| (Bytes::from(hash::hash(k).unwrap()), *v))
             .collect();
+
+        #[derive(Debug, Hash, PartialEq, Eq)]
+        enum DiffKey {
+            Known(u32),
+            Unknown(Bytes),
+        }
+
+        let differences: HashSet<(DiffKey, Option<u32>)> = reference
+            .symmetric_difference(&actual)
+            .map(|(hash, value)| {
+                (
+                    if let Some(key) = preimage.get(hash) {
+                        DiffKey::Known(*key)
+                    } else {
+                        DiffKey::Unknown(*hash)
+                    },
+                    value.clone(),
+                )
+            })
+            .collect();
+
         assert_eq!(differences, HashSet::new());
     }
 

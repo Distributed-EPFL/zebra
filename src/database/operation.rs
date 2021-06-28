@@ -1,6 +1,8 @@
+use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
 use super::action::Action;
+use super::bytes::Bytes;
 use super::field::Field;
 use super::path::Path;
 use super::wrap::Wrap;
@@ -8,8 +10,7 @@ use super::wrap::Wrap;
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
     pub path: Path,
-    pub key: Wrap<Key>,
-    pub action: Action<Value>,
+    pub action: Action<Key, Value>,
 }
 
 impl<Key, Value> Operation<Key, Value>
@@ -17,12 +18,11 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn get(key: Key) -> Result<Self, HashError> {
-        let key = Wrap::new(key)?;
+    pub fn get(key: &Key) -> Result<Self, HashError> {
+        let hash: Bytes = hash::hash(&key)?.into();
 
         Ok(Operation {
-            path: Path::from(*key.digest()),
-            key,
+            path: Path::from(hash),
             action: Action::Get(None),
         })
     }
@@ -33,16 +33,15 @@ where
 
         Ok(Operation {
             path: Path::from(*key.digest()),
-            key,
-            action: Action::Set(value),
+            action: Action::Set(key, value),
         })
     }
 
     pub fn remove(key: Key) -> Result<Self, HashError> {
-        let key = Wrap::new(key)?;
+        let hash: Bytes = hash::hash(&key)?.into();
+
         Ok(Operation {
-            path: Path::from(*key.digest()),
-            key,
+            path: Path::from(hash),
             action: Action::Remove,
         })
     }
@@ -54,7 +53,7 @@ where
     Value: Field,
 {
     fn eq(&self, rho: &Self) -> bool {
-        (self.key == rho.key) && (self.action == rho.action) // `path` is uniquely determined by `key`
+        (self.path == rho.path) && (self.action == rho.action)
     }
 }
 
@@ -96,12 +95,14 @@ mod tests {
 
         let set = Operation::set(0u32, 8u32).unwrap();
         assert!(prefix.contains(&set.path));
-        assert_eq!(set.key, Wrap::new(0u32).unwrap());
-        assert_eq!(set.action, Action::Set(Wrap::new(8u32).unwrap()));
+        assert_eq!(set.path, Path::from(hash(&0u32).unwrap()));
+        assert_eq!(
+            set.action,
+            Action::Set(Wrap::new(0u32).unwrap(), Wrap::new(8u32).unwrap())
+        );
 
         let remove = Operation::remove(0u32).unwrap();
         assert_eq!(remove.path, set.path);
-        assert_eq!(remove.key, set.key);
-        assert_eq!(remove.action, Action::<u32>::Remove);
+        assert_eq!(remove.action, Action::<u32, u32>::Remove);
     }
 }
