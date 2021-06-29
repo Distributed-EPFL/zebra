@@ -1,5 +1,7 @@
 use oh_snap::Snap;
 
+use rayon::prelude::*;
+
 use std::vec::Vec;
 
 use super::field::Field;
@@ -15,7 +17,7 @@ where
     Value: Field,
 {
     pub fn new(mut operations: Vec<Operation<Key, Value>>) -> Self {
-        operations.sort_unstable_by(|lho, rho| lho.path.cmp(&rho.path)); // TODO: Replace with `rayon`'s parallel sort if this becomes a bottleneck.
+        operations.par_sort_unstable_by(|lho, rho| lho.path.cmp(&rho.path));
         Batch {
             operations: Snap::new(operations),
         }
