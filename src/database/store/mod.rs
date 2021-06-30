@@ -1,3 +1,4 @@
+mod cell;
 mod entry;
 mod field;
 mod label;

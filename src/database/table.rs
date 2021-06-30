@@ -49,30 +49,3 @@ where
         batch
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use crate::database::Database;
-
-    use rand::prelude::*;
-
-    #[tokio::test]
-    async fn develop() {
-        let database: Database<u32, u32> = Database::new();
-        let mut table = database.empty_table();
-
-        for _ in 0..5 {
-            let mut transaction: Transaction<u32, u32> = Transaction::new();
-
-            for i in 0..65536 {
-                let _ = transaction.set(i, random());
-            }
-
-            let start = std::time::Instant::now();
-            table.execute(transaction).await;
-            println!("Elapsed total: {}", start.elapsed().as_secs_f64());
-        }
-    }
-}
