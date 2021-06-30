@@ -38,12 +38,11 @@ where
         &mut self,
         batch: Batch<Key, Value>,
     ) -> Batch<Key, Value> {
-        let mut guard = self.database.store.lock().unwrap();
-        let store = guard.take().unwrap();
+        let store = self.database.store.take();
 
         let (store, root, batch) = apply::apply(store, self.root, batch).await;
 
-        *guard = Some(store);
+        self.database.store.restore(store);
         self.root = root;
 
         batch

@@ -1,16 +1,14 @@
 use crate::database::{
-    store::{Field, Store},
+    store::{Cell, Field, Store},
     Table,
 };
-
-use std::sync::{Arc, Mutex};
 
 pub struct Database<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
-    pub(crate) store: Arc<Mutex<Option<Store<Key, Value>>>>,
+    pub(crate) store: Cell<Key, Value>,
 }
 
 impl<Key, Value> Database<Key, Value>
@@ -20,7 +18,7 @@ where
 {
     pub fn new() -> Self {
         Database {
-            store: Arc::new(Mutex::new(Some(Store::new()))),
+            store: Cell::new(Store::new()),
         }
     }
 

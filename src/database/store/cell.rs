@@ -7,7 +7,6 @@ struct Inner<Key: Field, Value: Field> {
     condvar: Condvar,
 }
 
-#[derive(Clone)]
 pub(crate) struct Cell<Key: Field, Value: Field>(Arc<Inner<Key, Value>>);
 
 impl<Key, Value> Inner<Key, Value>
@@ -42,16 +41,26 @@ where
     Key: Field,
     Value: Field,
 {
-    fn new(store: Store<Key, Value>) -> Self {
+    pub fn new(store: Store<Key, Value>) -> Self {
         Cell(Arc::new(Inner::new(store)))
     }
 
-    fn take(&self) -> Store<Key, Value> {
+    pub fn take(&self) -> Store<Key, Value> {
         self.0.take()
     }
 
-    fn restore(&self, store: Store<Key, Value>) {
+    pub fn restore(&self, store: Store<Key, Value>) {
         self.0.restore(store);
+    }
+}
+
+impl<Key, Value> Clone for Cell<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn clone(&self) -> Self {
+        Cell(self.0.clone())
     }
 }
 
