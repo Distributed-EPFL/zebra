@@ -1,28 +1,17 @@
 use crate::database::{
-    interact::{apply, Batch},
-    store::{Field, Label},
-    Database, Response, Transaction,
+    store::{Cell, Field, Handle},
+    Response, Transaction,
 };
 
-pub struct Table<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    database: Database<Key, Value>,
-    root: Label,
-}
+pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
 
 impl<Key, Value> Table<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn empty(database: &Database<Key, Value>) -> Self {
-        Table {
-            database: database.clone(),
-            root: Label::Empty,
-        }
+    pub(crate) fn empty(cell: Cell<Key, Value>) -> Self {
+        Table(Handle::empty(cell))
     }
 
     pub async fn execute(
@@ -30,21 +19,7 @@ where
         transaction: Transaction<Key, Value>,
     ) -> Response<Key, Value> {
         let (tid, batch) = transaction.finalize();
-        let batch = self.apply(batch).await;
+        let batch = self.0.apply(batch).await;
         Response::new(tid, batch)
-    }
-
-    pub(crate) async fn apply(
-        &mut self,
-        batch: Batch<Key, Value>,
-    ) -> Batch<Key, Value> {
-        let store = self.database.store.take();
-
-        let (store, root, batch) = apply::apply(store, self.root, batch).await;
-
-        self.database.store.restore(store);
-        self.root = root;
-
-        batch
     }
 }

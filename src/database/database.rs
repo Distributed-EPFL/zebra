@@ -23,7 +23,7 @@ where
     }
 
     pub fn empty_table(&self) -> Table<Key, Value> {
-        Table::empty(self)
+        Table::empty(self.store.clone())
     }
 }
 
