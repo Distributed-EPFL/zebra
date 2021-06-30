@@ -1,8 +1,6 @@
-use serde::Serialize;
+use crate::database::store::{Field, Label, Wrap};
 
-use super::field::Field;
-use super::label::Label;
-use super::wrap::Wrap;
+use serde::Serialize;
 
 #[derive(Debug, Serialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {

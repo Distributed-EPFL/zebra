@@ -1,12 +1,11 @@
+use crate::database::{data::Bytes, store::Field};
+
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
 use serde::Serialize;
 
 use std::sync::Arc;
-
-use super::bytes::Bytes;
-use super::field::Field;
 
 #[derive(Debug, Serialize)]
 pub(crate) struct Wrap<Inner: Field> {

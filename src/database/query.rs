@@ -1,4 +1,4 @@
-use super::path::Path;
+use crate::database::tree::Path;
 
 pub struct Query {
     pub(crate) tid: usize,

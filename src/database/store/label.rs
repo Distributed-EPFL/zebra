@@ -1,7 +1,6 @@
-use serde::Serialize;
+use crate::database::{data::Bytes, store::MapId};
 
-use super::bytes::Bytes;
-use super::map_id::MapId;
+use serde::Serialize;
 
 #[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize)]
 pub(crate) enum Label {

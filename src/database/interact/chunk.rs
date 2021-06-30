@@ -1,10 +1,10 @@
-use std::ops::Range;
+use crate::database::{
+    interact::{Batch, Operation, Task},
+    store::Field,
+    tree::Prefix,
+};
 
-use super::batch::Batch;
-use super::field::Field;
-use super::operation::Operation;
-use super::prefix::Prefix;
-use super::task::Task;
+use std::ops::Range;
 
 #[derive(Clone)]
 pub(crate) struct Chunk {
@@ -124,7 +124,7 @@ impl Chunk {
 mod tests {
     use super::*;
 
-    use super::super::direction::Direction;
+    use crate::database::tree::Direction;
 
     fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
         let mut prefix = Prefix::root();

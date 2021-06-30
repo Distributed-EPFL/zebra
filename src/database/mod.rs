@@ -1,25 +1,19 @@
-#![allow(dead_code)] // TODO: Remove this attribute, make sure there is no dead code.
-
-mod action;
-mod apply;
-mod batch;
-mod bytes;
-mod chunk;
+mod data;
 mod database;
-mod direction;
-mod entry;
-mod errors;
-mod field;
-mod label;
-mod map_id;
-mod node;
-mod operation;
-mod path;
-mod prefix;
+mod interact;
 mod query;
 mod response;
 mod store;
 mod table;
-mod task;
 mod transaction;
-mod wrap;
+mod tree;
+
+use transaction::Tid;
+
+pub mod errors;
+
+pub use database::Database;
+pub use query::Query;
+pub use response::Response;
+pub use table::Table;
+pub use transaction::Transaction;

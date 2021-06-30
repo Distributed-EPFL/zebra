@@ -1,19 +1,12 @@
 use async_recursion::async_recursion;
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
+use crate::database::{
+    interact::{Action, Batch, Chunk, Operation, Task},
+    store::{Entry as StoreEntry, Field, Label, Node, Split, Store},
+    tree::{Direction, Path},
+};
 
-use super::action::Action;
-use super::batch::Batch;
-use super::chunk::Chunk;
-use super::direction::Direction;
-use super::entry::Entry as StoreEntry;
-use super::field::Field;
-use super::label::Label;
-use super::node::Node;
-use super::operation::Operation;
-use super::path::Path;
-use super::store::{Split, Store};
-use super::task::Task;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 #[derive(Eq, PartialEq)]
 enum References {
@@ -403,15 +396,14 @@ where
 mod tests {
     use super::*;
 
+    use crate::database::{
+        data::Bytes, interact::Operation, store::Wrap, tree::Prefix,
+    };
+
     use drop::crypto::hash;
 
     use rand::seq::IteratorRandom;
     use rand::Rng;
-
-    use super::super::bytes::Bytes;
-    use super::super::operation::Operation;
-    use super::super::prefix::Prefix;
-    use super::super::wrap::Wrap;
 
     use std::collections::{HashMap, HashSet};
 

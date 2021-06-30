@@ -1,6 +1,7 @@
-use super::field::Field;
-use super::store::Store;
-use super::table::Table;
+use crate::database::{
+    store::{Field, Store},
+    Table,
+};
 
 use std::sync::{Arc, Mutex};
 

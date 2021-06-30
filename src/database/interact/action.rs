@@ -1,5 +1,5 @@
-use super::field::Field;
-use super::wrap::Wrap;
+use crate::database::store::{Field, Wrap};
+
 use std::sync::Arc;
 
 #[derive(Debug)]

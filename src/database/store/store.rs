@@ -1,3 +1,8 @@
+use crate::database::{
+    data::Bytes,
+    store::{Entry, Field, Label, MapId, Node, Split},
+};
+
 use drop::crypto::hash;
 
 use oh_snap::Snap;
@@ -5,13 +10,6 @@ use oh_snap::Snap;
 use std::collections::hash_map::Entry as HashMapEntry;
 use std::collections::HashMap;
 use std::iter;
-
-use super::bytes::Bytes;
-use super::entry::Entry;
-use super::field::Field;
-use super::label::Label;
-use super::map_id::MapId;
-use super::node::Node;
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> =
@@ -22,11 +20,6 @@ pub(crate) const DEPTH: u8 = 8;
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,
     splits: u8,
-}
-
-pub(crate) enum Split<Key: Field, Value: Field> {
-    Split(Store<Key, Value>, Store<Key, Value>),
-    Unsplittable(Store<Key, Value>),
 }
 
 impl<Key, Value> Store<Key, Value>
@@ -74,6 +67,7 @@ where
         }
     }
 
+    #[cfg(test)]
     pub fn size(&self) -> usize {
         debug_assert!(self.maps.is_complete());
         self.maps.iter().map(|map| map.len()).sum()
@@ -106,11 +100,10 @@ where
 mod tests {
     use super::*;
 
-    use super::super::direction::Direction;
-    use super::super::entry::Entry;
-    use super::super::node::Node;
-    use super::super::path::Path;
-    use super::super::wrap::Wrap;
+    use crate::database::{
+        store::{Entry, Node, Wrap},
+        tree::{Direction, Path},
+    };
 
     fn store_with_records(
         mut keys: Vec<u32>,

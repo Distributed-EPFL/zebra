@@ -1,7 +1,6 @@
-use std::ops::Index;
+use crate::database::tree::{Direction, Path};
 
-use super::direction::Direction;
-use super::path::Path;
+use std::ops::Index;
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Prefix {
@@ -10,6 +9,7 @@ pub(crate) struct Prefix {
 }
 
 impl Prefix {
+    #[cfg(test)]
     pub fn new(path: Path, depth: u8) -> Self {
         Prefix { path, depth }
     }
@@ -21,6 +21,7 @@ impl Prefix {
         }
     }
 
+    #[cfg(test)]
     pub fn depth(&self) -> u8 {
         self.depth
     }

@@ -1,8 +1,8 @@
-use super::action::Action;
-use super::batch::Batch;
-use super::field::Field;
-use super::query::Query;
-use super::transaction::Tid;
+use crate::database::{
+    interact::{Action, Batch},
+    store::Field,
+    Query, Tid,
+};
 
 pub struct Response<Key: Field, Value: Field> {
     tid: Tid,

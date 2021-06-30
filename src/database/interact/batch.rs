@@ -1,11 +1,10 @@
 use oh_snap::Snap;
 
+use crate::database::{interact::Operation, store::Field};
+
 use rayon::prelude::*;
 
 use std::vec::Vec;
-
-use super::field::Field;
-use super::operation::Operation;
 
 pub(crate) struct Batch<Key: Field, Value: Field> {
     operations: Snap<Operation<Key, Value>>,
@@ -47,7 +46,7 @@ where
 mod tests {
     use super::*;
 
-    use super::super::path::Path;
+    use crate::database::tree::Path;
 
     #[test]
     fn snap_merge() {

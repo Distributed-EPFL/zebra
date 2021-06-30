@@ -1,10 +1,8 @@
-use super::apply;
-use super::batch::Batch;
-use super::database::Database;
-use super::field::Field;
-use super::label::Label;
-use super::response::Response;
-use super::transaction::Transaction;
+use crate::database::{
+    interact::{apply, Batch},
+    store::{Field, Label},
+    Database, Response, Transaction,
+};
 
 pub struct Table<Key, Value>
 where
@@ -56,16 +54,16 @@ where
 mod tests {
     use super::*;
 
-    use rand::prelude::*;
+    use crate::database::Database;
 
-    use super::super::database::Database;
+    use rand::prelude::*;
 
     #[tokio::test]
     async fn develop() {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        for _ in 0..100 {
+        for _ in 0..5 {
             let mut transaction: Transaction<u32, u32> = Transaction::new();
 
             for i in 0..65536 {

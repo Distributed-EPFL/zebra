@@ -1,9 +1,8 @@
+use crate::database::{data::Bytes, store::DEPTH};
+
 use serde::Serialize;
 
 use std::fmt::{Debug, Error, Formatter, LowerHex};
-
-use super::bytes::Bytes;
-use super::store::DEPTH;
 
 #[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize)]
 pub(crate) struct MapId(u8);

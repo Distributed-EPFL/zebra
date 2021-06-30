@@ -1,11 +1,12 @@
+use crate::database::{
+    data::Bytes,
+    interact::Action,
+    store::{Field, Wrap},
+    tree::Path,
+};
+
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
-
-use super::action::Action;
-use super::bytes::Bytes;
-use super::field::Field;
-use super::path::Path;
-use super::wrap::Wrap;
 
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
@@ -68,8 +69,7 @@ where
 mod tests {
     use super::*;
 
-    use super::super::direction::Direction;
-    use super::super::prefix::Prefix;
+    use crate::database::tree::{Direction, Prefix};
 
     fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
         let mut prefix = Prefix::root();
