@@ -8,6 +8,7 @@ use drop::crypto::hash;
 use oh_snap::Snap;
 
 use std::collections::hash_map::Entry as HashMapEntry;
+use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::HashMap;
 use std::iter;
 
@@ -92,6 +93,72 @@ where
                 let hash: Bytes = hash::hash(&node).unwrap().into();
                 Label::Leaf(map, hash)
             }
+        }
+    }
+
+    pub fn populate(&mut self, label: Label, node: Node<Key, Value>) -> bool
+    where
+        Key: Field,
+        Value: Field,
+    {
+        if !label.is_empty() {
+            match self.entry(label) {
+                Vacant(entry) => {
+                    entry.insert(Entry {
+                        node,
+                        references: 0,
+                    });
+
+                    true
+                }
+                Occupied(..) => false,
+            }
+        } else {
+            false
+        }
+    }
+
+    pub fn incref(&mut self, label: Label)
+    where
+        Key: Field,
+        Value: Field,
+    {
+        if !label.is_empty() {
+            match self.entry(label) {
+                Occupied(mut entry) => {
+                    entry.get_mut().references += 1;
+                }
+                Vacant(..) => panic!("called `incref` on non-existing node"),
+            }
+        }
+    }
+
+    pub fn decref(
+        &mut self,
+        label: Label,
+        preserve: bool,
+    ) -> Option<Node<Key, Value>>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        if !label.is_empty() {
+            match self.entry(label) {
+                Occupied(mut entry) => {
+                    let value = entry.get_mut();
+                    value.references -= 1;
+
+                    if value.references == 0 && !preserve {
+                        let (_, entry) = entry.remove_entry();
+                        Some(entry.node)
+                    } else {
+                        None
+                    }
+                }
+                Vacant(..) => panic!("called `decref` on non-existing node"),
+            }
+        } else {
+            None
         }
     }
 }

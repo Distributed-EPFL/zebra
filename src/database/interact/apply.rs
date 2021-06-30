@@ -2,7 +2,7 @@ use async_recursion::async_recursion;
 
 use crate::database::{
     interact::{Action, Batch, Chunk, Operation, Task},
-    store::{Entry as StoreEntry, Field, Label, Node, Split, Store},
+    store::{Field, Label, Node, Split, Store},
     tree::{Direction, Path},
 };
 
@@ -65,70 +65,6 @@ where
         }
     } else {
         Entry::empty()
-    }
-}
-
-fn populate<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-    node: Node<Key, Value>,
-) -> bool
-where
-    Key: Field,
-    Value: Field,
-{
-    if !label.is_empty() {
-        match store.entry(label) {
-            Vacant(entry) => {
-                entry.insert(StoreEntry {
-                    node,
-                    references: 0,
-                });
-
-                true
-            }
-            Occupied(..) => false,
-        }
-    } else {
-        false
-    }
-}
-
-fn incref<Key, Value>(store: &mut Store<Key, Value>, label: Label)
-where
-    Key: Field,
-    Value: Field,
-{
-    if !label.is_empty() {
-        match store.entry(label) {
-            Occupied(mut entry) => {
-                entry.get_mut().references += 1;
-            }
-            Vacant(..) => panic!("called `incref` on non-existing node"),
-        }
-    }
-}
-
-fn decref<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-    preserve: bool,
-) where
-    Key: Field,
-    Value: Field,
-{
-    if !label.is_empty() {
-        match store.entry(label) {
-            Occupied(mut entry) => {
-                let value = entry.get_mut();
-                value.references -= 1;
-
-                if value.references == 0 && !preserve {
-                    entry.remove_entry();
-                }
-            }
-            Vacant(..) => panic!("called `decref` on non-existing node"),
-        }
     }
 }
 
@@ -229,7 +165,7 @@ where
         (new_left, new_right) => {
             let node = Node::<Key, Value>::Internal(new_left, new_right);
             let label = store.label(&node);
-            let adopt = populate(&mut store, label, node);
+            let adopt = store.populate(label, node);
 
             (label, adopt)
         }
@@ -244,8 +180,8 @@ where
         if adopt {
             // If `adopt`, then `node` is guaranteed to be
             // `Internal(new_left, new_right)` (see above)
-            incref(&mut store, new_left);
-            incref(&mut store, new_right);
+            store.incref(new_left);
+            store.incref(new_right);
         }
 
         if let Some(original) = original {
@@ -260,8 +196,8 @@ where
                     // or by a root handle. Hence, it is left on the `store` to be
                     // `incref`-ed (adopted) later, even if its references
                     // are temporarily 0.
-                    decref(&mut store, old_left, new_label == old_left);
-                    decref(&mut store, old_right, new_label == old_right);
+                    store.decref(old_left, new_label == old_left);
+                    store.decref(old_right, new_label == old_right);
                 }
             }
         }
@@ -292,7 +228,7 @@ where
                 let node = Node::Leaf(key.clone(), value.clone());
                 let label = store.label(&node);
 
-                populate(&mut store, label, node);
+                store.populate(label, node);
                 (store, batch, label)
             }
             Action::Remove => (store, batch, Label::Empty),
@@ -322,7 +258,7 @@ where
                 Action::Set(_, new_value) if new_value != original_value => {
                     let node = Node::Leaf(key.clone(), new_value.clone());
                     let label = store.label(&node);
-                    populate(&mut store, label, node);
+                    store.populate(label, node);
 
                     (store, batch, label)
                 }
@@ -385,8 +321,8 @@ where
 
     let old_root = root;
     if new_root != old_root {
-        incref(&mut store, new_root);
-        decref(&mut store, old_root, false);
+        store.incref(new_root);
+        store.decref(old_root, false);
     }
 
     (store, new_root, batch)
