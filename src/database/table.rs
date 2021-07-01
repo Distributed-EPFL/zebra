@@ -1,6 +1,6 @@
 use crate::database::{
     store::{Cell, Field, Handle},
-    Response, Transaction,
+    Response, Sender, Transaction,
 };
 
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
@@ -21,5 +21,9 @@ where
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch).await;
         Response::new(tid, batch)
+    }
+
+    pub fn send(self) -> Sender<Key, Value> {
+        Sender::new(self.0)
     }
 }
