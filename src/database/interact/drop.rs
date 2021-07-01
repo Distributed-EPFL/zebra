@@ -18,7 +18,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{interact::{apply, Operation, Batch}};
+    use crate::database::interact::{apply, Batch, Operation};
 
     use rand::seq::IteratorRandom;
     use rand::Rng;
@@ -81,9 +81,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
-        let (mut store, root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![root]);
-        
+
         drop(&mut store, root);
         check_size(&mut store, vec![]);
     }
@@ -93,11 +94,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
-        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, first_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root]);
-        
+
         let batch = Batch::new((128..256).map(|i| op_set(i, i)).collect());
-        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -112,11 +115,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
-        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, first_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root]);
-        
+
         let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
-        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -131,11 +136,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
-        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, first_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root]);
-        
+
         let batch = Batch::new((64..192).map(|i| op_set(i, i)).collect());
-        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) =
+            apply::apply(store, Label::Empty, batch).await;
         check_size(&mut store, vec![first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -153,10 +160,11 @@ mod tests {
         let mut store = Store::<u32, u32>::new();
 
         for _ in 0..32 {
-            if rng.gen::<bool>(){
+            if rng.gen::<bool>() {
                 let keys = (0..1024).choose_multiple(&mut rng, 128);
-                let batch = Batch::new(keys.iter().map(|&i| op_set(i, i)).collect());
-                
+                let batch =
+                    Batch::new(keys.iter().map(|&i| op_set(i, i)).collect());
+
                 let result = apply::apply(store, Label::Empty, batch).await;
                 store = result.0;
                 roots.push(result.1);
