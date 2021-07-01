@@ -19,6 +19,10 @@ where
         Sender(handle)
     }
 
+    pub fn hello(&mut self) -> Answer<Key, Value> {
+        self.answer(&Question(vec![self.0.root])).unwrap()
+    }
+
     pub fn answer(
         &mut self,
         question: &Question,
@@ -30,6 +34,7 @@ where
             Sender::grab(&mut store, &mut collector, *label, DEPTH)?;
         }
 
+        self.0.cell.restore(store);
         Ok(Answer(collector))
     }
 
@@ -39,26 +44,30 @@ where
         label: Label,
         ttl: u8,
     ) -> Result<(), SyncError> {
-        let node = match store.entry(label) {
-            Occupied(entry) => {
-                let node = entry.get().node.clone();
-                Ok(node)
+        if !label.is_empty() {
+            let node = match store.entry(label) {
+                Occupied(entry) => {
+                    let node = entry.get().node.clone();
+                    Ok(node)
+                }
+                Vacant(..) => MalformedQuestion.fail(),
+            }?;
+
+            let recur = match node {
+                Node::Internal(left, right) if ttl > 0 => Some((left, right)),
+                _ => None,
+            };
+
+            collector.push(node);
+
+            if let Some((left, right)) = recur {
+                Sender::grab(store, collector, left, ttl - 1)?;
+                Sender::grab(store, collector, right, ttl - 1)?;
             }
-            Vacant(..) => MalformedQuestion.fail(),
-        }?;
 
-        let recur = match node {
-            Node::Internal(left, right) if ttl > 0 => Some((left, right)),
-            _ => None,
-        };
-
-        collector.push(node);
-
-        if let Some((left, right)) = recur {
-            Sender::grab(store, collector, left, ttl - 1)?;
-            Sender::grab(store, collector, right, ttl - 1)?;
+            Ok(())
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 }
