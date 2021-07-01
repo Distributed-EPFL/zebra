@@ -1,14 +1,15 @@
 #![allow(dead_code)] // TODO: Remove this attribute, make sure there is no dead code.
 
 mod data;
-mod database;
 mod interact;
+mod store;
+mod tree;
+
+mod database;
 mod query;
 mod response;
-mod store;
 mod table;
 mod transaction;
-mod tree;
 
 use transaction::Tid;
 
