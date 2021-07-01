@@ -84,3 +84,6 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/osx,rust,linux,windows
+
+### VSCode ###
+.vscode
