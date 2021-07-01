@@ -71,3 +71,98 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::database::{store::Field, Database, Table, Transaction};
+
+    use std::collections::hash_map::Entry::Occupied;
+
+    async fn initialize_table<I, Key, Value>(
+        database: &Database<Key, Value>,
+        sets: I,
+    ) -> Table<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+        I: IntoIterator<Item = (Key, Value)>,
+    {
+        let mut table = database.empty_table();
+        let mut transaction = Transaction::new();
+        for (k, v) in sets.into_iter() {
+            let _ = transaction.set(k, v);
+        }
+        table.execute(transaction).await;
+
+        table
+    }
+
+    #[tokio::test]
+    async fn answer_empty() {
+        let database: Database<u32, u32> = Database::new();
+        let table = database.empty_table();
+
+        let mut send = table.send();
+
+        let answer = send.answer(&Question(vec![Label::Empty])).unwrap();
+
+        assert_eq!(answer, Answer(vec!()));
+    }
+
+    #[tokio::test]
+    async fn grab_one() {
+        let database: Database<u32, u32> = Database::new();
+        let table = initialize_table(&database, [(0u32, 0u32)]).await;
+
+        let mut send = table.send();
+        let label = send.0.root;
+
+        let mut store = database.store.take();
+        let node = match store.entry(label) {
+            Occupied(entry) => entry.get().node.clone(),
+            _ => unreachable!(),
+        };
+        database.store.restore(store);
+
+        let answer = send.answer(&Question(vec![label])).unwrap();
+
+        assert_eq!(answer, Answer(vec!(node)));
+    }
+
+    #[tokio::test]
+    async fn grab_three() {
+        let database: Database<u32, u32> = Database::new();
+        let table =
+            initialize_table(&database, [(0u32, 0u32), (4u32, 4u32)]).await;
+
+        let mut send = table.send();
+        let label0 = send.0.root;
+
+        let mut store = database.store.take();
+        let n0 = match store.entry(label0) {
+            Occupied(entry) => entry.get().node.clone(),
+            _ => unreachable!(),
+        };
+        let (n1, n2) = match n0 {
+            Node::Internal(label1, label2) => {
+                let n1 = match store.entry(label1) {
+                    Occupied(entry) => entry.get().node.clone(),
+                    _ => unreachable!(),
+                };
+                let n2 = match store.entry(label2) {
+                    Occupied(entry) => entry.get().node.clone(),
+                    _ => unreachable!(),
+                };
+                (n1, n2)
+            }
+            _ => unreachable!(),
+        };
+        database.store.restore(store);
+
+        let answer = send.answer(&Question(vec![label0])).unwrap();
+
+        assert_eq!(answer, Answer(vec!(n0, n1, n2)));
+    }
+}
