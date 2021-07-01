@@ -27,3 +27,13 @@ where
         Sender::new(self.0)
     }
 }
+
+impl<Key, Value> Clone for Table<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn clone(&self) -> Self {
+        Table(self.0.clone())
+    }
+}
