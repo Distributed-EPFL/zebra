@@ -1,5 +1,6 @@
-use crate::database::tree::{Direction, Path};
+use crate::database::tree::{Direction, Path, PathIterator};
 
+use std::iter::Take;
 use std::ops::Index;
 
 #[derive(Debug, Clone, Copy)]
@@ -18,6 +19,19 @@ impl Prefix {
         Prefix {
             path: Path::empty(),
             depth: 0,
+        }
+    }
+
+    pub fn common(lho: Path, rho: Path) -> Self {
+        let depth = lho
+            .into_iter()
+            .zip(rho.into_iter())
+            .take_while(|(left, right)| left == right)
+            .count();
+
+        Prefix {
+            path: lho,
+            depth: depth as u8,
         }
     }
 
@@ -75,33 +89,12 @@ impl PartialEq for Prefix {
     }
 }
 
-pub(crate) struct PrefixIterator {
-    prefix: Prefix,
-    cursor: u8,
-}
-
-impl Iterator for PrefixIterator {
-    type Item = Direction;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.cursor < self.prefix.depth {
-            self.cursor += 1;
-            Some(self.prefix[self.cursor - 1])
-        } else {
-            None
-        }
-    }
-}
-
 impl IntoIterator for Prefix {
     type Item = Direction;
-    type IntoIter = PrefixIterator;
+    type IntoIter = Take<PathIterator>;
 
     fn into_iter(self) -> Self::IntoIter {
-        PrefixIterator {
-            cursor: 0,
-            prefix: self,
-        }
+        self.path.into_iter().take(self.depth as usize)
     }
 }
 

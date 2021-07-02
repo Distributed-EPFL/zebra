@@ -86,6 +86,36 @@ impl Index<u8> for Path {
     }
 }
 
+pub(crate) struct PathIterator {
+    path: Path,
+    cursor: usize,
+}
+
+impl Iterator for PathIterator {
+    type Item = Direction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cursor < 256 {
+            self.cursor += 1;
+            Some(self.path[(self.cursor - 1) as u8])
+        } else {
+            None
+        }
+    }
+}
+
+impl IntoIterator for Path {
+    type Item = Direction;
+    type IntoIter = PathIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PathIterator {
+            cursor: 0,
+            path: self,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
