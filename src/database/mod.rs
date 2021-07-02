@@ -3,6 +3,7 @@
 mod data;
 mod interact;
 mod store;
+mod sync;
 mod tree;
 
 mod answer;
