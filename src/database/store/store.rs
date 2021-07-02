@@ -1,6 +1,7 @@
 use crate::database::{
     data::Bytes,
     store::{Entry, Field, Label, MapId, Node, Split},
+    tree::Prefix,
 };
 
 use drop::crypto::hash;
@@ -20,7 +21,7 @@ pub(crate) const DEPTH: u8 = 8;
 
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,
-    splits: u8,
+    scope: Prefix,
 }
 
 impl<Key, Value> Store<Key, Value>
@@ -35,31 +36,31 @@ where
                     .take(1 << DEPTH)
                     .collect(),
             ),
-            splits: 0,
+            scope: Prefix::root(),
         }
     }
 
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
             maps: Snap::merge(right.maps, left.maps),
-            splits: left.splits - 1,
+            scope: left.scope.parent(),
         }
     }
 
     pub fn split(self) -> Split<Key, Value> {
-        if self.splits < DEPTH {
-            let mid = 1 << (DEPTH - self.splits - 1);
+        if self.scope.depth() < DEPTH {
+            let mid = 1 << (DEPTH - self.scope.depth() - 1);
 
             let (right_maps, left_maps) = self.maps.snap(mid); // `oh-snap` stores the lowest-index elements in `left`, while `zebra` stores them in `right`, hence the swap
 
             let left = Store {
                 maps: left_maps,
-                splits: self.splits + 1,
+                scope: self.scope.left(),
             };
 
             let right = Store {
                 maps: right_maps,
-                splits: self.splits + 1,
+                scope: self.scope.right(),
             };
 
             Split::Split(left, right)
@@ -84,7 +85,7 @@ where
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
-                let map = MapId::internal(self.maps.range().start);
+                let map = MapId::internal(self.scope);
                 let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }

@@ -1,4 +1,8 @@
-use crate::database::{data::Bytes, store::DEPTH};
+use crate::database::{
+    data::Bytes,
+    store::DEPTH,
+    tree::{Direction, Prefix},
+};
 
 use serde::Serialize;
 
@@ -8,12 +12,16 @@ use std::fmt::{Debug, Error, Formatter, LowerHex};
 pub(crate) struct MapId(u8);
 
 impl MapId {
-    pub fn internal(id: usize) -> Self {
-        if DEPTH > 0 {
-            MapId((id as u8) << (8 - DEPTH))
-        } else {
-            MapId(0)
+    pub fn internal(position: Prefix) -> Self {
+        let mut id = 0;
+
+        for (bit, direction) in (0..DEPTH).zip(position.into_iter()) {
+            if direction == Direction::Left {
+                id |= 1 << (7 - bit);
+            }
         }
+
+        MapId(id)
     }
 
     pub fn leaf(key_hash: &Bytes) -> Self {

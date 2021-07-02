@@ -21,9 +21,19 @@ impl Prefix {
         }
     }
 
-    #[cfg(test)]
     pub fn depth(&self) -> u8 {
         self.depth
+    }
+
+    pub fn parent(&self) -> Self {
+        if self.depth == 0 {
+            panic!("called `parent` on root `Prefix`");
+        }
+
+        Prefix {
+            path: self.path,
+            depth: self.depth - 1,
+        }
     }
 
     pub fn left(&self) -> Self {
@@ -62,6 +72,36 @@ impl PartialEq for Prefix {
     fn eq(&self, rho: &Self) -> bool {
         self.depth == rho.depth
             && Path::deepeq(&self.path, &rho.path, self.depth)
+    }
+}
+
+pub(crate) struct PrefixIterator {
+    prefix: Prefix,
+    cursor: u8,
+}
+
+impl Iterator for PrefixIterator {
+    type Item = Direction;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.cursor < self.prefix.depth {
+            self.cursor += 1;
+            Some(self.prefix[self.cursor - 1])
+        } else {
+            None
+        }
+    }
+}
+
+impl IntoIterator for Prefix {
+    type Item = Direction;
+    type IntoIter = PrefixIterator;
+
+    fn into_iter(self) -> Self::IntoIter {
+        PrefixIterator {
+            cursor: 0,
+            prefix: self,
+        }
     }
 }
 
@@ -157,6 +197,36 @@ mod tests {
         assert_ne!(
             prefix_from_directions(&vec![L, L, L, R, L, L, L]),
             prefix_from_directions(&vec![L, L, L, R, L, L])
+        );
+    }
+
+    #[test]
+    fn iterator() {
+        use Direction::{Left as L, Right as R};
+
+        assert_eq!(
+            prefix_from_directions(&vec![])
+                .into_iter()
+                .collect::<Vec<Direction>>(),
+            vec![]
+        );
+        assert_eq!(
+            prefix_from_directions(&vec![L])
+                .into_iter()
+                .collect::<Vec<Direction>>(),
+            vec![L]
+        );
+        assert_eq!(
+            prefix_from_directions(&vec![L, R])
+                .into_iter()
+                .collect::<Vec<Direction>>(),
+            vec![L, R]
+        );
+        assert_eq!(
+            prefix_from_directions(&vec![L, R, L, L, R, L])
+                .into_iter()
+                .collect::<Vec<Direction>>(),
+            vec![L, R, L, L, R, L]
         );
     }
 }
