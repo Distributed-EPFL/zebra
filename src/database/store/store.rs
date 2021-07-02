@@ -43,7 +43,7 @@ where
     pub fn merge(left: Self, right: Self) -> Self {
         Store {
             maps: Snap::merge(right.maps, left.maps),
-            scope: left.scope.parent(),
+            scope: left.scope.ancestor(1),
         }
     }
 

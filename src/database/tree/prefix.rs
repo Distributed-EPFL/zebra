@@ -39,14 +39,14 @@ impl Prefix {
         self.depth
     }
 
-    pub fn parent(&self) -> Self {
-        if self.depth == 0 {
-            panic!("called `parent` on root `Prefix`");
+    pub fn ancestor(&self, generations: u8) -> Self {
+        if self.depth < generations {
+            panic!("`ancestor` does not exist (would be above root)");
         }
 
         Prefix {
             path: self.path,
-            depth: self.depth - 1,
+            depth: self.depth - generations,
         }
     }
 
