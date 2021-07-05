@@ -4,7 +4,7 @@ use std::ops::Add;
 
 pub(crate) enum Severity {
     Benign(usize),
-    Malicious
+    Malicious,
 }
 
 impl Severity {
@@ -15,7 +15,7 @@ impl Severity {
     pub(crate) fn is_malicious(&self) -> bool {
         match self {
             Severity::Benign(..) => false,
-            Severity::Malicious => true
+            Severity::Malicious => true,
         }
     }
 }
@@ -29,9 +29,11 @@ impl Add for Severity {
                 let recidivity = left + right;
                 if recidivity > (1 << (ANSWER_DEPTH + 1) - 2) {
                     Severity::Malicious
-                } else { Severity::Benign(left + right) }
-            },
-            _ => Severity::Malicious
+                } else {
+                    Severity::Benign(left + right)
+                }
+            }
+            _ => Severity::Malicious,
         }
     }
 }
