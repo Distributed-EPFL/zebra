@@ -10,6 +10,7 @@ mod answer;
 mod database;
 mod query;
 mod question;
+mod receiver;
 mod response;
 mod sender;
 mod table;
