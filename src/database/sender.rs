@@ -2,13 +2,12 @@ use crate::database::{
     errors::{MalformedQuestion, SyncError},
     store::{Field, Handle, Label, Node, Store},
     Answer, Question,
+    sync::ANSWER_DEPTH
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
 pub struct Sender<Key: Field, Value: Field>(Handle<Key, Value>);
-
-const DEPTH: u8 = 2;
 
 impl<Key, Value> Sender<Key, Value>
 where
@@ -27,7 +26,7 @@ where
         let mut store = self.0.cell.take();
 
         for label in &question.0 {
-            Sender::grab(&mut store, &mut collector, *label, DEPTH)?;
+            Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH)?;
         }
 
         self.0.cell.restore(store);
