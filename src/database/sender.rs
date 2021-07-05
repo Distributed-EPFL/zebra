@@ -19,10 +19,6 @@ where
         Sender(handle)
     }
 
-    pub fn hello(&mut self) -> Answer<Key, Value> {
-        self.answer(&Question(vec![self.0.root])).unwrap()
-    }
-
     pub fn answer(
         &mut self,
         question: &Question,
