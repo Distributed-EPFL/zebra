@@ -1,5 +1,5 @@
 use crate::database::{
-    data::Bytes,
+    data::{bytes::EMPTY, Bytes},
     store::{Field, Wrap},
     tree::Direction,
 };
@@ -13,7 +13,7 @@ pub(crate) struct Path(Bytes);
 
 impl Path {
     pub fn empty() -> Self {
-        Path(Bytes::empty())
+        Path(EMPTY)
     }
 
     pub fn reaches<Key>(&self, key: &Wrap<Key>) -> bool

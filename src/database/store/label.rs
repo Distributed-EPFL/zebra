@@ -1,4 +1,7 @@
-use crate::database::{data::Bytes, store::MapId};
+use crate::database::{
+    data::{bytes::EMPTY, Bytes},
+    store::MapId,
+};
 
 use serde::Serialize;
 
@@ -28,9 +31,7 @@ impl Label {
         match self {
             Label::Internal(_, hash) => hash,
             Label::Leaf(_, hash) => hash,
-            Label::Empty => {
-                panic!("called `Label::hash()` on an `Empty` value")
-            }
+            Label::Empty => &EMPTY,
         }
     }
 }

@@ -1,4 +1,9 @@
-use crate::database::store::{Field, Label, Wrap};
+use crate::database::{
+    data::{bytes::EMPTY, Bytes},
+    store::{Field, Label, Wrap},
+};
+
+use drop::crypto::hash;
 
 use serde::Serialize;
 
@@ -7,6 +12,26 @@ pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),
     Leaf(Wrap<Key>, Wrap<Value>),
+}
+
+impl<Key, Value> Node<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    pub fn hash(&self) -> Bytes {
+        match self {
+            Node::Empty => EMPTY,
+            Node::Internal(left, right) => {
+                hash::hash(&(*left.hash(), *right.hash())).unwrap().into()
+            }
+            Node::Leaf(key, value) => {
+                hash::hash(&(*key.digest(), *value.digest()))
+                    .unwrap()
+                    .into()
+            }
+        }
+    }
 }
 
 impl<Key, Value> Clone for Node<Key, Value>

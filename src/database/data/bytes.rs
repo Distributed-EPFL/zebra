@@ -7,11 +7,7 @@ use std::fmt::{Debug, Error, Formatter, LowerHex};
 #[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub(crate) struct Bytes(pub [u8; SIZE]);
 
-impl Bytes {
-    pub fn empty() -> Self {
-        Bytes([0; SIZE])
-    }
-}
+pub(crate) const EMPTY: Bytes = Bytes([0; SIZE]);
 
 impl From<Digest> for Bytes {
     fn from(digest: Digest) -> Bytes {

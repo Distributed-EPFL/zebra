@@ -4,8 +4,6 @@ use crate::database::{
     tree::Prefix,
 };
 
-use drop::crypto::hash;
-
 use oh_snap::Snap;
 
 use std::collections::hash_map::Entry as HashMapEntry;
@@ -82,16 +80,16 @@ where
     }
 
     pub fn label(&self, node: &Node<Key, Value>) -> Label {
+        let hash = node.hash();
+
         match node {
             Node::Empty => Label::Empty,
             Node::Internal(..) => {
                 let map = MapId::internal(self.scope);
-                let hash = hash::hash(&node).unwrap().into();
                 Label::Internal(map, hash)
             }
             Node::Leaf(key, _) => {
                 let map = MapId::leaf(&key.digest());
-                let hash: Bytes = hash::hash(&node).unwrap().into();
                 Label::Leaf(map, hash)
             }
         }
