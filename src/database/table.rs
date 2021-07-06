@@ -1,5 +1,5 @@
 use crate::database::{
-    store::{Cell, Field, Handle},
+    store::{Cell, Field, Handle, Label},
     Response, Sender, Transaction,
 };
 
@@ -12,6 +12,10 @@ where
 {
     pub(crate) fn empty(cell: Cell<Key, Value>) -> Self {
         Table(Handle::empty(cell))
+    }
+
+    pub(crate) fn new(cell: Cell<Key, Value>, root: Label) -> Self {
+        Table(Handle::new(cell, root))
     }
 
     pub async fn execute(

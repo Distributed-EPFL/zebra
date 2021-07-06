@@ -20,6 +20,10 @@ where
         }
     }
 
+    pub fn new(cell: Cell<Key, Value>, root: Label) -> Self {
+        Handle { cell, root }
+    }
+
     pub async fn apply(
         &mut self,
         batch: Batch<Key, Value>,
