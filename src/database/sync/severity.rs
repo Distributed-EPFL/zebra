@@ -2,6 +2,7 @@ use crate::database::sync::ANSWER_DEPTH;
 
 use std::ops::Add;
 
+#[derive(Debug)]
 pub(crate) enum Severity {
     Benign(usize),
     Malicious,
