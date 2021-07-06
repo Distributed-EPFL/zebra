@@ -24,6 +24,7 @@ pub use answer::Answer;
 pub use database::Database;
 pub use query::Query;
 pub use question::Question;
+pub use receiver::Receiver;
 pub use response::Response;
 pub use sender::Sender;
 pub use table::Table;

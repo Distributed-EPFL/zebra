@@ -1,6 +1,6 @@
 use crate::database::{
     store::{Cell, Field, Store},
-    Table,
+    Receiver, Table,
 };
 
 pub struct Database<Key, Value>
@@ -24,6 +24,10 @@ where
 
     pub fn empty_table(&self) -> Table<Key, Value> {
         Table::empty(self.store.clone())
+    }
+
+    pub fn receive(&self) -> Receiver<Key, Value> {
+        Receiver::new(self.store.clone())
     }
 }
 
