@@ -3,6 +3,7 @@ use crate::database::{
     store::{Cell, Field, Label, MapId, Node, Store},
     sync::{locate, Severity},
     tree::Prefix,
+    Question,
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -135,5 +136,15 @@ where
                 },
             );
         }
+    }
+
+    fn ask(&self) -> Question {
+        Question(
+            self.frontier
+                .iter()
+                .map(|(_, context)| context.remote_label)
+                .take(self.settings.window)
+                .collect(),
+        )
     }
 }
