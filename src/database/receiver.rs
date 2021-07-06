@@ -8,12 +8,19 @@ use crate::database::{
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
 
+const DEFAULT_WINDOW: usize = 128;
+
 pub struct Receiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
     held: HashSet<Label>,
     frontier: HashMap<Bytes, Context>,
     acquired: HashMap<Label, Node<Key, Value>>,
+    pub settings: Settings,
+}
+
+pub struct Settings {
+    pub window: usize,
 }
 
 struct Context {
@@ -33,6 +40,9 @@ where
             held: HashSet::new(),
             frontier: HashMap::new(),
             acquired: HashMap::new(),
+            settings: Settings {
+                window: DEFAULT_WINDOW,
+            },
         }
     }
 
