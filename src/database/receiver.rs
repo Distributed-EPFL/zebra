@@ -230,81 +230,86 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{Database, Transaction, Query};
+    use crate::database::{Database, Query, Sender, Transaction};
+
+    use std::fmt::Debug;
+
+    async fn new_table<Key, Value, I>(
+        database: &Database<Key, Value>,
+        sets: I,
+    ) -> Table<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+        I: IntoIterator<Item = (Key, Value)>,
+    {
+        let mut table = database.empty_table();
+        let mut transaction = Transaction::new();
+
+        for (k, v) in sets.into_iter() {
+            transaction.set(k, v).unwrap();
+        }
+
+        table.execute(transaction).await;
+        table
+    }
+
+    async fn check_table<Key, Value, I>(
+        table: &mut Table<Key, Value>,
+        values: I,
+    ) where
+        Key: Field,
+        Value: Field + Debug + Eq,
+        I: IntoIterator<Item = (Key, Value)>,
+    {
+        let mut transaction: Transaction<Key, Value> = Transaction::new();
+        let expected: Vec<(Query, Value)> = values
+            .into_iter()
+            .map(|(key, value)| (transaction.get(&key).unwrap(), value))
+            .collect();
+
+        let response = table.execute(transaction).await;
+
+        for (query, value) in expected {
+            assert_eq!(*response.get(&query).unwrap(), value);
+        }
+    }
+
+    fn exchange(
+        sender: &mut Sender<u32, u32>,
+        mut receiver: Receiver<u32, u32>,
+    ) -> (Table<u32, u32>, usize) {
+        let mut rounds: usize = 0;
+        let mut answer = sender.hello();
+
+        loop {
+            rounds += 1;
+            match receiver.learn(answer).unwrap() {
+                Status::Complete(table) => {
+                    return (table, rounds);
+                }
+                Status::Incomplete(new_receiver, question) => {
+                    receiver = new_receiver;
+                    answer = sender.answer(&question).unwrap();
+                }
+            }
+        }
+    }
 
     #[tokio::test]
     async fn develop() {
         let alice: Database<u32, u32> = Database::new();
-        let mut table = alice.empty_table();
-
-        let mut transaction = Transaction::new();
-        for i in 0..256 {
-            transaction.set(i, i).unwrap();
-        }
-
-        table.execute(transaction).await;
-        let mut sender = table.send();
-
         let bob: Database<u32, u32> = Database::new();
-        let receiver = bob.receive();
 
-        let answer = sender.hello();
+        let original = new_table(&alice, (0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
 
-        let (receiver, question) = match receiver.learn(answer) {
-            Ok(Status::Incomplete(receiver, question)) => {
-                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
-                (receiver, question)
-            }
-            _ => panic!("Something went wrong.")
-        };
+        let (mut first, _) = exchange(&mut sender, bob.receive());
+        check_table(&mut first, (0..256).map(|i| (i, i))).await;
 
-        let answer = sender.answer(&question).unwrap();
+        let (mut second, rounds) = exchange(&mut sender, bob.receive());
+        check_table(&mut second, (0..256).map(|i| (i, i))).await;
 
-        let (receiver, question) = match receiver.learn(answer) {
-            Ok(Status::Incomplete(receiver, question)) => {
-                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
-                (receiver, question)
-            }
-            _ => panic!("Something went wrong.")
-        };
-
-        let answer = sender.answer(&question).unwrap();
-
-        let (receiver, question) = match receiver.learn(answer) {
-            Ok(Status::Incomplete(receiver, question)) => {
-                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
-                (receiver, question)
-            }
-            _ => panic!("Something went wrong.")
-        };
-
-        let answer = sender.answer(&question).unwrap();
-
-        let (receiver, question) = match receiver.learn(answer) {
-            Ok(Status::Incomplete(receiver, question)) => {
-                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
-                (receiver, question)
-            }
-            _ => panic!("Something went wrong.")
-        };
-
-        let answer = sender.answer(&question).unwrap();
-
-        let mut outcome = match receiver.learn(answer) {
-            Ok(Status::Complete(table)) => {
-                println!("Complete.");
-                table
-            }
-            _ => panic!("Something went wrong.")
-        };
-
-        let mut transaction = Transaction::new();
-        let queries: Vec<Query> = (0..256).map(|i| transaction.get(&i).unwrap()).collect();
-
-        let response = outcome.execute(transaction).await;
-
-        for i in 0..256 {
-            println!("{} -> {}", i, response.get(&queries[i]).unwrap());
-        }
+        assert_eq!(rounds, 1);
     }
 }
