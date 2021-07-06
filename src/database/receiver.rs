@@ -147,4 +147,36 @@ where
                 .collect(),
         )
     }
+
+    fn flush(&mut self, store: &mut Store<Key, Value>, label: Label) {
+        if !label.is_empty() {
+            let stored = match store.entry(label) {
+                Occupied(..) => true,
+                Vacant(..) => false,
+            };
+
+            let recursion = if stored {
+                None
+            } else {
+                let node = self.acquired.get(&label).unwrap();
+                store.populate(label, node.clone());
+
+                match node {
+                    Node::Internal(left, right) => Some((*left, *right)),
+                    _ => None,
+                }
+            };
+
+            if self.held.contains(&label) {
+                self.held.remove(&label);
+            } else {
+                store.incref(label);
+            }
+
+            if let Some((left, right)) = recursion {
+                self.flush(store, left);
+                self.flush(store, right);
+            }
+        }
+    }
 }
