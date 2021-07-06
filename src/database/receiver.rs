@@ -120,9 +120,9 @@ where
             }
 
             self.acquired.insert(label, node);
-            self.frontier.remove(&hash);
         }
 
+        self.frontier.remove(&hash);
         Ok(())
     }
 
