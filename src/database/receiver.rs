@@ -104,8 +104,8 @@ where
             self.held.insert(label);
         } else {
             if let Node::Internal(ref left, ref right) = node {
-                self.discover(left, location.left());
-                self.discover(right, location.right());
+                self.sight(left, location.left());
+                self.sight(right, location.right());
             }
 
             self.acquired.insert(label, node);
@@ -115,7 +115,7 @@ where
         Ok(())
     }
 
-    fn discover(&mut self, label: &Label, location: Prefix) {
+    fn sight(&mut self, label: &Label, location: Prefix) {
         if !label.is_empty() {
             self.frontier.insert(
                 *label.hash(),
