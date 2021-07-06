@@ -42,12 +42,18 @@ where
         node: Node<Key, Value>,
     ) -> Result<(), Severity> {
         let hash = node.hash().into();
+
+        // Check if `hash` is in `frontier`. If so, retrieve `location`.
         let location = self
             .frontier
             .get(&hash)
             .ok_or(Severity::Benign(1))?
             .location;
 
+        // Check if `node` preserves topology invariants:
+        // - If `node` is `Internal`, its children must preserve compactness.
+        // - If `node` is `Leaf`, it must lie along its `key` path.
+        // If so, compute `node`'s `label`.
         let label = match node {
             Node::Internal(left, right) => match (left, right) {
                 (Label::Empty, Label::Empty)
@@ -65,49 +71,30 @@ where
             Node::Empty => Err(Severity::Malicious),
         }?;
 
+        // Check if `label` is already in `store`.
         let hold = match store.entry(label) {
             Occupied(..) => true,
             Vacant(..) => false,
         };
 
         if hold {
-            match node {
-                Node::Internal(..) => {
-                    if locate::locate(store, label) == location {
-                        Ok(())
-                    } else {
-                        Err(Severity::Malicious)
-                    }
+            // If `node` is `Internal`, its position in `store` must match `location`.
+            if let Node::Internal(..) = node {
+                if locate::locate(store, label) == location {
+                    Ok(())
+                } else {
+                    Err(Severity::Malicious)
                 }
-                _ => Ok(()),
+            } else {
+                Ok(())
             }?;
 
             store.incref(label);
             self.held.insert(label);
         } else {
-            match node {
-                Node::Internal(left, right) => {
-                    if !left.is_empty() {
-                        self.frontier.insert(
-                            *left.hash(),
-                            Context {
-                                location: location.left(),
-                                remote_map_id: *left.map(),
-                            },
-                        );
-                    }
-
-                    if !right.is_empty() {
-                        self.frontier.insert(
-                            *left.hash(),
-                            Context {
-                                location: location.left(),
-                                remote_map_id: *left.map(),
-                            },
-                        );
-                    }
-                }
-                _ => {}
+            if let Node::Internal(ref left, ref right) = node {
+                self.discover(left, location.left());
+                self.discover(right, location.right());
             }
 
             self.acquired.insert(label, node);
@@ -115,5 +102,17 @@ where
         }
 
         Ok(())
+    }
+
+    fn discover(&mut self, label: &Label, location: Prefix) {
+        if !label.is_empty() {
+            self.frontier.insert(
+                *label.hash(),
+                Context {
+                    location,
+                    remote_map_id: *label.map(),
+                },
+            );
+        }
     }
 }
