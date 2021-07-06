@@ -1,9 +1,10 @@
 use crate::database::{
     data::Bytes,
+    errors::{MalformedAnswer, SyncError},
     store::{Cell, Field, Label, MapId, Node, Store},
     sync::{locate, Severity},
     tree::Prefix,
-    Question,
+    Answer, Question, Table,
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -22,6 +23,11 @@ pub struct Receiver<Key: Field, Value: Field> {
 
 pub struct Settings {
     pub window: usize,
+}
+
+pub enum Status<Key: Field, Value: Field> {
+    Complete(Table<Key, Value>),
+    Incomplete(Receiver<Key, Value>, Question),
 }
 
 struct Context {
@@ -44,6 +50,45 @@ where
             settings: Settings {
                 window: DEFAULT_WINDOW,
             },
+        }
+    }
+
+    pub fn learn(
+        mut self,
+        answer: Answer<Key, Value>,
+    ) -> Result<Status<Key, Value>, SyncError> {
+        let mut store = self.cell.take();
+        let mut severity = Severity::Benign(0);
+
+        for node in answer.0.into_iter() {
+            severity = match self.update(&mut store, node) {
+                Ok(()) => Severity::Benign(0),
+                Err(offence) => severity + offence,
+            };
+
+            if severity.is_malicious() {
+                break;
+            }
+        }
+
+        if severity.is_benign() {
+            if self.frontier.is_empty() {
+                self.flush(&mut store, self.root.unwrap());
+                self.cell.restore(store);
+
+                Ok(Status::Complete(Table::new(
+                    self.cell.clone(),
+                    self.root.unwrap(),
+                )))
+            } else {
+                self.cell.restore(store);
+                let question = self.ask();
+
+                Ok(Status::Incomplete(self, question))
+            }
+        } else {
+            self.cell.restore(store);
+            MalformedAnswer.fail()
         }
     }
 
