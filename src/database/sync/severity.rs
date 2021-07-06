@@ -12,6 +12,13 @@ impl Severity {
         Severity::Benign(0)
     }
 
+    pub(crate) fn is_benign(&self) -> bool {
+        match self {
+            Severity::Benign(..) => true,
+            Severity::Malicious => false,
+        }
+    }
+
     pub(crate) fn is_malicious(&self) -> bool {
         match self {
             Severity::Benign(..) => false,
