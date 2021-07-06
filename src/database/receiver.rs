@@ -225,3 +225,86 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::database::{Database, Transaction, Query};
+
+    #[tokio::test]
+    async fn develop() {
+        let alice: Database<u32, u32> = Database::new();
+        let mut table = alice.empty_table();
+
+        let mut transaction = Transaction::new();
+        for i in 0..256 {
+            transaction.set(i, i).unwrap();
+        }
+
+        table.execute(transaction).await;
+        let mut sender = table.send();
+
+        let bob: Database<u32, u32> = Database::new();
+        let receiver = bob.receive();
+
+        let answer = sender.hello();
+
+        let (receiver, question) = match receiver.learn(answer) {
+            Ok(Status::Incomplete(receiver, question)) => {
+                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
+                (receiver, question)
+            }
+            _ => panic!("Something went wrong.")
+        };
+
+        let answer = sender.answer(&question).unwrap();
+
+        let (receiver, question) = match receiver.learn(answer) {
+            Ok(Status::Incomplete(receiver, question)) => {
+                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
+                (receiver, question)
+            }
+            _ => panic!("Something went wrong.")
+        };
+
+        let answer = sender.answer(&question).unwrap();
+
+        let (receiver, question) = match receiver.learn(answer) {
+            Ok(Status::Incomplete(receiver, question)) => {
+                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
+                (receiver, question)
+            }
+            _ => panic!("Something went wrong.")
+        };
+
+        let answer = sender.answer(&question).unwrap();
+
+        let (receiver, question) = match receiver.learn(answer) {
+            Ok(Status::Incomplete(receiver, question)) => {
+                println!("\n\nIncomplete: {:?} ({} elements) \n\n", question.0, question.0.len());
+                (receiver, question)
+            }
+            _ => panic!("Something went wrong.")
+        };
+
+        let answer = sender.answer(&question).unwrap();
+
+        let mut outcome = match receiver.learn(answer) {
+            Ok(Status::Complete(table)) => {
+                println!("Complete.");
+                table
+            }
+            _ => panic!("Something went wrong.")
+        };
+
+        let mut transaction = Transaction::new();
+        let queries: Vec<Query> = (0..256).map(|i| transaction.get(&i).unwrap()).collect();
+
+        let response = outcome.execute(transaction).await;
+
+        for i in 0..256 {
+            println!("{} -> {}", i, response.get(&queries[i]).unwrap());
+        }
+    }
+}
