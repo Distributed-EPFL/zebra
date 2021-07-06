@@ -35,7 +35,7 @@ impl Add for Severity {
         match (self, rho) {
             (Severity::Benign(left), Severity::Benign(right)) => {
                 let recidivity = left + right;
-                if recidivity > (1 << (ANSWER_DEPTH + 1) - 2) {
+                if recidivity > (1 << (ANSWER_DEPTH + 1)) - 2 {
                     Severity::Malicious
                 } else {
                     Severity::Benign(left + right)
