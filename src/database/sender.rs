@@ -79,7 +79,7 @@ mod tests {
 
     use std::collections::hash_map::Entry::Occupied;
 
-    async fn initialize_table<I, Key, Value>(
+    async fn new_table<Key, Value, I>(
         database: &Database<Key, Value>,
         sets: I,
     ) -> Table<Key, Value>
@@ -90,11 +90,12 @@ mod tests {
     {
         let mut table = database.empty_table();
         let mut transaction = Transaction::new();
-        for (k, v) in sets.into_iter() {
-            let _ = transaction.set(k, v);
-        }
-        table.execute(transaction).await;
 
+        for (k, v) in sets.into_iter() {
+            transaction.set(k, v).unwrap();
+        }
+
+        table.execute(transaction).await;
         table
     }
 
@@ -113,7 +114,7 @@ mod tests {
     #[tokio::test]
     async fn grab_one() {
         let database: Database<u32, u32> = Database::new();
-        let table = initialize_table(&database, [(0u32, 0u32)]).await;
+        let table = new_table(&database, [(0u32, 0u32)]).await;
 
         let mut send = table.send();
         let label = send.0.root;
@@ -134,7 +135,7 @@ mod tests {
     async fn grab_three() {
         let database: Database<u32, u32> = Database::new();
         let table =
-            initialize_table(&database, [(0u32, 0u32), (4u32, 4u32)]).await;
+            new_table(&database, [(0u32, 0u32), (4u32, 4u32)]).await;
 
         let mut send = table.send();
         let label0 = send.0.root;
