@@ -18,7 +18,7 @@ pub struct Receiver<Key: Field, Value: Field> {
 
 struct Context {
     location: Prefix,
-    remote_map_id: MapId,
+    remote_label: Label,
 }
 
 impl<Key, Value> Receiver<Key, Value>
@@ -121,7 +121,7 @@ where
                 *label.hash(),
                 Context {
                     location,
-                    remote_map_id: *label.map(),
+                    remote_label: *label,
                 },
             );
         }
