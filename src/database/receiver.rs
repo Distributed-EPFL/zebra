@@ -1,6 +1,7 @@
 use crate::database::{
     data::Bytes,
     errors::{MalformedAnswer, SyncError},
+    interact::drop,
     store::{Cell, Field, Label, MapId, Node, Store},
     sync::{locate, Severity},
     tree::Prefix,
@@ -223,6 +224,22 @@ where
                 self.flush(store, right);
             }
         }
+    }
+}
+
+impl<Key, Value> Drop for Receiver<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn drop(&mut self) {
+        let mut store = self.cell.take();
+        
+        for label in self.held.iter() {
+            drop::drop(&mut store, *label);
+        }
+        
+        self.cell.restore(store);
     }
 }
 
