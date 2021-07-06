@@ -43,12 +43,17 @@ where
     ) -> Result<(), Severity> {
         let hash = node.hash().into();
 
-        // Check if `hash` is in `frontier`. If so, retrieve `location`.
-        let location = self
-            .frontier
-            .get(&hash)
-            .ok_or(Severity::Benign(1))?
-            .location;
+        let location = if self.root.is_some() {
+            // Check if `hash` is in `frontier`. If so, retrieve `location`.
+            Ok(self
+                .frontier
+                .get(&hash)
+                .ok_or(Severity::Benign(1))?
+                .location)
+        } else {
+            // This is the first `node` fed in `update`. By convention, `node` is the root.
+            Ok(Prefix::root())
+        }?;
 
         // Check if `node` preserves topology invariants:
         // - If `node` is `Internal`, its children must preserve compactness.
@@ -70,6 +75,12 @@ where
             }
             Node::Empty => Err(Severity::Malicious),
         }?;
+
+        // Fill `root` if necessary.
+
+        if self.root.is_none() {
+            self.root = Some(label);
+        }
 
         // Check if `label` is already in `store`.
         let hold = match store.entry(label) {
