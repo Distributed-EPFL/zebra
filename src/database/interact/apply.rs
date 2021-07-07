@@ -371,7 +371,7 @@ mod tests {
     }
 
     fn leaf(key: u32, value: u32) -> Node<u32, u32> {
-        Node::Leaf(Wrap::new(key).unwrap(), Wrap::new(value).unwrap())
+        Node::Leaf(wrap!(key), wrap!(value))
     }
 
     fn op_get(key: u32) -> Operation<u32, u32> {

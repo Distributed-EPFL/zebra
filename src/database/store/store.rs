@@ -167,7 +167,7 @@ mod tests {
     use super::*;
 
     use crate::database::{
-        store::{Entry, Node, Wrap},
+        store::{Entry, Node},
         tree::{Direction, Path},
     };
 
@@ -185,8 +185,8 @@ mod tests {
             let labels = leaves
                 .into_iter()
                 .map(|(key, value)| {
-                    let key = Wrap::new(key).unwrap();
-                    let value = Wrap::new(value).unwrap();
+                    let key = wrap!(key);
+                    let value = wrap!(value);
 
                     let node = Node::Leaf(key, value);
                     let label = store.label(&node);
@@ -217,7 +217,7 @@ mod tests {
     fn split() {
         let (mut store, labels) = Store::raw_leaves([(0u32, 1u32)]);
 
-        let path = Path::from(*Wrap::new(0u32).unwrap().digest());
+        let path = Path::from(*wrap!(0u32).digest());
         let label = labels[0];
 
         for splits in 0..DEPTH {
@@ -284,8 +284,8 @@ mod tests {
             match store.entry(label) {
                 EntryMapEntry::Occupied(entry) => match &entry.get().node {
                     Node::Leaf(key, value) => {
-                        assert_eq!(*key, Wrap::new(index).unwrap());
-                        assert_eq!(*value, Wrap::new(index).unwrap());
+                        assert_eq!(*key, wrap!(index));
+                        assert_eq!(*value, wrap!(index));
                     }
                     _ => unreachable!(),
                 },

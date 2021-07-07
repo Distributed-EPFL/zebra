@@ -84,10 +84,7 @@ mod tests {
         assert!(prefix.contains(&set.path));
         assert_eq!(set.path, Path::from(hash(&0u32).unwrap()));
 
-        assert_eq!(
-            set.action,
-            Action::Set(Wrap::new(0u32).unwrap(), Wrap::new(8u32).unwrap())
-        );
+        assert_eq!(set.action, Action::Set(wrap!(0u32), wrap!(8u32)));
 
         let remove = remove!(0u32);
         assert_eq!(remove.path, set.path);
