@@ -327,9 +327,8 @@ mod tests {
         use Direction::{Left as L, Right as R};
 
         let new_batch = || {
-            let operations: Vec<Operation<u32, u32>> = (0u32..4u32)
-                .map(|index| Operation::set(index, index).unwrap())
-                .collect();
+            let operations: Vec<Operation<u32, u32>> =
+                (0u32..4u32).map(|index| set!(index, index)).collect();
 
             Batch::new(operations)
         };
@@ -368,24 +367,15 @@ mod tests {
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![], vec![L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(3u32, 3u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(3u32, 3u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L], vec![R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(3u32, 3u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(3u32, 3u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, R], vec![]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(3u32, 3u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(3u32, 3u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![], vec![L, L, L]);
@@ -405,101 +395,59 @@ mod tests {
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![], vec![L, L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(1u32, 1u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(1u32, 1u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L], vec![L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(1u32, 1u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(1u32, 1u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L], vec![R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(1u32, 1u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(1u32, 1u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L, R], vec![]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(1u32, 1u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(1u32, 1u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![], vec![L, L, L, L]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(2u32, 2u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(2u32, 2u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L], vec![L, L, L]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(2u32, 2u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(2u32, 2u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L], vec![L, L]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(2u32, 2u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(2u32, 2u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L, L], vec![L]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(2u32, 2u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(2u32, 2u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L, L, L], vec![]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(2u32, 2u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(2u32, 2u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![], vec![L, L, L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(0u32, 0u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(0u32, 0u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L], vec![L, L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(0u32, 0u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(0u32, 0u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L], vec![L, R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(0u32, 0u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(0u32, 0u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L, L], vec![R]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(0u32, 0u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(0u32, 0u32)));
 
         let (mut batch, chunk) =
             Chunk::from_directions(new_batch(), vec![L, L, L, R], vec![]);
-        assert_eq!(
-            chunk.task(&mut batch),
-            Task::Do(&mut Operation::set(0u32, 0u32).unwrap())
-        );
+        assert_eq!(chunk.task(&mut batch), Task::Do(&mut set!(0u32, 0u32)));
     }
 
     #[test]
@@ -562,9 +510,8 @@ mod tests {
         }
 
         let new_batch = || {
-            let operations: Vec<Operation<u32, u32>> = (0u32..64u32)
-                .map(|index| Operation::set(index, index).unwrap())
-                .collect();
+            let operations: Vec<Operation<u32, u32>> =
+                (0u32..64u32).map(|index| set!(index, index)).collect();
 
             Batch::new(operations)
         };
