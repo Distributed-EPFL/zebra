@@ -10,11 +10,6 @@ pub(crate) struct Prefix {
 }
 
 impl Prefix {
-    #[cfg(test)]
-    pub fn new(path: Path, depth: u8) -> Self {
-        Prefix { path, depth }
-    }
-
     pub fn root() -> Self {
         Prefix {
             path: Path::empty(),
@@ -104,36 +99,31 @@ mod tests {
 
     use std::vec::Vec;
 
-    fn path_from_directions(directions: &Vec<Direction>) -> Path {
-        let mut path = Path::empty();
-
-        for index in 0..directions.len() {
-            path.set(index as u8, directions[index]);
+    impl Prefix {
+        pub fn new(path: Path, depth: u8) -> Self {
+            Prefix { path, depth }
         }
 
-        path
-    }
+        pub fn from_directions<I>(directions: I) -> Self
+        where
+            I: IntoIterator<Item = Direction>,
+        {
+            let mut prefix = Prefix::root();
 
-    fn directions_from_path(path: &Path, until: u8) -> Vec<Direction> {
-        (0..until).map(|index| path[index]).collect()
-    }
+            for direction in directions.into_iter() {
+                prefix = if direction == Direction::Left {
+                    prefix.left()
+                } else {
+                    prefix.right()
+                };
+            }
 
-    fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
-        let mut prefix = Prefix::root();
-
-        for &direction in directions {
-            prefix = if direction == Direction::Left {
-                prefix.left()
-            } else {
-                prefix.right()
-            };
+            prefix
         }
 
-        prefix
-    }
-
-    fn directions_from_prefix(prefix: &Prefix) -> Vec<Direction> {
-        directions_from_path(&prefix.path, prefix.depth())
+        pub fn into_vec(self) -> Vec<Direction> {
+            self.path.into_vec(self.depth as usize)
+        }
     }
 
     #[test]
@@ -141,35 +131,40 @@ mod tests {
         use Direction::{Left as L, Right as R};
         let reference = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
 
-        let path = path_from_directions(&reference);
+        let path = Path::from_directions(reference.clone());
 
         assert_eq!(
-            directions_from_prefix(&Prefix::new(path, reference.len() as u8)),
-            reference
-        );
-        assert_eq!(directions_from_prefix(&Prefix::root()), vec![]);
-        assert_eq!(
-            directions_from_prefix(&prefix_from_directions(&reference)),
+            Prefix::new(path, reference.len() as u8).into_vec(),
             reference
         );
 
-        assert!(Prefix::root().contains(&path_from_directions(&vec![L])));
-        assert!(Prefix::root().contains(&path_from_directions(&vec![R])));
+        assert_eq!(Prefix::root().into_vec(), vec![]);
+
+        assert_eq!(
+            Prefix::from_directions(reference.clone()).into_vec(),
+            reference
+        );
+
+        assert!(Prefix::root().contains(&Path::from_directions(vec![L])));
+        assert!(Prefix::root().contains(&Path::from_directions(vec![R])));
 
         assert!(Prefix::root().left().contains(&path));
         assert!(!Prefix::root().right().contains(&path));
 
         assert!(
-            prefix_from_directions(&vec![L, L, L, R, L, L, R]).contains(&path)
+            Prefix::from_directions(vec![L, L, L, R, L, L, R]).contains(&path)
         );
+
         assert!(
-            !prefix_from_directions(&vec![L, L, L, R, L, L, L]).contains(&path)
+            !Prefix::from_directions(vec![L, L, L, R, L, L, L]).contains(&path)
         );
 
         assert!(Prefix::new(path, reference.len() as u8).contains(&path));
+
         assert!(Prefix::new(path, reference.len() as u8)
             .right()
             .contains(&path));
+
         assert!(!Prefix::new(path, reference.len() as u8)
             .left()
             .contains(&path));
@@ -180,16 +175,18 @@ mod tests {
         assert_ne!(Prefix::root(), Prefix::root().left());
 
         assert_eq!(
-            prefix_from_directions(&vec![L, L, L, R, L, L, L]),
-            prefix_from_directions(&vec![L, L, L, R, L, L, L])
+            Prefix::from_directions(vec![L, L, L, R, L, L, L]),
+            Prefix::from_directions(vec![L, L, L, R, L, L, L])
         );
+
         assert_ne!(
-            prefix_from_directions(&vec![L, L, L, R, L, L, L]),
-            prefix_from_directions(&vec![L, L, L, R, L, L, R])
+            Prefix::from_directions(vec![L, L, L, R, L, L, L]),
+            Prefix::from_directions(vec![L, L, L, R, L, L, R])
         );
+
         assert_ne!(
-            prefix_from_directions(&vec![L, L, L, R, L, L, L]),
-            prefix_from_directions(&vec![L, L, L, R, L, L])
+            Prefix::from_directions(vec![L, L, L, R, L, L, L]),
+            Prefix::from_directions(vec![L, L, L, R, L, L])
         );
     }
 
@@ -198,25 +195,28 @@ mod tests {
         use Direction::{Left as L, Right as R};
 
         assert_eq!(
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
                 .into_iter()
                 .collect::<Vec<Direction>>(),
             vec![]
         );
+
         assert_eq!(
-            prefix_from_directions(&vec![L])
+            Prefix::from_directions(vec![L])
                 .into_iter()
                 .collect::<Vec<Direction>>(),
             vec![L]
         );
+
         assert_eq!(
-            prefix_from_directions(&vec![L, R])
+            Prefix::from_directions(vec![L, R])
                 .into_iter()
                 .collect::<Vec<Direction>>(),
             vec![L, R]
         );
+
         assert_eq!(
-            prefix_from_directions(&vec![L, R, L, L, R, L])
+            Prefix::from_directions(vec![L, R, L, L, R, L])
                 .into_iter()
                 .collect::<Vec<Direction>>(),
             vec![L, R, L, L, R, L]
@@ -229,82 +229,82 @@ mod tests {
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![]),
-                path_from_directions(&vec![])
+                Path::from_directions(vec![]),
+                Path::from_directions(vec![])
             ),
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![]),
-                path_from_directions(&vec![L, R, L])
+                Path::from_directions(vec![]),
+                Path::from_directions(vec![L, R, L])
             ),
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![L, L]),
-                path_from_directions(&vec![L, R, L])
+                Path::from_directions(vec![L, L]),
+                Path::from_directions(vec![L, R, L])
             ),
-            prefix_from_directions(&vec![L])
+            Prefix::from_directions(vec![L])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![R]),
-                path_from_directions(&vec![L, R, L])
+                Path::from_directions(vec![R]),
+                Path::from_directions(vec![L, R, L])
             ),
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![R, R, L]),
-                path_from_directions(&vec![L])
+                Path::from_directions(vec![R, R, L]),
+                Path::from_directions(vec![L])
             ),
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![L, R, L, L]),
-                path_from_directions(&vec![L, R, L])
+                Path::from_directions(vec![L, R, L, L]),
+                Path::from_directions(vec![L, R, L])
             ),
-            prefix_from_directions(&vec![L, R, L])
+            Prefix::from_directions(vec![L, R, L])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![L, R, L, R]),
-                path_from_directions(&vec![L, R, L, R, L, L])
+                Path::from_directions(vec![L, R, L, R]),
+                Path::from_directions(vec![L, R, L, R, L, L])
             ),
-            prefix_from_directions(&vec![L, R, L, R])
+            Prefix::from_directions(vec![L, R, L, R])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![L, R, L, R, L, L, R, L]),
-                path_from_directions(&vec![R, R, L, R, L, L, R, L])
+                Path::from_directions(vec![L, R, L, R, L, L, R, L]),
+                Path::from_directions(vec![R, R, L, R, L, L, R, L])
             ),
-            prefix_from_directions(&vec![])
+            Prefix::from_directions(vec![])
         );
 
         assert_eq!(
             Prefix::common(
-                path_from_directions(&vec![L, R, L, R, L, L, R, L, R, R, R, R]),
-                path_from_directions(&vec![L, R, L, R, L, L, R, L, R, R, R, L])
+                Path::from_directions(vec![L, R, L, R, L, L, R, L, R, R, R, R]),
+                Path::from_directions(vec![L, R, L, R, L, L, R, L, R, R, R, L])
             ),
-            prefix_from_directions(&vec![L, R, L, R, L, L, R, L, R, R, R])
+            Prefix::from_directions(vec![L, R, L, R, L, L, R, L, R, R, R])
         );
 
         assert_eq!(
-            prefix_from_directions(&vec![L, R, L, L, R, L]),
             Prefix::common(
-                path_from_directions(&vec![L, R, L, L, R, L, L, L, L, L]),
-                path_from_directions(&vec![L, R, L, L, R, L, R, R, R, R])
-            )
+                Path::from_directions(vec![L, R, L, L, R, L, L, L, L, L]),
+                Path::from_directions(vec![L, R, L, L, R, L, R, R, R, R])
+            ),
+            Prefix::from_directions(vec![L, R, L, L, R, L])
         );
     }
 }
