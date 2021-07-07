@@ -126,18 +126,23 @@ mod tests {
     use std::iter;
     use std::vec::Vec;
 
-    fn path_from_directions(directions: &Vec<Direction>) -> Path {
-        let mut path = Path::empty();
+    impl Path {
+        pub fn from_directions<I>(directions: I) -> Self
+        where
+            I: IntoIterator<Item = Direction>,
+        {
+            let mut path = Path::empty();
 
-        for index in 0..directions.len() {
-            path.set(index as u8, directions[index]);
+            for (index, direction) in directions.into_iter().enumerate() {
+                path.set(index as u8, direction);
+            }
+
+            path
         }
 
-        path
-    }
-
-    fn directions_from_path(path: &Path, until: u8) -> Vec<Direction> {
-        (0..until).map(|index| path[index]).collect()
+        pub fn into_vec(self, len: usize) -> Vec<Direction> {
+            self.into_iter().take(len).collect()
+        }
     }
 
     #[test]
@@ -146,23 +151,19 @@ mod tests {
         let reference = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
 
         assert_eq!(
-            directions_from_path(&Path::empty(), (8 * SIZE - 1) as u8),
+            Path::empty().into_vec(8 * SIZE - 1),
             iter::repeat(Direction::Right)
                 .take(8 * SIZE - 1)
                 .collect::<Vec<Direction>>()
         );
+
         assert_eq!(
-            directions_from_path(
-                &Path::from(hash(&0u32).unwrap()),
-                reference.len() as u8
-            ),
+            Path::from(hash(&0u32).unwrap()).into_vec(reference.len()),
             reference
         );
+
         assert_eq!(
-            directions_from_path(
-                &path_from_directions(&reference),
-                reference.len() as u8
-            ),
+            Path::from_directions(reference.clone()).into_vec(reference.len()),
             reference
         );
     }
@@ -172,15 +173,17 @@ mod tests {
         use Direction::{Left as L, Right as R};
 
         assert!(
-            &path_from_directions(&vec![R]) < &path_from_directions(&vec![L])
+            &Path::from_directions(vec![R]) < &Path::from_directions(vec![L])
         );
+
         assert!(
-            &path_from_directions(&vec![R])
-                < &path_from_directions(&vec![R, L])
+            &Path::from_directions(vec![R])
+                < &Path::from_directions(vec![R, L])
         );
+
         assert!(
-            &path_from_directions(&vec![L, R, L])
-                < &path_from_directions(&vec![L, L, L, L, L])
+            &Path::from_directions(vec![L, R, L])
+                < &Path::from_directions(vec![L, L, L, L, L])
         );
 
         let lesser = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
@@ -189,7 +192,7 @@ mod tests {
         greater.push(L);
 
         assert!(
-            &path_from_directions(&lesser) < &path_from_directions(&greater)
+            &Path::from_directions(lesser) < &Path::from_directions(greater)
         );
     }
 }
