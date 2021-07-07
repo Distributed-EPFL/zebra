@@ -66,6 +66,7 @@ where
 }
 
 #[cfg(test)]
+#[macro_use]
 mod tests {
     use super::*;
 

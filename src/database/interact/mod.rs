@@ -1,7 +1,9 @@
+#[macro_use]
+mod operation;
+
 mod action;
 mod batch;
 mod chunk;
-mod operation;
 mod task;
 
 use chunk::Chunk;
