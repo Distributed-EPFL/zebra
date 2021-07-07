@@ -23,28 +23,10 @@ mod tests {
     use rand::seq::IteratorRandom;
     use rand::Rng;
 
-    use std::collections::hash_map::Entry::{Occupied, Vacant};
     use std::collections::HashSet;
 
     fn op_set(key: u32, value: u32) -> Operation<u32, u32> {
         Operation::set(key, value).unwrap()
-    }
-
-    fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
-        match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("get: node not found"),
-        }
-    }
-
-    fn get_internal(
-        store: &mut Store<u32, u32>,
-        label: Label,
-    ) -> (Label, Label) {
-        match get(store, label) {
-            Node::Internal(left, right) => (left, right),
-            _ => panic!("get_internal: node not internal"),
-        }
     }
 
     fn read_labels(
@@ -58,7 +40,7 @@ mod tests {
 
         match label {
             Label::Internal(..) => {
-                let (left, right) = get_internal(store, label);
+                let (left, right) = store.fetch_internal(label);
                 read_labels(store, left, collector);
                 read_labels(store, right, collector);
             }

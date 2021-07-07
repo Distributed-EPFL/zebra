@@ -76,13 +76,6 @@ mod tests {
         tree::Direction::{self, Left as L, Right as R},
     };
 
-    fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
-        match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("get: node not found"),
-        }
-    }
-
     fn get_recursive(
         store: &mut Store<u32, u32>,
         prefix: Prefix,
@@ -90,7 +83,7 @@ mod tests {
     ) -> Label {
         let mut next = label;
         for i in prefix.into_iter() {
-            next = match get(store, next) {
+            next = match store.fetch_node(next) {
                 Node::Internal(left, right) => {
                     if i == L {
                         left
@@ -115,7 +108,7 @@ mod tests {
         label: Label,
     ) {
         if !label.is_empty() {
-            match get(store, label) {
+            match store.fetch_node(label) {
                 Node::Internal(left, right) => {
                     assert_eq!(locate(store, label), prefix);
                     check_recursion(store, prefix.left(), left);

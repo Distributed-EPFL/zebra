@@ -332,9 +332,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{
-        data::Bytes, interact::Operation, store::Wrap, tree::Prefix,
-    };
+    use crate::database::{data::Bytes, interact::Operation, tree::Prefix};
 
     use drop::crypto::hash;
 
@@ -342,33 +340,6 @@ mod tests {
     use rand::Rng;
 
     use std::collections::{HashMap, HashSet};
-
-    fn get(store: &mut Store<u32, u32>, label: Label) -> Node<u32, u32> {
-        match store.entry(label) {
-            Occupied(entry) => entry.get().node.clone(),
-            Vacant(..) => panic!("get: node not found"),
-        }
-    }
-
-    fn get_internal(
-        store: &mut Store<u32, u32>,
-        label: Label,
-    ) -> (Label, Label) {
-        match get(store, label) {
-            Node::Internal(left, right) => (left, right),
-            _ => panic!("get_internal: node not internal"),
-        }
-    }
-
-    fn get_leaf(
-        store: &mut Store<u32, u32>,
-        label: Label,
-    ) -> (Wrap<u32>, Wrap<u32>) {
-        match get(store, label) {
-            Node::Leaf(key, value) => (key.clone(), value.clone()),
-            _ => panic!("get_leaf: node not leaf"),
-        }
-    }
 
     fn leaf(key: u32, value: u32) -> Node<u32, u32> {
         Node::Leaf(wrap!(key), wrap!(value))
@@ -387,7 +358,7 @@ mod tests {
     }
 
     fn check_internal(store: &mut Store<u32, u32>, label: Label) {
-        let (left, right) = get_internal(store, label);
+        let (left, right) = store.fetch_internal(label);
 
         match (left, right) {
             (Label::Empty, Label::Empty)
@@ -408,7 +379,7 @@ mod tests {
     }
 
     fn check_leaf(store: &mut Store<u32, u32>, label: Label, prefix: Prefix) {
-        let (key, _) = get_leaf(store, label);
+        let (key, _) = store.fetch_leaf(label);
         if !prefix.contains(&Path::from(*key.digest())) {
             panic!("check_leaf: leaf outside of path")
         }
@@ -419,7 +390,7 @@ mod tests {
             Label::Internal(..) => {
                 check_internal(store, label);
 
-                let (left, right) = get_internal(store, label);
+                let (left, right) = store.fetch_internal(label);
                 check_tree(store, left, prefix.left());
                 check_tree(store, right, prefix.right());
             }
@@ -441,7 +412,7 @@ mod tests {
 
         match label {
             Label::Internal(..) => {
-                let (left, right) = get_internal(store, label);
+                let (left, right) = store.fetch_internal(label);
                 read_labels(store, left, collector);
                 read_labels(store, right, collector);
             }
@@ -466,12 +437,12 @@ mod tests {
     ) {
         match label {
             Label::Internal(..) => {
-                let (left, right) = get_internal(store, label);
+                let (left, right) = store.fetch_internal(label);
                 read_records(store, left, collector);
                 read_records(store, right, collector);
             }
             Label::Leaf(..) => {
-                let (key, value) = get_leaf(store, label);
+                let (key, value) = store.fetch_leaf(label);
                 collector.insert(**key.inner(), **value.inner());
             }
             Label::Empty => {}
@@ -575,39 +546,39 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        let (l, r) = get_internal(&mut store, root);
-        assert_eq!(get(&mut store, r), leaf(4, 4));
+        let (l, r) = store.fetch_internal(root);
+        assert_eq!(store.fetch_node(r), leaf(4, 4));
 
-        let (ll, lr) = get_internal(&mut store, l);
-        assert_eq!(get(&mut store, lr), leaf(3, 3));
+        let (ll, lr) = store.fetch_internal(l);
+        assert_eq!(store.fetch_node(lr), leaf(3, 3));
 
-        let (lll, llr) = get_internal(&mut store, ll);
-        assert_eq!(get(&mut store, llr), leaf(1, 1));
+        let (lll, llr) = store.fetch_internal(ll);
+        assert_eq!(store.fetch_node(llr), leaf(1, 1));
 
-        let (llll, lllr) = get_internal(&mut store, lll);
+        let (llll, lllr) = store.fetch_internal(lll);
 
-        let (lllll, llllr) = get_internal(&mut store, llll);
+        let (lllll, llllr) = store.fetch_internal(llll);
         assert_eq!(lllll, Label::Empty);
 
-        let (llllrl, llllrr) = get_internal(&mut store, llllr);
+        let (llllrl, llllrr) = store.fetch_internal(llllr);
         assert_eq!(llllrl, Label::Empty);
 
-        let (llllrrl, llllrrr) = get_internal(&mut store, llllrr);
-        assert_eq!(get(&mut store, llllrrl), leaf(7, 7));
-        assert_eq!(get(&mut store, llllrrr), leaf(2, 2));
+        let (llllrrl, llllrrr) = store.fetch_internal(llllrr);
+        assert_eq!(store.fetch_node(llllrrl), leaf(7, 7));
+        assert_eq!(store.fetch_node(llllrrr), leaf(2, 2));
 
-        let (lllrl, lllrr) = get_internal(&mut store, lllr);
+        let (lllrl, lllrr) = store.fetch_internal(lllr);
         assert_eq!(lllrr, Label::Empty);
 
-        let (lllrll, lllrlr) = get_internal(&mut store, lllrl);
-        assert_eq!(get(&mut store, lllrlr), leaf(5, 5));
+        let (lllrll, lllrlr) = store.fetch_internal(lllrl);
+        assert_eq!(store.fetch_node(lllrlr), leaf(5, 5));
 
-        let (lllrlll, lllrllr) = get_internal(&mut store, lllrll);
+        let (lllrlll, lllrllr) = store.fetch_internal(lllrll);
         assert_eq!(lllrlll, Label::Empty);
 
-        let (lllrllrl, lllrllrr) = get_internal(&mut store, lllrllr);
-        assert_eq!(get(&mut store, lllrllrl), leaf(6, 6));
-        assert_eq!(get(&mut store, lllrllrr), leaf(0, 0));
+        let (lllrllrl, lllrllrr) = store.fetch_internal(lllrllr);
+        assert_eq!(store.fetch_node(lllrllrl), leaf(6, 6));
+        assert_eq!(store.fetch_node(lllrllrr), leaf(0, 0));
     }
 
     #[tokio::test]
@@ -622,7 +593,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(get(&mut store, root), leaf(0, 1));
+        assert_eq!(store.fetch_node(root), leaf(0, 1));
 
         // {0: 0}
 
@@ -632,7 +603,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(get(&mut store, root), leaf(0, 0));
+        assert_eq!(store.fetch_node(root), leaf(0, 0));
 
         // {0: 0, 1: 0}
 
@@ -642,15 +613,15 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        let (l, r) = get_internal(&mut store, root);
+        let (l, r) = store.fetch_internal(root);
         assert_eq!(r, Label::Empty);
 
-        let (ll, lr) = get_internal(&mut store, l);
+        let (ll, lr) = store.fetch_internal(l);
         assert_eq!(lr, Label::Empty);
 
-        let (lll, llr) = get_internal(&mut store, ll);
-        assert_eq!(get(&mut store, lll), leaf(0, 0));
-        assert_eq!(get(&mut store, llr), leaf(1, 0));
+        let (lll, llr) = store.fetch_internal(ll);
+        assert_eq!(store.fetch_node(lll), leaf(0, 0));
+        assert_eq!(store.fetch_node(llr), leaf(1, 0));
 
         // {1: 1}
 
@@ -660,7 +631,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(get(&mut store, root), leaf(1, 1));
+        assert_eq!(store.fetch_node(root), leaf(1, 1));
 
         // {}
 

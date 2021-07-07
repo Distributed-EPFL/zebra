@@ -167,7 +167,7 @@ mod tests {
     use super::*;
 
     use crate::database::{
-        store::{Entry, Node},
+        store::{Entry, Node, Wrap},
         tree::{Direction, Path},
     };
 
@@ -176,7 +176,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
+        pub fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
@@ -210,6 +210,27 @@ mod tests {
                 .collect();
 
             (store, labels)
+        }
+
+        pub fn fetch_node(&mut self, label: Label) -> Node<Key, Value> {
+            match self.entry(label) {
+                Occupied(entry) => entry.get().node.clone(),
+                Vacant(..) => panic!("`fetch_node`: node not found"),
+            }
+        }
+
+        pub fn fetch_internal(&mut self, label: Label) -> (Label, Label) {
+            match self.fetch_node(label) {
+                Node::Internal(left, right) => (left, right),
+                _ => panic!("`fetch_internal`: node not `Internal`"),
+            }
+        }
+
+        pub fn fetch_leaf(&mut self, label: Label) -> (Wrap<Key>, Wrap<Value>) {
+            match self.fetch_node(label) {
+                Node::Leaf(key, value) => (key, value),
+                _ => panic!("`fetch_leaf`: node not `Leaf`"),
+            }
         }
     }
 
