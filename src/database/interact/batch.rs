@@ -51,7 +51,7 @@ mod tests {
     #[test]
     fn snap_merge() {
         let operations: Vec<Operation<u32, u32>> =
-            (0..128).map(|i| Operation::set(i, i).unwrap()).collect();
+            (0..128).map(|i| set!(i, i)).collect();
 
         let batch = Batch::new(operations);
 
