@@ -7,6 +7,12 @@ mod tests {
         };
     }
 
+    macro_rules! leaf {
+        ($key: expr, $value: expr) => {
+            crate::database::store::Node::Leaf(wrap!($key), wrap!($value))
+        };
+    }
+
     macro_rules! get {
         ($key: expr) => {
             crate::database::interact::Operation::get(&$key).unwrap()

@@ -341,10 +341,6 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
-    fn leaf(key: u32, value: u32) -> Node<u32, u32> {
-        Node::Leaf(wrap!(key), wrap!(value))
-    }
-
     fn check_internal(store: &mut Store<u32, u32>, label: Label) {
         let (left, right) = store.fetch_internal(label);
 
@@ -535,13 +531,13 @@ mod tests {
         check_size(&mut store, vec![root]);
 
         let (l, r) = store.fetch_internal(root);
-        assert_eq!(store.fetch_node(r), leaf(4, 4));
+        assert_eq!(store.fetch_node(r), leaf!(4, 4));
 
         let (ll, lr) = store.fetch_internal(l);
-        assert_eq!(store.fetch_node(lr), leaf(3, 3));
+        assert_eq!(store.fetch_node(lr), leaf!(3, 3));
 
         let (lll, llr) = store.fetch_internal(ll);
-        assert_eq!(store.fetch_node(llr), leaf(1, 1));
+        assert_eq!(store.fetch_node(llr), leaf!(1, 1));
 
         let (llll, lllr) = store.fetch_internal(lll);
 
@@ -552,21 +548,21 @@ mod tests {
         assert_eq!(llllrl, Label::Empty);
 
         let (llllrrl, llllrrr) = store.fetch_internal(llllrr);
-        assert_eq!(store.fetch_node(llllrrl), leaf(7, 7));
-        assert_eq!(store.fetch_node(llllrrr), leaf(2, 2));
+        assert_eq!(store.fetch_node(llllrrl), leaf!(7, 7));
+        assert_eq!(store.fetch_node(llllrrr), leaf!(2, 2));
 
         let (lllrl, lllrr) = store.fetch_internal(lllr);
         assert_eq!(lllrr, Label::Empty);
 
         let (lllrll, lllrlr) = store.fetch_internal(lllrl);
-        assert_eq!(store.fetch_node(lllrlr), leaf(5, 5));
+        assert_eq!(store.fetch_node(lllrlr), leaf!(5, 5));
 
         let (lllrlll, lllrllr) = store.fetch_internal(lllrll);
         assert_eq!(lllrlll, Label::Empty);
 
         let (lllrllrl, lllrllrr) = store.fetch_internal(lllrllr);
-        assert_eq!(store.fetch_node(lllrllrl), leaf(6, 6));
-        assert_eq!(store.fetch_node(lllrllrr), leaf(0, 0));
+        assert_eq!(store.fetch_node(lllrllrl), leaf!(6, 6));
+        assert_eq!(store.fetch_node(lllrllrr), leaf!(0, 0));
     }
 
     #[tokio::test]
@@ -581,7 +577,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(store.fetch_node(root), leaf(0, 1));
+        assert_eq!(store.fetch_node(root), leaf!(0, 1));
 
         // {0: 0}
 
@@ -591,7 +587,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(store.fetch_node(root), leaf(0, 0));
+        assert_eq!(store.fetch_node(root), leaf!(0, 0));
 
         // {0: 0, 1: 0}
 
@@ -608,8 +604,8 @@ mod tests {
         assert_eq!(lr, Label::Empty);
 
         let (lll, llr) = store.fetch_internal(ll);
-        assert_eq!(store.fetch_node(lll), leaf(0, 0));
-        assert_eq!(store.fetch_node(llr), leaf(1, 0));
+        assert_eq!(store.fetch_node(lll), leaf!(0, 0));
+        assert_eq!(store.fetch_node(llr), leaf!(1, 0));
 
         // {1: 1}
 
@@ -619,7 +615,7 @@ mod tests {
         check_tree(&mut store, root, Prefix::root());
         check_size(&mut store, vec![root]);
 
-        assert_eq!(store.fetch_node(root), leaf(1, 1));
+        assert_eq!(store.fetch_node(root), leaf!(1, 1));
 
         // {}
 
