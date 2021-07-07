@@ -234,11 +234,11 @@ where
 {
     fn drop(&mut self) {
         let mut store = self.cell.take();
-        
+
         for label in self.held.iter() {
             drop::drop(&mut store, *label);
         }
-        
+
         self.cell.restore(store);
     }
 }
