@@ -71,37 +71,46 @@ mod tests {
 
     use crate::database::tree::{Direction, Prefix};
 
-    fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
-        let mut prefix = Prefix::root();
-
-        for &direction in directions {
-            prefix = if direction == Direction::Left {
-                prefix.left()
-            } else {
-                prefix.right()
+    #[macro_use]
+    mod macros {
+        macro_rules! get {
+            ($key: expr) => {
+                crate::database::interact::Operation::get(&$key).unwrap()
             };
         }
 
-        prefix
+        macro_rules! set {
+            ($key: expr, $value: expr) => {
+                crate::database::interact::Operation::set($key, $value).unwrap()
+            };
+        }
+
+        macro_rules! remove {
+            ($key: expr) => {
+                crate::database::interact::Operation::remove(&$key).unwrap()
+            };
+        }
     }
 
     #[test]
     fn operation() {
         use Direction::{Left as L, Right as R};
 
-        let prefix = prefix_from_directions(&vec![
+        let prefix = Prefix::from_directions(vec![
             L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L,
         ]);
 
-        let set = Operation::set(0u32, 8u32).unwrap();
+        let set = set!(0u32, 8u32);
+
         assert!(prefix.contains(&set.path));
         assert_eq!(set.path, Path::from(hash(&0u32).unwrap()));
+
         assert_eq!(
             set.action,
             Action::Set(Wrap::new(0u32).unwrap(), Wrap::new(8u32).unwrap())
         );
 
-        let remove = Operation::remove(&0u32).unwrap();
+        let remove = remove!(0u32);
         assert_eq!(remove.path, set.path);
         assert_eq!(remove.action, Action::<u32, u32>::Remove);
     }
