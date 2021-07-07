@@ -1,9 +1,10 @@
 #![allow(dead_code)] // TODO: Remove this attribute, make sure there is no dead code.
 
 #[macro_use]
-mod interact;
+mod macros;
 
 mod data;
+mod interact;
 mod store;
 mod sync;
 mod tree;
