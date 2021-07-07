@@ -171,67 +171,54 @@ mod tests {
         tree::{Direction, Path},
     };
 
-    fn store_with_records(
-        mut keys: Vec<u32>,
-        mut values: Vec<u32>,
-    ) -> (Store<u32, u32>, Vec<Label>) {
-        let mut store = Store::<u32, u32>::new();
+    impl<Key, Value> Store<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        fn raw_leaves<I>(leaves: I) -> (Self, Vec<Label>)
+        where
+            I: IntoIterator<Item = (Key, Value)>,
+        {
+            let mut store = Store::new();
 
-        let labels = keys
-            .drain(..)
-            .zip(values.drain(..))
-            .map(|(key, value)| {
-                let key = Wrap::new(key).unwrap();
-                let value = Wrap::new(value).unwrap();
+            let labels = leaves
+                .into_iter()
+                .map(|(key, value)| {
+                    let key = Wrap::new(key).unwrap();
+                    let value = Wrap::new(value).unwrap();
 
-                let node = Node::Leaf(key, value);
-                let label = store.label(&node);
+                    let node = Node::Leaf(key, value);
+                    let label = store.label(&node);
 
-                let entry = Entry {
-                    node,
-                    references: 1,
-                };
+                    let entry = Entry {
+                        node,
+                        references: 1,
+                    };
 
-                match store.entry(label) {
-                    EntryMapEntry::Vacant(entrymapentry) => {
-                        entrymapentry.insert(entry);
+                    match store.entry(label) {
+                        EntryMapEntry::Vacant(entrymapentry) => {
+                            entrymapentry.insert(entry);
+                        }
+                        _ => {
+                            unreachable!();
+                        }
                     }
-                    _ => {
-                        unreachable!();
-                    }
-                }
 
-                label
-            })
-            .collect();
+                    label
+                })
+                .collect();
 
-        (store, labels)
+            (store, labels)
+        }
     }
 
     #[test]
     fn split() {
-        let mut store = Store::<u32, u32>::new();
+        let (mut store, labels) = Store::raw_leaves([(0u32, 1u32)]);
 
-        let key = Wrap::new(0u32).unwrap();
-        let value = Wrap::new(1u32).unwrap();
-
-        let path: Path = (*key.digest()).into();
-        let node = Node::Leaf(key, value);
-        let label = store.label(&node);
-
-        let entry = Entry {
-            node,
-            references: 1,
-        };
-
-        match store.entry(label) {
-            EntryMapEntry::Vacant(entrymapentry) => {
-                entrymapentry.insert(entry);
-            }
-            _ => {
-                unreachable!();
-            }
-        }
+        let path = Path::from(*Wrap::new(0u32).unwrap().digest());
+        let label = labels[0];
 
         for splits in 0..DEPTH {
             store = match store.split() {
@@ -270,10 +257,8 @@ mod tests {
 
     #[test]
     fn merge() {
-        let keys = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
-        let values = keys.clone();
-
-        let (store, labels) = store_with_records(keys.clone(), values.clone());
+        let leaves = (0..=8).map(|i| (i, i));
+        let (store, labels) = Store::raw_leaves(leaves);
 
         let (l, r) = match store.split() {
             Split::Split(l, r) => (l, r),
@@ -295,12 +280,12 @@ mod tests {
 
         let mut store = Store::merge(l, r);
 
-        for i in 0..=8 {
-            match store.entry(labels[i]) {
+        for (index, label) in labels.into_iter().enumerate() {
+            match store.entry(label) {
                 EntryMapEntry::Occupied(entry) => match &entry.get().node {
                     Node::Leaf(key, value) => {
-                        assert_eq!(*key, Wrap::new(keys[i]).unwrap());
-                        assert_eq!(*value, Wrap::new(values[i]).unwrap());
+                        assert_eq!(*key, Wrap::new(index).unwrap());
+                        assert_eq!(*value, Wrap::new(index).unwrap());
                     }
                     _ => unreachable!(),
                 },
@@ -316,10 +301,9 @@ mod tests {
         let store = Store::<u32, u32>::new();
         assert_eq!(store.size(), 0);
 
-        let keys = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
-        let values = keys.clone();
+        let leaves = (0..=8).map(|i| (i, i));
+        let (store, _) = Store::raw_leaves(leaves);
 
-        let (store, _) = store_with_records(keys.clone(), values.clone());
         assert_eq!(store.size(), 9);
     }
 }
