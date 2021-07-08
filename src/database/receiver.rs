@@ -256,7 +256,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub fn run(
+        pub(crate) fn run(
             mut self,
             sender: &mut Sender<Key, Value>,
         ) -> (Table<Key, Value>, usize) {

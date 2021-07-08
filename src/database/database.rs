@@ -54,7 +54,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub async fn table_with_records<I>(
+        pub(crate) async fn table_with_records<I>(
             &self,
             records: I,
         ) -> Table<Key, Value>
