@@ -171,6 +171,8 @@ mod tests {
         tree::{Direction, Path},
     };
 
+    use std::collections::HashSet;
+
     impl<Key, Value> Store<Key, Value>
     where
         Key: Field,
@@ -259,19 +261,63 @@ mod tests {
             }
         }
 
-        pub fn check_tree(&mut self, label: Label, location: Prefix) {
-            match label {
+        pub fn check_tree(&mut self, root: Label, location: Prefix) {
+            match root {
                 Label::Internal(..) => {
-                    self.check_internal(label);
+                    self.check_internal(root);
 
-                    let (left, right) = self.fetch_internal(label);
+                    let (left, right) = self.fetch_internal(root);
                     self.check_tree(left, location.left());
                     self.check_tree(right, location.right());
                 }
                 Label::Leaf(..) => {
-                    self.check_leaf(label, location);
+                    self.check_leaf(root, location);
                 }
                 Label::Empty => {}
+            }
+        }
+
+        pub fn collect_tree(&mut self, root: Label) -> HashSet<Label> {
+            let mut collector = HashSet::new();
+
+            fn recursion<Key, Value>(
+                store: &mut Store<Key, Value>,
+                label: Label,
+                collector: &mut HashSet<Label>,
+            ) where
+                Key: Field,
+                Value: Field,
+            {
+                if !label.is_empty() {
+                    collector.insert(label);
+                }
+
+                match label {
+                    Label::Internal(..) => {
+                        let (left, right) = store.fetch_internal(label);
+                        recursion(store, left, collector);
+                        recursion(store, right, collector);
+                    }
+                    _ => {}
+                }
+            }
+
+            recursion(self, root, &mut collector);
+            collector
+        }
+
+        pub fn check_leaks<I>(&mut self, held: I)
+        where
+            I: IntoIterator<Item = Label>,
+        {
+            let mut labels = HashSet::new();
+
+            for root in held {
+                labels.extend(self.collect_tree(root));
+            }
+
+            if self.size() > labels.len() {
+                panic!("`check_leaks`: unreachable entries detected");
             }
         }
     }

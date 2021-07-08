@@ -341,35 +341,6 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
-    fn read_labels(
-        store: &mut Store<u32, u32>,
-        label: Label,
-        collector: &mut HashSet<Label>,
-    ) {
-        if !label.is_empty() {
-            collector.insert(label);
-        }
-
-        match label {
-            Label::Internal(..) => {
-                let (left, right) = store.fetch_internal(label);
-                read_labels(store, left, collector);
-                read_labels(store, right, collector);
-            }
-            _ => {}
-        }
-    }
-
-    fn check_size(store: &mut Store<u32, u32>, roots: Vec<Label>) {
-        let mut labels = HashSet::new();
-
-        for root in roots {
-            read_labels(store, root, &mut labels);
-        }
-
-        assert_eq!(store.size(), labels.len());
-    }
-
     fn read_records(
         store: &mut Store<u32, u32>,
         label: Label,
@@ -467,7 +438,7 @@ mod tests {
     #[tokio::test]
     async fn single_static_tree() {
         let mut store = Store::<u32, u32>::new();
-        check_size(&mut store, vec![Label::Empty]);
+        store.check_leaks([Label::Empty]);
 
         // {0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7}
 
@@ -484,7 +455,7 @@ mod tests {
 
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         let (l, r) = store.fetch_internal(root);
         assert_eq!(store.fetch_node(r), leaf!(4, 4));
@@ -531,7 +502,7 @@ mod tests {
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
 
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 1));
 
@@ -541,7 +512,7 @@ mod tests {
         let (mut store, root, _) = apply(store, root, batch).await;
 
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 0));
 
@@ -551,7 +522,7 @@ mod tests {
         let (mut store, root, _) = apply(store, root, batch).await;
 
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         let (l, r) = store.fetch_internal(root);
         assert_eq!(r, Label::Empty);
@@ -569,7 +540,7 @@ mod tests {
         let (mut store, root, _) = apply(store, root, batch).await;
 
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(1, 1));
 
@@ -579,7 +550,7 @@ mod tests {
         let (mut store, root, _) = apply(store, root, batch).await;
 
         store.check_tree(root, Prefix::root());
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         assert_eq!(root, Label::Empty);
     }
@@ -597,7 +568,7 @@ mod tests {
             root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -673,7 +644,7 @@ mod tests {
             root,
             &mut (0..128).map(|i| (i, i + 1)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -721,7 +692,7 @@ mod tests {
                 .map(|i| (i, if i < 128 { i + 1 } else { i }))
                 .collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
 
         check_gets(
             &batch,
@@ -742,7 +713,7 @@ mod tests {
         let (mut store, root, _) = apply(store, root, batch).await;
 
         assert_eq!(root, Label::Empty);
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -761,7 +732,7 @@ mod tests {
             root,
             &mut (64..128).map(|i| (i, i)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -780,7 +751,7 @@ mod tests {
             root,
             &mut (127..128).map(|i| (i, i)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -803,7 +774,7 @@ mod tests {
             root,
             &mut (64..128).map(|i| (i, i)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -826,7 +797,7 @@ mod tests {
             root,
             &mut (64..128).map(|i| (i, i + 1)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -849,7 +820,7 @@ mod tests {
             root,
             &mut (32..128).map(|i| (i, i + 1)).collect(),
         );
-        check_size(&mut store, vec![root]);
+        store.check_leaks([root]);
     }
 
     #[tokio::test]
@@ -895,7 +866,7 @@ mod tests {
 
             store.check_tree(root, Prefix::root());
             check_records(&mut store, root, &record_reference);
-            check_size(&mut store, vec![root]);
+            store.check_leaks([root]);
 
             check_gets(&batch, &get_reference);
         }
@@ -926,7 +897,7 @@ mod tests {
             &mut (128..256).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -952,7 +923,7 @@ mod tests {
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -980,7 +951,7 @@ mod tests {
             &mut (0..129).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1008,7 +979,7 @@ mod tests {
             &mut (0..256).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1033,7 +1004,7 @@ mod tests {
         store.check_tree(second_root, Prefix::root());
         check_records(&mut store, second_root, &mut HashMap::new());
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1062,7 +1033,7 @@ mod tests {
             &mut (127..128).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1091,7 +1062,7 @@ mod tests {
             &mut (64..128).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1123,7 +1094,7 @@ mod tests {
             &mut (64..128).map(|i| (i, i)).collect(),
         );
 
-        check_size(&mut store, vec![first_root, second_root]);
+        store.check_leaks([first_root, second_root]);
     }
 
     #[tokio::test]
@@ -1180,7 +1151,7 @@ mod tests {
                 check_gets(&batch, &get_reference);
             }
 
-            check_size(&mut store, vec![first_root, second_root]);
+            store.check_leaks([first_root, second_root]);
         }
     }
 }
