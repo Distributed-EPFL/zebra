@@ -54,13 +54,17 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub(crate) fn check_tree<I>(&mut self) {
+        pub(crate) fn root(&self) -> Label {
+            self.0.root
+        }
+
+        pub(crate) fn check_tree(&self) {
             let mut store = self.0.cell.take();
             store.check_tree(self.0.root);
             self.0.cell.restore(store);
         }
 
-        pub(crate) fn assert_records<I>(&mut self, reference: I)
+        pub(crate) fn assert_records<I>(&self, reference: I)
         where
             Key: Debug + Clone + Eq + Hash,
             Value: Debug + Clone + Eq + Hash,
