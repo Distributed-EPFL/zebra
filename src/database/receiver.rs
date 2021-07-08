@@ -251,6 +251,33 @@ mod tests {
 
     use std::fmt::Debug;
 
+    impl<Key, Value> Receiver<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        pub fn run(
+            mut self,
+            sender: &mut Sender<Key, Value>,
+        ) -> (Table<Key, Value>, usize) {
+            let mut rounds: usize = 0;
+            let mut answer = sender.hello();
+
+            loop {
+                rounds += 1;
+                match self.learn(answer).unwrap() {
+                    Status::Complete(table) => {
+                        return (table, rounds);
+                    }
+                    Status::Incomplete(receiver, question) => {
+                        self = receiver;
+                        answer = sender.answer(&question).unwrap();
+                    }
+                }
+            }
+        }
+    }
+
     async fn check_table<Key, Value, I>(
         table: &mut Table<Key, Value>,
         values: I,
@@ -272,27 +299,6 @@ mod tests {
         }
     }
 
-    fn exchange(
-        sender: &mut Sender<u32, u32>,
-        mut receiver: Receiver<u32, u32>,
-    ) -> (Table<u32, u32>, usize) {
-        let mut rounds: usize = 0;
-        let mut answer = sender.hello();
-
-        loop {
-            rounds += 1;
-            match receiver.learn(answer).unwrap() {
-                Status::Complete(table) => {
-                    return (table, rounds);
-                }
-                Status::Incomplete(new_receiver, question) => {
-                    receiver = new_receiver;
-                    answer = sender.answer(&question).unwrap();
-                }
-            }
-        }
-    }
-
     #[tokio::test]
     async fn develop() {
         let alice: Database<u32, u32> = Database::new();
@@ -301,10 +307,10 @@ mod tests {
         let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
         let mut sender = original.send();
 
-        let (mut first, _) = exchange(&mut sender, bob.receive());
+        let (mut first, _) = bob.receive().run(&mut sender);
         check_table(&mut first, (0..256).map(|i| (i, i))).await;
 
-        let (mut second, rounds) = exchange(&mut sender, bob.receive());
+        let (mut second, rounds) = bob.receive().run(&mut sender);
         check_table(&mut second, (0..256).map(|i| (i, i))).await;
 
         assert_eq!(rounds, 1);
