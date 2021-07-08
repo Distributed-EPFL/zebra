@@ -332,7 +332,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{interact::Operation, tree::Prefix};
+    use crate::database::interact::Operation;
 
     use rand::seq::IteratorRandom;
     use rand::Rng;
@@ -358,7 +358,7 @@ mod tests {
         ]);
 
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         let (l, r) = store.fetch_internal(root);
@@ -405,7 +405,7 @@ mod tests {
         let batch = Batch::new(vec![set!(0, 1)]);
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 1));
@@ -415,7 +415,7 @@ mod tests {
         let batch = Batch::new(vec![set!(0, 0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 0));
@@ -425,7 +425,7 @@ mod tests {
         let batch = Batch::new(vec![set!(1, 0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         let (l, r) = store.fetch_internal(root);
@@ -443,7 +443,7 @@ mod tests {
         let batch = Batch::new(vec![set!(1, 1), remove!(0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         assert_eq!(store.fetch_node(root), leaf!(1, 1));
@@ -453,7 +453,7 @@ mod tests {
         let batch = Batch::new(vec![remove!(1)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.check_leaks([root]);
 
         assert_eq!(root, Label::Empty);
@@ -466,7 +466,7 @@ mod tests {
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (0..128).map(|i| (i, i)));
         store.check_leaks([root]);
     }
@@ -535,7 +535,7 @@ mod tests {
         let batch = Batch::new((0..128).map(|i| set!(i, i + 1)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (0..128).map(|i| (i, i + 1)));
         store.check_leaks([root]);
     }
@@ -574,7 +574,7 @@ mod tests {
 
         let (mut store, root, batch) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(
             root,
             (0..192).map(|i| (i, if i < 128 { i + 1 } else { i })),
@@ -610,7 +610,7 @@ mod tests {
         let batch = Batch::new((0..64).map(|i| remove!(i)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i)));
         store.check_leaks([root]);
     }
@@ -625,7 +625,7 @@ mod tests {
         let batch = Batch::new((0..127).map(|i| remove!(i)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (127..128).map(|i| (i, i)));
         store.check_leaks([root]);
     }
@@ -644,7 +644,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i)));
         store.check_leaks([root]);
     }
@@ -663,7 +663,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i + 1)));
         store.check_leaks([root]);
     }
@@ -682,7 +682,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        store.check_tree(root, Prefix::root());
+        store.check_tree(root);
         store.assert_records(root, (32..128).map(|i| (i, i + 1)));
         store.check_leaks([root]);
     }
@@ -728,7 +728,7 @@ mod tests {
             root = next.1;
             let batch = next.2;
 
-            store.check_tree(root, Prefix::root());
+            store.check_tree(root);
             store.assert_records(root, record_reference.clone());
             store.check_leaks([root]);
 
@@ -747,10 +747,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (128..256).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -765,10 +765,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch()).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (0..128).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -785,10 +785,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (0..129).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -805,10 +805,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (0..256).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -826,10 +826,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, HashMap::new());
 
         store.check_leaks([first_root, second_root]);
@@ -847,10 +847,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (127..128).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -868,10 +868,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (64..128).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -892,10 +892,10 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        store.check_tree(first_root, Prefix::root());
+        store.check_tree(first_root);
         store.assert_records(first_root, (0..64).map(|i| (i, i)));
 
-        store.check_tree(second_root, Prefix::root());
+        store.check_tree(second_root);
         store.assert_records(second_root, (64..128).map(|i| (i, i)));
 
         store.check_leaks([first_root, second_root]);
@@ -949,7 +949,7 @@ mod tests {
                 *root = next.1;
                 let batch = next.2;
 
-                store.check_tree(*root, Prefix::root());
+                store.check_tree(*root);
                 store.assert_records(*root, record_reference.clone());
 
                 batch.assert_gets(get_reference.clone());

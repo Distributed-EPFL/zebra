@@ -281,20 +281,31 @@ mod tests {
             }
         }
 
-        pub fn check_tree(&mut self, root: Label, location: Prefix) {
-            match root {
-                Label::Internal(..) => {
-                    self.check_internal(root);
+        pub fn check_tree(&mut self, root: Label) {
+            fn recursion<Key, Value>(
+                store: &mut Store<Key, Value>,
+                label: Label,
+                location: Prefix,
+            ) where
+                Key: Field,
+                Value: Field,
+            {
+                match label {
+                    Label::Internal(..) => {
+                        store.check_internal(label);
 
-                    let (left, right) = self.fetch_internal(root);
-                    self.check_tree(left, location.left());
-                    self.check_tree(right, location.right());
+                        let (left, right) = store.fetch_internal(label);
+                        recursion(store, left, location.left());
+                        recursion(store, right, location.right());
+                    }
+                    Label::Leaf(..) => {
+                        store.check_leaf(label, location);
+                    }
+                    Label::Empty => {}
                 }
-                Label::Leaf(..) => {
-                    self.check_leaf(root, location);
-                }
-                Label::Empty => {}
             }
+
+            recursion(self, root, Prefix::root());
         }
 
         pub fn collect_tree(&mut self, root: Label) -> HashSet<Label> {
