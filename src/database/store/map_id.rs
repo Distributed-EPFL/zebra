@@ -15,7 +15,7 @@ impl MapId {
     pub fn internal(position: Prefix) -> Self {
         let mut id = 0;
 
-        for (bit, direction) in (0..DEPTH).zip(position.into_iter()) {
+        for (bit, direction) in (0..DEPTH).zip(position) {
             if direction == Direction::Left {
                 id |= 1 << (7 - bit);
             }

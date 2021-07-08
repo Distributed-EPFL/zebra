@@ -20,7 +20,7 @@ impl Prefix {
     pub fn common(lho: Path, rho: Path) -> Self {
         let depth = lho
             .into_iter()
-            .zip(rho.into_iter())
+            .zip(rho)
             .take_while(|(left, right)| left == right)
             .count();
 
@@ -110,7 +110,7 @@ mod tests {
         {
             let mut prefix = Prefix::root();
 
-            for direction in directions.into_iter() {
+            for direction in directions {
                 prefix = if direction == Direction::Left {
                     prefix.left()
                 } else {

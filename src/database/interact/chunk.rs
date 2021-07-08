@@ -140,7 +140,7 @@ mod tests {
         {
             let mut chunk = Chunk::root(&batch);
 
-            for direction in snaps.into_iter() {
+            for direction in snaps {
                 let (left_batch, left_chunk, right_batch, right_chunk) =
                     chunk.snap(batch);
 
@@ -153,7 +153,7 @@ mod tests {
                 };
             }
 
-            for direction in splits.into_iter() {
+            for direction in splits {
                 let (left, right) = chunk.split(&batch);
                 chunk = if direction == Direction::Left {
                     left

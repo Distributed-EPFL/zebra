@@ -61,7 +61,7 @@ where
         let mut store = self.cell.take();
         let mut severity = Severity::Benign(0);
 
-        for node in answer.0.into_iter() {
+        for node in answer.0 {
             severity = match self.update(&mut store, node) {
                 Ok(()) => Severity::Benign(0),
                 Err(offence) => severity + offence,
@@ -263,7 +263,7 @@ mod tests {
         let mut table = database.empty_table();
         let mut transaction = Transaction::new();
 
-        for (k, v) in sets.into_iter() {
+        for (k, v) in sets {
             transaction.set(k, v).unwrap();
         }
 

@@ -91,7 +91,7 @@ mod tests {
         let mut table = database.empty_table();
         let mut transaction = Transaction::new();
 
-        for (k, v) in sets.into_iter() {
+        for (k, v) in sets {
             transaction.set(k, v).unwrap();
         }
 

@@ -82,7 +82,7 @@ mod tests {
         label: Label,
     ) -> Label {
         let mut next = label;
-        for i in prefix.into_iter() {
+        for i in prefix {
             next = match store.fetch_node(next) {
                 Node::Internal(left, right) => {
                     if i == L {
