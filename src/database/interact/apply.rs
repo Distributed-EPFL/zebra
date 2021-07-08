@@ -332,69 +332,12 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{data::Bytes, interact::Operation, tree::Prefix};
-
-    use drop::crypto::hash;
+    use crate::database::{interact::Operation, tree::Prefix};
 
     use rand::seq::IteratorRandom;
     use rand::Rng;
 
-    use std::collections::{HashMap, HashSet};
-
-    fn read_gets(batch: &Batch<u32, u32>) -> HashMap<Bytes, Option<u32>> {
-        batch
-            .operations()
-            .iter()
-            .filter_map(|operation| match &operation.action {
-                Action::Get(holder) => Some((
-                    operation.path.into(),
-                    holder.clone().map(|value| *value),
-                )),
-                _ => None,
-            })
-            .collect()
-    }
-
-    fn check_gets(
-        batch: &Batch<u32, u32>,
-        reference: &HashMap<u32, Option<u32>>,
-    ) {
-        let preimage: HashMap<Bytes, u32> = reference
-            .iter()
-            .map(|(k, _)| (Bytes::from(hash::hash(k).unwrap()), *k))
-            .collect();
-
-        let actual = read_gets(batch);
-
-        let actual: HashSet<(Bytes, Option<u32>)> =
-            actual.iter().map(|(k, v)| (*k, *v)).collect();
-        let reference: HashSet<(Bytes, Option<u32>)> = reference
-            .iter()
-            .map(|(k, v)| (Bytes::from(hash::hash(k).unwrap()), *v))
-            .collect();
-
-        #[derive(Debug, Hash, PartialEq, Eq)]
-        enum DiffKey {
-            Known(u32),
-            Unknown(Bytes),
-        }
-
-        let differences: HashSet<(DiffKey, Option<u32>)> = reference
-            .symmetric_difference(&actual)
-            .map(|(hash, value)| {
-                (
-                    if let Some(key) = preimage.get(hash) {
-                        DiffKey::Known(*key)
-                    } else {
-                        DiffKey::Unknown(*hash)
-                    },
-                    value.clone(),
-                )
-            })
-            .collect();
-
-        assert_eq!(differences, HashSet::new());
-    }
+    use std::collections::HashMap;
 
     #[tokio::test]
     async fn single_static_tree() {
@@ -538,7 +481,7 @@ mod tests {
         let batch = Batch::new((0..128).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch).await;
 
-        check_gets(&batch, &(0..128).map(|i| (i, Some(i))).collect());
+        batch.assert_gets((0..128).map(|i| (i, Some(i))));
     }
 
     #[tokio::test]
@@ -551,7 +494,7 @@ mod tests {
         let batch = Batch::new((0..64).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch).await;
 
-        check_gets(&batch, &(0..64).map(|i| (i, Some(i))).collect());
+        batch.assert_gets((0..64).map(|i| (i, Some(i))));
     }
 
     #[tokio::test]
@@ -564,7 +507,7 @@ mod tests {
         let batch = Batch::new((128..256).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch).await;
 
-        check_gets(&batch, &(128..256).map(|i| (i, None)).collect());
+        batch.assert_gets((128..256).map(|i| (i, None)));
     }
 
     #[tokio::test]
@@ -577,11 +520,8 @@ mod tests {
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch).await;
 
-        check_gets(
-            &batch,
-            &(64..192)
-                .map(|i| (i, if i < 128 { Some(i) } else { None }))
-                .collect(),
+        batch.assert_gets(
+            (64..192).map(|i| (i, if i < 128 { Some(i) } else { None })),
         );
     }
 
@@ -613,11 +553,8 @@ mod tests {
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch).await;
 
-        check_gets(
-            &batch,
-            &(64..192)
-                .map(|i| (i, if i < 128 { Some(i + 1) } else { None }))
-                .collect(),
+        batch.assert_gets(
+            (64..192).map(|i| (i, if i < 128 { Some(i + 1) } else { None })),
         );
     }
 
@@ -644,11 +581,8 @@ mod tests {
         );
         store.check_leaks([root]);
 
-        check_gets(
-            &batch,
-            &(128..256)
-                .map(|i| (i, if i < 192 { Some(i) } else { None }))
-                .collect(),
+        batch.assert_gets(
+            (128..256).map(|i| (i, if i < 192 { Some(i) } else { None })),
         );
     }
 
@@ -798,7 +732,7 @@ mod tests {
             store.assert_records(root, record_reference.clone());
             store.check_leaks([root]);
 
-            check_gets(&batch, &get_reference);
+            batch.assert_gets(get_reference.clone());
         }
     }
 
@@ -1018,7 +952,7 @@ mod tests {
                 store.check_tree(*root, Prefix::root());
                 store.assert_records(*root, record_reference.clone());
 
-                check_gets(&batch, &get_reference);
+                batch.assert_gets(get_reference.clone());
             }
 
             store.check_leaks([first_root, second_root]);

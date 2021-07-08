@@ -46,7 +46,77 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::tree::Path;
+    use crate::database::{data::Bytes, interact::Action, tree::Path};
+
+    use drop::crypto::hash;
+
+    use std::collections::{HashMap, HashSet};
+    use std::fmt::Debug;
+    use std::hash::Hash;
+
+    impl<Key, Value> Batch<Key, Value>
+    where
+        Key: Field,
+        Value: Field + Clone,
+    {
+        pub fn collect_raw_gets(&self) -> HashMap<Bytes, Option<Value>> {
+            self.operations
+                .iter()
+                .filter_map(|operation| match &operation.action {
+                    Action::Get(holder) => Some((
+                        operation.path.into(),
+                        holder.clone().map(|value| (*value).clone()),
+                    )),
+                    _ => None,
+                })
+                .collect()
+        }
+
+        pub fn assert_gets<I>(&self, reference: I)
+        where
+            Key: Debug + Clone + Eq + Hash,
+            Value: Debug + Clone + Eq + Hash,
+            I: IntoIterator<Item = (Key, Option<Value>)>,
+        {
+            let reference: HashMap<Key, Option<Value>> =
+                reference.into_iter().collect();
+
+            let preimage: HashMap<Bytes, Key> = reference
+                .iter()
+                .map(|(k, _)| (Bytes::from(hash::hash(k).unwrap()), k.clone()))
+                .collect();
+
+            let actual: HashSet<(Bytes, Option<Value>)> =
+                self.collect_raw_gets().into_iter().collect();
+
+            let reference: HashSet<(Bytes, Option<Value>)> = reference
+                .iter()
+                .map(|(k, v)| (Bytes::from(hash::hash(k).unwrap()), v.clone()))
+                .collect();
+
+            #[derive(Debug, Hash, PartialEq, Eq)]
+            enum DiffKey<Key> {
+                Known(Key),
+                Unknown(Bytes),
+            }
+
+            let differences: HashSet<(DiffKey<Key>, Option<Value>)> = reference
+                .symmetric_difference(&actual)
+                .map(|(hash, value)| {
+                    (
+                        if let Some(key) = preimage.get(hash) {
+                            DiffKey::Known(key.clone())
+                        } else {
+                            DiffKey::Unknown(*hash)
+                        },
+                        value.clone(),
+                    )
+                })
+                .collect();
+
+            assert_eq!(differences, HashSet::new());
+        }
+    }
 
     #[test]
     fn snap_merge() {
