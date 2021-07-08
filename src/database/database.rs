@@ -71,5 +71,34 @@ mod tests {
             table.execute(transaction).await;
             table
         }
+
+        pub(crate) fn check<'a, I, J>(&self, tables: I, receivers: J)
+        where
+            I: IntoIterator<Item = &'a Table<Key, Value>>,
+            J: IntoIterator<Item = &'a Receiver<Key, Value>>,
+        {
+            let tables: Vec<&'a Table<Key, Value>> =
+                tables.into_iter().collect();
+
+            let receivers: Vec<&'a Receiver<Key, Value>> =
+                receivers.into_iter().collect();
+
+            for table in &tables {
+                table.check_tree();
+            }
+
+            let table_held = tables.iter().map(|table| table.root());
+
+            let receiver_held = receivers
+                .iter()
+                .map(|receiver| receiver.held())
+                .flatten();
+
+            let held = table_held.chain(receiver_held);
+
+            let mut store = self.store.take();
+            store.check_leaks(held);
+            self.store.restore(store);
+        }
     }
 }
