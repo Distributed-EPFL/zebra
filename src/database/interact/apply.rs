@@ -341,32 +341,12 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
-    fn read_records(
-        store: &mut Store<u32, u32>,
-        label: Label,
-        collector: &mut HashMap<u32, u32>,
-    ) {
-        match label {
-            Label::Internal(..) => {
-                let (left, right) = store.fetch_internal(label);
-                read_records(store, left, collector);
-                read_records(store, right, collector);
-            }
-            Label::Leaf(..) => {
-                let (key, value) = store.fetch_leaf(label);
-                collector.insert(**key.inner(), **value.inner());
-            }
-            Label::Empty => {}
-        }
-    }
-
     fn check_records(
         store: &mut Store<u32, u32>,
         root: Label,
         reference: &HashMap<u32, u32>,
     ) {
-        let mut actual = HashMap::new();
-        read_records(store, root, &mut actual);
+        let actual = store.collect_records(root);
 
         let actual: HashSet<(u32, u32)> =
             actual.iter().map(|(k, v)| (*k, *v)).collect();

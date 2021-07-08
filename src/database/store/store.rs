@@ -172,6 +172,7 @@ mod tests {
     };
 
     use std::collections::HashSet;
+    use std::hash::Hash;
 
     impl<Key, Value> Store<Key, Value>
     where
@@ -319,6 +320,41 @@ mod tests {
             if self.size() > labels.len() {
                 panic!("`check_leaks`: unreachable entries detected");
             }
+        }
+
+        pub fn collect_records(&mut self, root: Label) -> HashMap<Key, Value>
+        where
+            Key: Clone + Eq + Hash,
+            Value: Clone,
+        {
+            fn recursion<Key, Value>(
+                store: &mut Store<Key, Value>,
+                label: Label,
+                collector: &mut HashMap<Key, Value>,
+            ) where
+                Key: Field + Clone + Eq + Hash,
+                Value: Field + Clone,
+            {
+                match label {
+                    Label::Internal(..) => {
+                        let (left, right) = store.fetch_internal(label);
+                        recursion(store, left, collector);
+                        recursion(store, right, collector);
+                    }
+                    Label::Leaf(..) => {
+                        let (key, value) = store.fetch_leaf(label);
+                        collector.insert(
+                            (**key.inner()).clone(),
+                            (**value.inner()).clone(),
+                        );
+                    }
+                    Label::Empty => {}
+                }
+            }
+
+            let mut collector = HashMap::new();
+            recursion(self, root, &mut collector);
+            collector
         }
     }
 
