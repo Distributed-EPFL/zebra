@@ -172,6 +172,7 @@ mod tests {
     };
 
     use std::collections::HashSet;
+    use std::fmt::Debug;
     use std::hash::Hash;
 
     impl<Key, Value> Store<Key, Value>
@@ -355,6 +356,26 @@ mod tests {
             let mut collector = HashMap::new();
             recursion(self, root, &mut collector);
             collector
+        }
+
+        pub fn assert_records<I>(&mut self, root: Label, reference: I)
+        where
+            Key: Debug + Clone + Eq + Hash,
+            Value: Debug + Clone + Eq + Hash,
+            I: IntoIterator<Item = (Key, Value)>,
+        {
+            let actual: HashSet<(Key, Value)> =
+                self.collect_records(root).into_iter().collect();
+
+            let reference: HashSet<(Key, Value)> =
+                reference.into_iter().collect();
+
+            let differences: HashSet<(Key, Value)> = reference
+                .symmetric_difference(&actual)
+                .map(|r| r.clone())
+                .collect();
+
+            assert_eq!(differences, HashSet::new());
         }
     }
 
