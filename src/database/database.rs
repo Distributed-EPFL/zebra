@@ -42,3 +42,34 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::database::Transaction;
+
+    impl<Key, Value> Database<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        pub async fn table_with_records<I>(
+            &self,
+            records: I,
+        ) -> Table<Key, Value>
+        where
+            I: IntoIterator<Item = (Key, Value)>,
+        {
+            let mut table = self.empty_table();
+            let mut transaction = Transaction::new();
+
+            for (key, value) in records {
+                transaction.set(key, value).unwrap();
+            }
+
+            table.execute(transaction).await;
+            table
+        }
+    }
+}

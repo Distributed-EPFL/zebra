@@ -251,26 +251,6 @@ mod tests {
 
     use std::fmt::Debug;
 
-    async fn new_table<Key, Value, I>(
-        database: &Database<Key, Value>,
-        sets: I,
-    ) -> Table<Key, Value>
-    where
-        Key: Field,
-        Value: Field,
-        I: IntoIterator<Item = (Key, Value)>,
-    {
-        let mut table = database.empty_table();
-        let mut transaction = Transaction::new();
-
-        for (k, v) in sets {
-            transaction.set(k, v).unwrap();
-        }
-
-        table.execute(transaction).await;
-        table
-    }
-
     async fn check_table<Key, Value, I>(
         table: &mut Table<Key, Value>,
         values: I,
@@ -318,7 +298,7 @@ mod tests {
         let alice: Database<u32, u32> = Database::new();
         let bob: Database<u32, u32> = Database::new();
 
-        let original = new_table(&alice, (0..256).map(|i| (i, i))).await;
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
         let mut sender = original.send();
 
         let (mut first, _) = exchange(&mut sender, bob.receive());

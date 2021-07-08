@@ -75,29 +75,9 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{store::Field, Database, Table, Transaction};
+    use crate::database::Database;
 
     use std::collections::hash_map::Entry::Occupied;
-
-    async fn new_table<Key, Value, I>(
-        database: &Database<Key, Value>,
-        sets: I,
-    ) -> Table<Key, Value>
-    where
-        Key: Field,
-        Value: Field,
-        I: IntoIterator<Item = (Key, Value)>,
-    {
-        let mut table = database.empty_table();
-        let mut transaction = Transaction::new();
-
-        for (k, v) in sets {
-            transaction.set(k, v).unwrap();
-        }
-
-        table.execute(transaction).await;
-        table
-    }
 
     #[tokio::test]
     async fn answer_empty() {
@@ -114,7 +94,7 @@ mod tests {
     #[tokio::test]
     async fn grab_one() {
         let database: Database<u32, u32> = Database::new();
-        let table = new_table(&database, [(0u32, 0u32)]).await;
+        let table = database.table_with_records([(0u32, 0u32)]).await;
 
         let mut send = table.send();
         let label = send.0.root;
@@ -134,7 +114,9 @@ mod tests {
     #[tokio::test]
     async fn grab_three() {
         let database: Database<u32, u32> = Database::new();
-        let table = new_table(&database, [(0u32, 0u32), (4u32, 4u32)]).await;
+        let table = database
+            .table_with_records([(0u32, 0u32), (4u32, 4u32)])
+            .await;
 
         let mut send = table.send();
         let label0 = send.0.root;
