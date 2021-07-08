@@ -200,9 +200,7 @@ mod tests {
                         EntryMapEntry::Vacant(entrymapentry) => {
                             entrymapentry.insert(entry);
                         }
-                        _ => {
-                            unreachable!();
-                        }
+                        _ => unreachable!(),
                     }
 
                     label
@@ -230,6 +228,50 @@ mod tests {
             match self.fetch_node(label) {
                 Node::Leaf(key, value) => (key, value),
                 _ => panic!("`fetch_leaf`: node not `Leaf`"),
+            }
+        }
+
+        pub fn check_internal(&mut self, label: Label) {
+            let (left, right) = self.fetch_internal(label);
+
+            match (left, right) {
+                (Label::Empty, Label::Empty)
+                | (Label::Empty, Label::Leaf(..))
+                | (Label::Leaf(..), Label::Empty) => {
+                    panic!("`check_internal`: children violate compactness")
+                }
+                _ => {}
+            }
+
+            for child in [left, right] {
+                if child != Label::Empty {
+                    if let Vacant(..) = self.entry(child) {
+                        panic!("`check_internal`: child not found");
+                    }
+                }
+            }
+        }
+
+        pub fn check_leaf(&mut self, label: Label, location: Prefix) {
+            let (key, _) = self.fetch_leaf(label);
+            if !location.contains(&Path::from(*key.digest())) {
+                panic!("`check_leaf`: leaf outside of its key path")
+            }
+        }
+
+        pub fn check_tree(&mut self, label: Label, location: Prefix) {
+            match label {
+                Label::Internal(..) => {
+                    self.check_internal(label);
+
+                    let (left, right) = self.fetch_internal(label);
+                    self.check_tree(left, location.left());
+                    self.check_tree(right, location.right());
+                }
+                Label::Leaf(..) => {
+                    self.check_leaf(label, location);
+                }
+                Label::Empty => {}
             }
         }
     }

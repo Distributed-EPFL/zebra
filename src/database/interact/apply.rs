@@ -341,50 +341,6 @@ mod tests {
 
     use std::collections::{HashMap, HashSet};
 
-    fn check_internal(store: &mut Store<u32, u32>, label: Label) {
-        let (left, right) = store.fetch_internal(label);
-
-        match (left, right) {
-            (Label::Empty, Label::Empty)
-            | (Label::Empty, Label::Leaf(..))
-            | (Label::Leaf(..), Label::Empty) => {
-                panic!("check_internal: children violate topology")
-            }
-            _ => {}
-        }
-
-        for &child in [left, right].iter() {
-            if child != Label::Empty {
-                if let Vacant(..) = store.entry(child) {
-                    panic!("check_internal: child not found");
-                }
-            }
-        }
-    }
-
-    fn check_leaf(store: &mut Store<u32, u32>, label: Label, prefix: Prefix) {
-        let (key, _) = store.fetch_leaf(label);
-        if !prefix.contains(&Path::from(*key.digest())) {
-            panic!("check_leaf: leaf outside of path")
-        }
-    }
-
-    fn check_tree(store: &mut Store<u32, u32>, label: Label, prefix: Prefix) {
-        match label {
-            Label::Internal(..) => {
-                check_internal(store, label);
-
-                let (left, right) = store.fetch_internal(label);
-                check_tree(store, left, prefix.left());
-                check_tree(store, right, prefix.right());
-            }
-            Label::Leaf(..) => {
-                check_leaf(store, label, prefix);
-            }
-            Label::Empty => {}
-        }
-    }
-
     fn read_labels(
         store: &mut Store<u32, u32>,
         label: Label,
@@ -527,7 +483,7 @@ mod tests {
         ]);
 
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         let (l, r) = store.fetch_internal(root);
@@ -574,7 +530,7 @@ mod tests {
         let batch = Batch::new(vec![set!(0, 1)]);
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 1));
@@ -584,7 +540,7 @@ mod tests {
         let batch = Batch::new(vec![set!(0, 0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         assert_eq!(store.fetch_node(root), leaf!(0, 0));
@@ -594,7 +550,7 @@ mod tests {
         let batch = Batch::new(vec![set!(1, 0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         let (l, r) = store.fetch_internal(root);
@@ -612,7 +568,7 @@ mod tests {
         let batch = Batch::new(vec![set!(1, 1), remove!(0)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         assert_eq!(store.fetch_node(root), leaf!(1, 1));
@@ -622,7 +578,7 @@ mod tests {
         let batch = Batch::new(vec![remove!(1)]);
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_size(&mut store, vec![root]);
 
         assert_eq!(root, Label::Empty);
@@ -635,7 +591,7 @@ mod tests {
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) = apply(store, Label::Empty, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -711,7 +667,7 @@ mod tests {
         let batch = Batch::new((0..128).map(|i| set!(i, i + 1)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -757,7 +713,7 @@ mod tests {
 
         let (mut store, root, batch) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -799,7 +755,7 @@ mod tests {
         let batch = Batch::new((0..64).map(|i| remove!(i)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -818,7 +774,7 @@ mod tests {
         let batch = Batch::new((0..127).map(|i| remove!(i)).collect());
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -841,7 +797,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -864,7 +820,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -887,7 +843,7 @@ mod tests {
         );
         let (mut store, root, _) = apply(store, root, batch).await;
 
-        check_tree(&mut store, root, Prefix::root());
+        store.check_tree(root, Prefix::root());
         check_records(
             &mut store,
             root,
@@ -937,7 +893,7 @@ mod tests {
             root = next.1;
             let batch = next.2;
 
-            check_tree(&mut store, root, Prefix::root());
+            store.check_tree(root, Prefix::root());
             check_records(&mut store, root, &record_reference);
             check_size(&mut store, vec![root]);
 
@@ -956,14 +912,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -982,14 +938,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch()).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1010,14 +966,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1038,14 +994,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, Label::Empty, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1067,14 +1023,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(&mut store, second_root, &mut HashMap::new());
 
         check_size(&mut store, vec![first_root, second_root]);
@@ -1092,14 +1048,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1121,14 +1077,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..128).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1153,14 +1109,14 @@ mod tests {
         let (mut store, second_root, _) =
             apply(store, second_root, batch).await;
 
-        check_tree(&mut store, first_root, Prefix::root());
+        store.check_tree(first_root, Prefix::root());
         check_records(
             &mut store,
             first_root,
             &mut (0..64).map(|i| (i, i)).collect(),
         );
 
-        check_tree(&mut store, second_root, Prefix::root());
+        store.check_tree(second_root, Prefix::root());
         check_records(
             &mut store,
             second_root,
@@ -1218,7 +1174,7 @@ mod tests {
                 *root = next.1;
                 let batch = next.2;
 
-                check_tree(&mut store, *root, Prefix::root());
+                store.check_tree(*root, Prefix::root());
                 check_records(&mut store, *root, &record_reference);
 
                 check_gets(&batch, &get_reference);
