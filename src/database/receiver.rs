@@ -256,6 +256,10 @@ mod tests {
         Key: Field,
         Value: Field,
     {
+        pub(crate) fn held(&self) -> Vec<Label> {
+            self.held.iter().map(|label| *label).collect()
+        }
+
         pub(crate) fn run(
             mut self,
             sender: &mut Sender<Key, Value>,
