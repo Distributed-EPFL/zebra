@@ -41,3 +41,34 @@ where
         Table(self.0.clone())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::fmt::Debug;
+    use std::hash::Hash;
+
+    impl<Key, Value> Table<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        pub(crate) fn check_tree<I>(&mut self) {
+            let mut store = self.0.cell.take();
+            store.check_tree(self.0.root);
+            self.0.cell.restore(store);
+        }
+
+        pub(crate) fn assert_records<I>(&mut self, reference: I)
+        where
+            Key: Debug + Clone + Eq + Hash,
+            Value: Debug + Clone + Eq + Hash,
+            I: IntoIterator<Item = (Key, Value)>,
+        {
+            let mut store = self.0.cell.take();
+            store.assert_records(self.0.root, reference);
+            self.0.cell.restore(store);
+        }
+    }
+}
