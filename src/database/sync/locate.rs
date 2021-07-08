@@ -72,130 +72,68 @@ mod tests {
     use super::*;
 
     use crate::database::{
-        interact::{apply, Batch, Operation},
-        tree::Direction::{self, Left as L, Right as R},
+        interact::{apply, Batch},
+        tree::Direction,
     };
-
-    fn get_recursive(
-        store: &mut Store<u32, u32>,
-        prefix: Prefix,
-        label: Label,
-    ) -> Label {
-        let mut next = label;
-        for i in prefix {
-            next = match store.fetch_node(next) {
-                Node::Internal(left, right) => {
-                    if i == L {
-                        left
-                    } else {
-                        right
-                    }
-                }
-                _ => unreachable!(),
-            };
-        }
-
-        next
-    }
-
-    fn op_set(key: u32, value: u32) -> Operation<u32, u32> {
-        Operation::set(key, value).unwrap()
-    }
-
-    fn check_recursion(
-        store: &mut Store<u32, u32>,
-        prefix: Prefix,
-        label: Label,
-    ) {
-        if !label.is_empty() {
-            match store.fetch_node(label) {
-                Node::Internal(left, right) => {
-                    assert_eq!(locate(store, label), prefix);
-                    check_recursion(store, prefix.left(), left);
-                    check_recursion(store, prefix.right(), right);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    fn prefix_from_directions(directions: &Vec<Direction>) -> Prefix {
-        let mut prefix = Prefix::root();
-
-        for &direction in directions {
-            prefix = if direction == Direction::Left {
-                prefix.left()
-            } else {
-                prefix.right()
-            };
-        }
-
-        prefix
-    }
 
     #[tokio::test]
     async fn tree() {
+        use Direction::{Left as L, Right as R};
+
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
+        let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) =
             apply::apply(store, Label::Empty, batch).await;
 
-        let l =
-            get_recursive(&mut store, prefix_from_directions(&vec![L]), root);
-        assert_eq!(locate(&mut store, l), prefix_from_directions(&vec![L]));
+        let l = store.fetch_label_at(root, Prefix::from_directions([L]));
+        assert_eq!(locate(&mut store, l), Prefix::from_directions([L]));
 
-        let r =
-            get_recursive(&mut store, prefix_from_directions(&vec![R]), root);
-        assert_eq!(locate(&mut store, r), prefix_from_directions(&vec![R]));
+        let r = store.fetch_label_at(root, Prefix::from_directions([R]));
+        assert_eq!(locate(&mut store, r), Prefix::from_directions([R]));
 
-        let ll = get_recursive(
-            &mut store,
-            prefix_from_directions(&vec![L, L]),
-            root,
-        );
-        assert_eq!(locate(&mut store, ll), prefix_from_directions(&vec![L, L]));
+        let ll = store.fetch_label_at(root, Prefix::from_directions([L, L]));
+        assert_eq!(locate(&mut store, ll), Prefix::from_directions([L, L]));
 
-        let lr = get_recursive(
-            &mut store,
-            prefix_from_directions(&vec![L, R]),
-            root,
-        );
-        assert_eq!(locate(&mut store, lr), prefix_from_directions(&vec![L, R]));
+        let lr = store.fetch_label_at(root, Prefix::from_directions([L, R]));
+        assert_eq!(locate(&mut store, lr), Prefix::from_directions([L, R]));
 
-        let rl = get_recursive(
-            &mut store,
-            prefix_from_directions(&vec![R, L]),
-            root,
-        );
-        assert_eq!(locate(&mut store, rl), prefix_from_directions(&vec![R, L]));
+        let rl = store.fetch_label_at(root, Prefix::from_directions([R, L]));
+        assert_eq!(locate(&mut store, rl), Prefix::from_directions([R, L]));
 
-        let rr = get_recursive(
-            &mut store,
-            prefix_from_directions(&vec![R, R]),
-            root,
-        );
-        assert_eq!(locate(&mut store, rr), prefix_from_directions(&vec![R, R]));
+        let rr = store.fetch_label_at(root, Prefix::from_directions([R, R]));
+        assert_eq!(locate(&mut store, rr), Prefix::from_directions([R, R]));
 
-        let lll = get_recursive(
-            &mut store,
-            prefix_from_directions(&vec![L, L, R]),
-            root,
-        );
-        assert_eq!(
-            locate(&mut store, lll),
-            prefix_from_directions(&vec![L, L, R])
-        );
+        let lll =
+            store.fetch_label_at(root, Prefix::from_directions([L, L, R]));
+        assert_eq!(locate(&mut store, lll), Prefix::from_directions([L, L, R]));
     }
 
     #[tokio::test]
     async fn full() {
+        fn recursion(
+            store: &mut Store<u32, u32>,
+            prefix: Prefix,
+            label: Label,
+        ) {
+            if !label.is_empty() {
+                match store.fetch_node(label) {
+                    Node::Internal(left, right) => {
+                        assert_eq!(locate(store, label), prefix);
+                        recursion(store, prefix.left(), left);
+                        recursion(store, prefix.right(), right);
+                    }
+                    _ => {}
+                }
+            }
+        }
+
         let store = Store::<u32, u32>::new();
 
-        let batch = Batch::new((0..128).map(|i| op_set(i, i)).collect());
+        let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, root, _) =
             apply::apply(store, Label::Empty, batch).await;
 
-        check_recursion(&mut store, Prefix::root(), root);
+        recursion(&mut store, Prefix::root(), root);
     }
 }

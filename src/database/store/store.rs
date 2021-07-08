@@ -235,6 +235,24 @@ mod tests {
             }
         }
 
+        pub fn fetch_label_at(
+            &mut self,
+            root: Label,
+            location: Prefix,
+        ) -> Label {
+            let mut next = root;
+
+            for direction in location {
+                next = match (self.fetch_node(next), direction) {
+                    (Node::Internal(next, _), Direction::Left)
+                    | (Node::Internal(_, next), Direction::Right) => next,
+                    _ => panic!("`label_at`: reached a dead end"),
+                };
+            }
+
+            next
+        }
+
         pub fn check_internal(&mut self, label: Label) {
             let (left, right) = self.fetch_internal(label);
 
