@@ -402,4 +402,33 @@ mod tests {
         assert_eq!(steps, 1);
         received.assert_records([(0, 1)]);
     }
+
+    #[tokio::test]
+    async fn tree() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..8).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 3);
+        received.assert_records((0..8).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        received.assert_records((0..256).map(|i| (i, i)));
+    }
 }
