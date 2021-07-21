@@ -431,4 +431,302 @@ mod tests {
 
         received.assert_records((0..256).map(|i| (i, i)));
     }
+
+    #[tokio::test]
+    async fn single_then_single() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records([(0, 1)]).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        first.assert_records([(0, 1)]);
+
+        let original = alice.table_with_records([(2, 3)]).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], steps) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        second.assert_records([(2, 3)]);
+    }
+
+    #[tokio::test]
+    async fn single_then_same() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records([(0, 1)]).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        first.assert_records([(0, 1)]);
+
+        let receiver = bob.receive();
+        let ([second], steps) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        second.assert_records([(0, 1)]);
+    }
+
+    #[tokio::test]
+    async fn tree_then_same() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..8).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 3);
+        first.assert_records((0..8).map(|i| (i, i)));
+
+        let receiver = bob.receive();
+        let ([second], steps) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        second.assert_records((0..8).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_multiple() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let original =
+            alice.table_with_records((256..512).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], _) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        second.assert_records((256..512).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_same() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let receiver = bob.receive();
+        let ([second], steps) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        second.assert_records((0..256).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_subset() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], first_steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let original = alice.table_with_records((0..128).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], second_steps) =
+            run(&bob, [&first], [(&mut sender, receiver)]);
+
+        second.assert_records((0..128).map(|i| (i, i)));
+        assert!(second_steps < first_steps);
+    }
+
+    #[tokio::test]
+    async fn multiple_then_superset() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let original = alice.table_with_records((0..512).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], _) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        second.assert_records((0..512).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_overlap() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], _) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        second.assert_records((128..384).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_multiple_then_overlap() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([first], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        first.assert_records((0..256).map(|i| (i, i)));
+
+        let original =
+            alice.table_with_records((256..512).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([second], _) = run(&bob, [&first], [(&mut sender, receiver)]);
+
+        second.assert_records((256..512).map(|i| (i, i)));
+
+        let original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([third], _) =
+            run(&bob, [&first, &second], [(&mut sender, receiver)]);
+
+        third.assert_records((128..384).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_interleave_multiple() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let first_original =
+            alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut first_sender = first_original.send();
+
+        let second_original =
+            alice.table_with_records((256..512).map(|i| (i, i))).await;
+        let mut second_sender = second_original.send();
+
+        let first_receiver = bob.receive();
+        let second_receiver = bob.receive();
+
+        let ([first, second], _) = run(
+            &bob,
+            [],
+            [
+                (&mut first_sender, first_receiver),
+                (&mut second_sender, second_receiver),
+            ],
+        );
+
+        first.assert_records((0..256).map(|i| (i, i)));
+        second.assert_records((256..512).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_interleave_same() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let first_original =
+            alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut first_sender = first_original.send();
+
+        let second_original =
+            alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut second_sender = second_original.send();
+
+        let first_receiver = bob.receive();
+        let second_receiver = bob.receive();
+
+        let ([first, second], _) = run(
+            &bob,
+            [],
+            [
+                (&mut first_sender, first_receiver),
+                (&mut second_sender, second_receiver),
+            ],
+        );
+
+        first.assert_records((0..256).map(|i| (i, i)));
+        second.assert_records((0..256).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_interleave_overlap() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let first_original =
+            alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut first_sender = first_original.send();
+
+        let second_original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut second_sender = second_original.send();
+
+        let first_receiver = bob.receive();
+        let second_receiver = bob.receive();
+
+        let ([first, second], _) = run(
+            &bob,
+            [],
+            [
+                (&mut first_sender, first_receiver),
+                (&mut second_sender, second_receiver),
+            ],
+        );
+
+        first.assert_records((0..256).map(|i| (i, i)));
+        second.assert_records((128..384).map(|i| (i, i)));
+    }
 }
