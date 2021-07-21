@@ -309,10 +309,10 @@ mod tests {
 
         let tables: Vec<&Table<Key, Value>> = tables.into_iter().collect();
 
-        let mut rounds: usize = 0;
+        let mut steps: usize = 0;
 
         loop {
-            rounds += 1;
+            steps += 1;
 
             transfers = array_init::from_iter(IntoIter::new(transfers).map(
                 |transfer| match transfer {
@@ -370,6 +370,36 @@ mod tests {
             }))
             .unwrap();
 
-        (received, rounds)
+        (received, steps)
+    }
+
+    #[tokio::test]
+    async fn empty() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.empty_table();
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        received.assert_records([]);
+    }
+
+    #[tokio::test]
+    async fn single() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records([(0, 1)]).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], steps) = run(&bob, [], [(&mut sender, receiver)]);
+
+        assert_eq!(steps, 1);
+        received.assert_records([(0, 1)]);
     }
 }
