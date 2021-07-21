@@ -89,10 +89,8 @@ mod tests {
 
             let table_held = tables.iter().map(|table| table.root());
 
-            let receiver_held = receivers
-                .iter()
-                .map(|receiver| receiver.held())
-                .flatten();
+            let receiver_held =
+                receivers.iter().map(|receiver| receiver.held()).flatten();
 
             let held = table_held.chain(receiver_held);
 
