@@ -74,14 +74,29 @@ where
 
         if severity.is_benign() {
             if self.frontier.is_empty() {
-                self.flush(&mut store, self.root.unwrap());
-                self.cell.restore(store);
+                // Receive complete, flush if necessary
+                match self.root {
+                    Some(root) => {
+                        // At least one node was received: flush
+                        self.flush(&mut store, root);
+                        self.cell.restore(store);
 
-                Ok(Status::Complete(Table::new(
-                    self.cell.clone(),
-                    self.root.unwrap(),
-                )))
+                        Ok(Status::Complete(Table::new(
+                            self.cell.clone(),
+                            root,
+                        )))
+                    }
+                    None => {
+                        // No node received: the new table's `root` should be `Empty`
+                        self.cell.restore(store);
+                        Ok(Status::Complete(Table::new(
+                            self.cell.clone(),
+                            Label::Empty,
+                        )))
+                    }
+                }
             } else {
+                // Receive incomplete, carry on with new `Question`
                 self.cell.restore(store);
                 let question = self.ask();
 
@@ -247,9 +262,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{Database, Query, Sender, Transaction};
-
-    use std::fmt::Debug;
+    use crate::database::{Database, Sender};
 
     impl<Key, Value> Receiver<Key, Value>
     where
@@ -261,15 +274,35 @@ mod tests {
         }
 
         pub(crate) fn run(
-            mut self,
+            self,
             sender: &mut Sender<Key, Value>,
         ) -> (Table<Key, Value>, usize) {
+            self.run_interleaved(sender, || ())
+        }
+
+        pub(crate) fn run_interleaved<F>(
+            mut self,
+            sender: &mut Sender<Key, Value>,
+            mut interleave: F,
+        ) -> (Table<Key, Value>, usize)
+        where
+            F: FnMut(),
+        {
             let mut rounds: usize = 0;
             let mut answer = sender.hello();
 
             loop {
                 rounds += 1;
-                match self.learn(answer).unwrap() {
+                let status = self.learn(answer);
+
+                let status = match status {
+                    Err(_) => panic!("We are fucked!"),
+                    Ok(status) => status,
+                };
+
+                interleave();
+
+                match status {
                     Status::Complete(table) => {
                         return (table, rounds);
                     }
@@ -282,41 +315,18 @@ mod tests {
         }
     }
 
-    async fn check_table<Key, Value, I>(
-        table: &mut Table<Key, Value>,
-        values: I,
-    ) where
-        Key: Field,
-        Value: Field + Debug + Eq,
-        I: IntoIterator<Item = (Key, Value)>,
-    {
-        let mut transaction: Transaction<Key, Value> = Transaction::new();
-        let expected: Vec<(Query, Value)> = values
-            .into_iter()
-            .map(|(key, value)| (transaction.get(&key).unwrap(), value))
-            .collect();
-
-        let response = table.execute(transaction).await;
-
-        for (query, value) in expected {
-            assert_eq!(*response.get(&query).unwrap(), value);
-        }
-    }
-
     #[tokio::test]
-    async fn develop() {
+    async fn empty() {
         let alice: Database<u32, u32> = Database::new();
         let bob: Database<u32, u32> = Database::new();
 
-        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let original = alice.empty_table();
         let mut sender = original.send();
 
-        let (mut first, _) = bob.receive().run(&mut sender);
-        check_table(&mut first, (0..256).map(|i| (i, i))).await;
+        let (received, steps) = bob.receive().run(&mut sender);
+        assert_eq!(steps, 1);
 
-        let (mut second, rounds) = bob.receive().run(&mut sender);
-        check_table(&mut second, (0..256).map(|i| (i, i))).await;
-
-        assert_eq!(rounds, 1);
+        bob.check([&received], []);
+        received.assert_records([]);
     }
 }
