@@ -264,6 +264,8 @@ mod tests {
 
     use crate::database::{Database, Sender};
 
+    use std::array::IntoIter;
+
     impl<Key, Value> Receiver<Key, Value>
     where
         Key: Field,
@@ -272,61 +274,102 @@ mod tests {
         pub(crate) fn held(&self) -> Vec<Label> {
             self.held.iter().map(|label| *label).collect()
         }
-
-        pub(crate) fn run(
-            self,
-            sender: &mut Sender<Key, Value>,
-        ) -> (Table<Key, Value>, usize) {
-            self.run_interleaved(sender, || ())
-        }
-
-        pub(crate) fn run_interleaved<F>(
-            mut self,
-            sender: &mut Sender<Key, Value>,
-            mut interleave: F,
-        ) -> (Table<Key, Value>, usize)
-        where
-            F: FnMut(),
-        {
-            let mut rounds: usize = 0;
-            let mut answer = sender.hello();
-
-            loop {
-                rounds += 1;
-                let status = self.learn(answer);
-
-                let status = match status {
-                    Err(_) => panic!("We are fucked!"),
-                    Ok(status) => status,
-                };
-
-                interleave();
-
-                match status {
-                    Status::Complete(table) => {
-                        return (table, rounds);
-                    }
-                    Status::Incomplete(receiver, question) => {
-                        self = receiver;
-                        answer = sender.answer(&question).unwrap();
-                    }
-                }
-            }
-        }
     }
 
-    #[tokio::test]
-    async fn empty() {
-        let alice: Database<u32, u32> = Database::new();
-        let bob: Database<u32, u32> = Database::new();
+    fn run<'a, Key, Value, I, const N: usize>(
+        database: &Database<Key, Value>,
+        tables: I,
+        transfers: [(&mut Sender<Key, Value>, Receiver<Key, Value>); N],
+    ) -> ([Table<Key, Value>; N], usize)
+    where
+        Key: Field,
+        Value: Field,
+        I: IntoIterator<Item = &'a Table<Key, Value>>,
+    {
+        enum Transfer<'a, Key, Value>
+        where
+            Key: Field,
+            Value: Field,
+        {
+            Complete(Table<Key, Value>),
+            Incomplete(
+                &'a mut Sender<Key, Value>,
+                Receiver<Key, Value>,
+                Answer<Key, Value>,
+            ),
+        }
 
-        let original = alice.empty_table();
-        let mut sender = original.send();
+        let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
+            IntoIter::new(transfers).map(|(sender, receiver)| {
+                let hello = sender.hello();
+                Transfer::Incomplete(sender, receiver, hello)
+            }),
+        )
+        .unwrap();
 
-        let (received, steps) = bob.receive().run(&mut sender);
-        assert_eq!(steps, 1);
+        let tables: Vec<&Table<Key, Value>> = tables.into_iter().collect();
 
-        bob.check([&received], []);
-        received.assert_records([]);
+        let mut rounds: usize = 0;
+
+        loop {
+            rounds += 1;
+
+            transfers = array_init::from_iter(IntoIter::new(transfers).map(
+                |transfer| match transfer {
+                    Transfer::Incomplete(sender, receiver, answer) => {
+                        let status = receiver.learn(answer).unwrap();
+
+                        match status {
+                            Status::Complete(table) => {
+                                Transfer::Complete(table)
+                            }
+                            Status::Incomplete(receiver, question) => {
+                                let answer = sender.answer(&question).unwrap();
+                                Transfer::Incomplete(sender, receiver, answer)
+                            }
+                        }
+                    }
+                    complete => complete,
+                },
+            ))
+            .unwrap();
+
+            let receivers =
+                transfers.iter().filter_map(|transfer| match transfer {
+                    Transfer::Complete(..) => None,
+                    Transfer::Incomplete(_, receiver, _) => Some(receiver),
+                });
+
+            let received =
+                transfers.iter().filter_map(|transfer| match transfer {
+                    Transfer::Complete(table) => Some(table),
+                    Transfer::Incomplete(..) => None,
+                });
+
+            let tables = tables.clone().into_iter().chain(received);
+
+            database.check(tables, receivers);
+
+            if transfers.iter().all(|transfer| {
+                if let Transfer::Complete(..) = transfer {
+                    true
+                } else {
+                    false
+                }
+            }) {
+                break;
+            }
+        }
+
+        let received: [Table<Key, Value>; N] =
+            array_init::from_iter(IntoIter::new(transfers).map(|transfer| {
+                match transfer {
+                    Transfer::Complete(table) => table,
+                    Transfer::Incomplete(..) => unreachable!(),
+                }
+            }))
+            .unwrap();
+
+        (received, rounds)
     }
 }
