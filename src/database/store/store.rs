@@ -352,6 +352,65 @@ mod tests {
             }
         }
 
+        pub fn check_references<I>(&mut self, held: I)
+        where
+            I: IntoIterator<Item = Label>,
+        {
+            #[derive(Hash, PartialEq, Eq)]
+            enum Reference {
+                Internal(Label),
+                External(usize),
+            }
+
+            fn recursion<Key, Value>(
+                store: &mut Store<Key, Value>,
+                label: Label,
+                references: &mut HashMap<Label, HashSet<Reference>>,
+            ) where
+                Key: Field,
+                Value: Field,
+            {
+                if let Label::Internal(..) = label {
+                    let (left, right) = store.fetch_internal(label);
+
+                    for child in [left, right] {
+                        references
+                            .entry(child)
+                            .or_insert(HashSet::new())
+                            .insert(Reference::Internal(label));
+
+                        recursion(store, child, references);
+                    }
+                }
+            }
+
+            let mut references: HashMap<Label, HashSet<Reference>> =
+                HashMap::new();
+
+            for (id, held) in held.into_iter().enumerate() {
+                references
+                    .entry(held)
+                    .or_insert(HashSet::new())
+                    .insert(Reference::External(id));
+                    
+                recursion(self, held, &mut references);
+            }
+
+            for (label, references) in references {
+                if !label.is_empty() {
+                    match self.entry(label) {
+                        Occupied(entry) => {
+                            assert_eq!(
+                                entry.get().references,
+                                references.len()
+                            );
+                        }
+                        Vacant(..) => unreachable!(),
+                    }
+                }
+            }
+        }
+
         pub fn collect_records(&mut self, root: Label) -> HashMap<Key, Value>
         where
             Key: Clone + Eq + Hash,

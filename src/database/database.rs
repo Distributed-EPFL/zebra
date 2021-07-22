@@ -47,7 +47,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::Transaction;
+    use crate::database::{store::Label, Transaction};
 
     impl<Key, Value> Database<Key, Value>
     where
@@ -92,10 +92,11 @@ mod tests {
             let receiver_held =
                 receivers.iter().map(|receiver| receiver.held()).flatten();
 
-            let held = table_held.chain(receiver_held);
+            let held: Vec<Label> = table_held.chain(receiver_held).collect();
 
             let mut store = self.store.take();
-            store.check_leaks(held);
+            store.check_leaks(held.clone());
+            store.check_references(held.clone());
             self.store.restore(store);
         }
     }
