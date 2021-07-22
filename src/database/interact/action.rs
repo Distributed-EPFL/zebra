@@ -1,4 +1,4 @@
-use crate::database::store::{Field, Wrap};
+use crate::{common::store::Field, database::store::Wrap};
 
 use std::sync::Arc;
 

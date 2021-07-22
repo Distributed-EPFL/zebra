@@ -1,9 +1,12 @@
 use async_recursion::async_recursion;
 
-use crate::database::{
-    interact::{Action, Batch, Chunk, Operation, Task},
-    store::{Field, Label, Node, Split, Store},
-    tree::{Direction, Path},
+use crate::{
+    common::store::Field,
+    database::{
+        interact::{Action, Batch, Chunk, Operation, Task},
+        store::{Label, Node, Split, Store},
+        tree::{Direction, Path},
+    },
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};

@@ -1,4 +1,4 @@
-use crate::database::store::{Field, Store};
+use crate::{common::store::Field, database::store::Store};
 
 use std::sync::{Arc, Condvar, Mutex};
 

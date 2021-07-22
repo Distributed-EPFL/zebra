@@ -1,9 +1,11 @@
-use crate::database::{
-    errors::{HashError, KeyCollision, QueryError},
-    interact::{Batch, Operation},
-    store::Field,
-    tree::Path,
-    Query,
+use crate::{
+    common::store::Field,
+    database::{
+        errors::{HashError, KeyCollision, QueryError},
+        interact::{Batch, Operation},
+        tree::Path,
+        Query,
+    },
 };
 
 use snafu::ResultExt;

@@ -1,9 +1,9 @@
 use crate::{
-    common::data::Bytes,
+    common::{data::Bytes, store::Field},
     database::{
         errors::{MalformedAnswer, SyncError},
         interact::drop,
-        store::{Cell, Field, Label, MapId, Node, Store},
+        store::{Cell, Label, MapId, Node, Store},
         sync::{locate, Severity},
         tree::Prefix,
         Answer, Question, Table,

@@ -1,6 +1,9 @@
-use crate::database::{
-    interact::{apply, drop, Batch},
-    store::{Cell, Field, Label},
+use crate::{
+    common::store::Field,
+    database::{
+        interact::{apply, drop, Batch},
+        store::{Cell, Label},
+    },
 };
 
 pub(crate) struct Handle<Key: Field, Value: Field> {

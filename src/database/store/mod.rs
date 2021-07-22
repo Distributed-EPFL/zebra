@@ -1,6 +1,5 @@
 mod cell;
 mod entry;
-mod field;
 mod handle;
 mod label;
 mod map_id;
@@ -13,7 +12,6 @@ use store::DEPTH;
 
 pub(crate) use cell::Cell;
 pub(crate) use entry::Entry;
-pub(crate) use field::Field;
 pub(crate) use handle::Handle;
 pub(crate) use label::Label;
 pub(crate) use map_id::MapId;

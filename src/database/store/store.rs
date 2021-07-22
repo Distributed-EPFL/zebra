@@ -1,7 +1,7 @@
 use crate::{
-    common::data::Bytes,
+    common::{data::Bytes, store::Field},
     database::{
-        store::{Entry, Field, Label, MapId, Node, Split},
+        store::{Entry, Label, MapId, Node, Split},
         tree::Prefix,
     },
 };

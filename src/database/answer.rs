@@ -1,4 +1,4 @@
-use crate::database::store::{Field, Node};
+use crate::{common::store::Field, database::store::Node};
 
 use std::vec::Vec;
 

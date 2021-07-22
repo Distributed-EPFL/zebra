@@ -1,7 +1,9 @@
-use crate::database::{
-    interact::{Action, Batch},
-    store::Field,
-    Query, Tid,
+use crate::{
+    common::store::Field,
+    database::{
+        interact::{Action, Batch},
+        Query, Tid,
+    },
 };
 
 pub struct Response<Key: Field, Value: Field> {

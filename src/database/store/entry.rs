@@ -1,4 +1,4 @@
-use crate::database::store::{Field, Node};
+use crate::{common::store::Field, database::store::Node};
 
 #[derive(Clone)]
 pub(crate) struct Entry<Key: Field, Value: Field> {

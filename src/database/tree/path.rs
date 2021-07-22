@@ -1,9 +1,9 @@
 use crate::{
-    common::data::{bytes::EMPTY, Bytes},
-    database::{
-        store::{Field, Wrap},
-        tree::Direction,
+    common::{
+        data::{bytes::EMPTY, Bytes},
+        store::Field,
     },
+    database::{store::Wrap, tree::Direction},
 };
 
 use drop::crypto::Digest;

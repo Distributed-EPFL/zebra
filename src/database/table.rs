@@ -1,6 +1,9 @@
-use crate::database::{
-    store::{Cell, Field, Handle, Label},
-    Response, Sender, Transaction,
+use crate::{
+    common::store::Field,
+    database::{
+        store::{Cell, Handle, Label},
+        Response, Sender, Transaction,
+    },
 };
 
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);

@@ -1,6 +1,9 @@
-use crate::database::{
-    store::{Field, Label, Node, Store},
-    tree::{Path, Prefix},
+use crate::{
+    common::store::Field,
+    database::{
+        store::{Label, Node, Store},
+        tree::{Path, Prefix},
+    },
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};

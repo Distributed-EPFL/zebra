@@ -1,4 +1,4 @@
-use crate::database::{interact::Operation, store::Field};
+use crate::{common::store::Field, database::interact::Operation};
 
 #[derive(Debug)]
 pub(crate) enum Task<'a, Key: Field, Value: Field> {

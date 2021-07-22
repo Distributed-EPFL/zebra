@@ -1,6 +1,6 @@
 use oh_snap::Snap;
 
-use crate::database::{interact::Operation, store::Field};
+use crate::{common::store::Field, database::interact::Operation};
 
 use rayon::prelude::*;
 

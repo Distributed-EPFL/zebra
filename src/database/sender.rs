@@ -1,8 +1,11 @@
-use crate::database::{
-    errors::{MalformedQuestion, SyncError},
-    store::{Field, Handle, Label, Node, Store},
-    sync::ANSWER_DEPTH,
-    Answer, Question,
+use crate::{
+    common::store::Field,
+    database::{
+        errors::{MalformedQuestion, SyncError},
+        store::{Handle, Label, Node, Store},
+        sync::ANSWER_DEPTH,
+        Answer, Question,
+    },
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};

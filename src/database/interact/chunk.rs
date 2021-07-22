@@ -1,7 +1,9 @@
-use crate::database::{
-    interact::{Batch, Operation, Task},
-    store::Field,
-    tree::Prefix,
+use crate::{
+    common::store::Field,
+    database::{
+        interact::{Batch, Operation, Task},
+        tree::Prefix,
+    },
 };
 
 use std::ops::Range;

@@ -1,6 +1,9 @@
-use crate::database::{
-    store::{Cell, Field, Store},
-    Receiver, Table,
+use crate::{
+    common::store::Field,
+    database::{
+        store::{Cell, Store},
+        Receiver, Table,
+    },
 };
 
 pub struct Database<Key, Value>

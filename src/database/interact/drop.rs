@@ -1,4 +1,7 @@
-use crate::database::store::{Field, Label, Node, Store};
+use crate::{
+    common::store::Field,
+    database::store::{Label, Node, Store},
+};
 
 pub(crate) fn drop<Key, Value>(store: &mut Store<Key, Value>, label: Label)
 where

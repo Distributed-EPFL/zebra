@@ -1,6 +1,9 @@
 use crate::{
-    common::data::{bytes::EMPTY, Bytes},
-    database::store::{Field, Label, Wrap},
+    common::{
+        data::{bytes::EMPTY, Bytes},
+        store::Field,
+    },
+    database::store::{Label, Wrap},
 };
 
 use drop::crypto::hash;
