@@ -729,4 +729,41 @@ mod tests {
         first.assert_records((0..256).map(|i| (i, i)));
         second.assert_records((128..384).map(|i| (i, i)));
     }
+
+    #[tokio::test]
+    async fn multiple_then_double_overlap() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        received.assert_records((0..256).map(|i| (i, i)));
+
+        let first_original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut first_sender = first_original.send();
+
+        let second_original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut second_sender = second_original.send();
+
+        let first_receiver = bob.receive();
+        let second_receiver = bob.receive();
+
+        let ([first, second], _) = run(
+            &bob,
+            [&received],
+            [
+                (&mut first_sender, first_receiver),
+                (&mut second_sender, second_receiver),
+            ],
+        );
+
+        first.assert_records((128..384).map(|i| (i, i)));
+        second.assert_records((128..384).map(|i| (i, i)));
+    }
 }
