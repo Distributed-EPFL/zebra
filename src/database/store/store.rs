@@ -323,13 +323,10 @@ mod tests {
                     collector.insert(label);
                 }
 
-                match label {
-                    Label::Internal(..) => {
-                        let (left, right) = store.fetch_internal(label);
-                        recursion(store, left, collector);
-                        recursion(store, right, collector);
-                    }
-                    _ => {}
+                if let Label::Internal(..) = label {
+                    let (left, right) = store.fetch_internal(label);
+                    recursion(store, left, collector);
+                    recursion(store, right, collector);
                 }
             }
 
@@ -392,7 +389,7 @@ mod tests {
                     .entry(held)
                     .or_insert(HashSet::new())
                     .insert(Reference::External(id));
-                    
+
                 recursion(self, held, &mut references);
             }
 
