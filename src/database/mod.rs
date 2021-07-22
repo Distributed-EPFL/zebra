@@ -3,7 +3,6 @@
 #[macro_use]
 mod macros;
 
-mod data;
 mod interact;
 mod store;
 mod sync;

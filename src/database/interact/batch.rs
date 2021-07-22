@@ -46,7 +46,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{data::Bytes, interact::Action, tree::Path};
+    use crate::{
+        common::data::Bytes,
+        database::{interact::Action, tree::Path},
+    };
 
     use drop::crypto::hash;
 

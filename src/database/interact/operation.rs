@@ -1,8 +1,10 @@
-use crate::database::{
-    data::Bytes,
-    interact::Action,
-    store::{Field, Wrap},
-    tree::Path,
+use crate::{
+    common::data::Bytes,
+    database::{
+        interact::Action,
+        store::{Field, Wrap},
+        tree::Path,
+    },
 };
 
 use drop::crypto::hash;

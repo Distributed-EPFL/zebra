@@ -1,6 +1,6 @@
-use crate::database::{
-    data::{bytes::EMPTY, Bytes},
-    store::MapId,
+use crate::{
+    common::data::{bytes::EMPTY, Bytes},
+    database::store::MapId,
 };
 
 use serde::Serialize;

@@ -1,7 +1,9 @@
-use crate::database::{
-    data::Bytes,
-    store::{Entry, Field, Label, MapId, Node, Split},
-    tree::Prefix,
+use crate::{
+    common::data::Bytes,
+    database::{
+        store::{Entry, Field, Label, MapId, Node, Split},
+        tree::Prefix,
+    },
 };
 
 use oh_snap::Snap;

@@ -1,4 +1,4 @@
-use crate::database::{data::Bytes, store::Field};
+use crate::{common::data::Bytes, database::store::Field};
 
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;

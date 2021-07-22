@@ -1,11 +1,13 @@
-use crate::database::{
-    data::Bytes,
-    errors::{MalformedAnswer, SyncError},
-    interact::drop,
-    store::{Cell, Field, Label, MapId, Node, Store},
-    sync::{locate, Severity},
-    tree::Prefix,
-    Answer, Question, Table,
+use crate::{
+    common::data::Bytes,
+    database::{
+        errors::{MalformedAnswer, SyncError},
+        interact::drop,
+        store::{Cell, Field, Label, MapId, Node, Store},
+        sync::{locate, Severity},
+        tree::Prefix,
+        Answer, Question, Table,
+    },
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
