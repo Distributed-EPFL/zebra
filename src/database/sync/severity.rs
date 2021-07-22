@@ -9,8 +9,16 @@ pub(crate) enum Severity {
 }
 
 impl Severity {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn ok() -> Self {
         Severity::Benign(0)
+    }
+
+    pub(crate) fn benign() -> Self {
+        Severity::Benign(1)
+    }
+
+    pub(crate) fn malicious() -> Self {
+        Severity::Malicious
     }
 
     pub(crate) fn is_benign(&self) -> bool {

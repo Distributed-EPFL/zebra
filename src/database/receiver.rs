@@ -61,11 +61,11 @@ where
         answer: Answer<Key, Value>,
     ) -> Result<Status<Key, Value>, SyncError> {
         let mut store = self.cell.take();
-        let mut severity = Severity::Benign(0);
+        let mut severity = Severity::ok();
 
         for node in answer.0 {
             severity = match self.update(&mut store, node) {
-                Ok(()) => Severity::Benign(0),
+                Ok(()) => Severity::ok(),
                 Err(offence) => severity + offence,
             };
 
@@ -119,11 +119,7 @@ where
 
         let location = if self.root.is_some() {
             // Check if `hash` is in `frontier`. If so, retrieve `location`.
-            Ok(self
-                .frontier
-                .get(&hash)
-                .ok_or(Severity::Benign(1))?
-                .location)
+            Ok(self.frontier.get(&hash).ok_or(Severity::benign())?.location)
         } else {
             // This is the first `node` fed in `update`. By convention, `node` is the root.
             Ok(Prefix::root())
@@ -137,17 +133,17 @@ where
             Node::Internal(left, right) => match (left, right) {
                 (Label::Empty, Label::Empty)
                 | (Label::Empty, Label::Leaf(..))
-                | (Label::Leaf(..), Label::Empty) => Err(Severity::Malicious),
+                | (Label::Leaf(..), Label::Empty) => Err(Severity::malicious()),
                 _ => Ok(Label::Internal(MapId::internal(location), hash)),
             },
             Node::Leaf(ref key, _) => {
                 if location.contains(&(*key.digest()).into()) {
                     Ok(Label::Leaf(MapId::leaf(key.digest()), hash))
                 } else {
-                    Err(Severity::Malicious)
+                    Err(Severity::malicious())
                 }
             }
-            Node::Empty => Err(Severity::Malicious),
+            Node::Empty => Err(Severity::malicious()),
         }?;
 
         // Fill `root` if necessary.
@@ -168,7 +164,7 @@ where
                 if locate::locate(store, label) == location {
                     Ok(())
                 } else {
-                    Err(Severity::Malicious)
+                    Err(Severity::malicious())
                 }
             } else {
                 Ok(())
