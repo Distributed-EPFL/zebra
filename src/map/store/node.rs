@@ -7,7 +7,6 @@ use crate::{
 };
 
 use drop::crypto::hash;
-use drop::crypto::hash::HashError;
 
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
@@ -43,15 +42,12 @@ where
         Box::new(Node::Internal { hash, left, right })
     }
 
-    pub fn leaf(key: Key, value: Value) -> Result<Box<Self>, HashError> {
-        let key = Wrap::new(key)?;
-        let value = Wrap::new(value)?;
-
+    pub fn leaf(key: Wrap<Key>, value: Wrap<Value>) -> Box<Self> {
         let hash = hash::hash(&(*key.digest(), *value.digest()))
             .unwrap()
             .into();
 
-        Ok(Box::new(Node::Leaf { hash, key, value }))
+        Box::new(Node::Leaf { hash, key, value })
     }
 
     pub fn stub(hash: Bytes) -> Box<Self> {
