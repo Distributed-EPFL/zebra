@@ -5,7 +5,7 @@ where
     Key: Field,
     Value: Field,
 {
-    root: Node<Key, Value>,
+    root: Box<Node<Key, Value>>,
 }
 
 impl<Key, Value> Map<Key, Value>
