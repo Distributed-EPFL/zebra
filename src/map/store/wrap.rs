@@ -3,6 +3,7 @@ use crate::common::{data::Bytes, store::Field};
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
+#[derive(Debug)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
     inner: Box<Inner>,
