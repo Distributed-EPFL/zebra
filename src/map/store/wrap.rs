@@ -3,10 +3,12 @@ use crate::common::{data::Bytes, store::Field};
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
+use std::rc::Rc;
+
 #[derive(Debug)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
-    inner: Box<Inner>,
+    inner: Rc<Inner>,
 }
 
 impl<Inner> Wrap<Inner>
@@ -16,7 +18,7 @@ where
     pub fn new(inner: Inner) -> Result<Self, HashError> {
         Ok(Wrap {
             digest: hash::hash(&inner)?.into(),
-            inner: Box::new(inner),
+            inner: Rc::new(inner),
         })
     }
 
@@ -24,7 +26,7 @@ where
         &self.digest
     }
 
-    pub fn inner(&self) -> &Inner {
+    pub fn inner(&self) -> &Rc<Inner> {
         &self.inner
     }
 }
