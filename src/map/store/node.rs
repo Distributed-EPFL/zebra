@@ -6,11 +6,7 @@ use crate::common::{
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
-pub(crate) enum Node<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
+pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Bytes, Box<Node<Key, Value>>, Box<Node<Key, Value>>),
     Leaf(Bytes, Key, Value),
