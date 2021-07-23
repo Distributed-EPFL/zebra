@@ -1,11 +1,10 @@
 use crate::{
-    common::{data::Bytes, store::Field},
+    common::{data::Bytes, store::Field, tree::Prefix},
     database::{
         errors::{MalformedAnswer, SyncError},
         interact::drop,
         store::{Cell, Label, MapId, Node, Store},
         sync::{locate, Severity},
-        tree::Prefix,
         Answer, Question, Table,
     },
 };

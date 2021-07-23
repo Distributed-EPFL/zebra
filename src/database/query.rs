@@ -1,4 +1,4 @@
-use crate::database::tree::Path;
+use crate::common::tree::Path;
 
 /// Used with a [`Response`] to obtain the result of a particular
 /// operation in a [`Transaction`].

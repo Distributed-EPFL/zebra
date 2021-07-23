@@ -1,9 +1,6 @@
-use crate::{
-    common::{
-        data::{bytes::EMPTY, Bytes},
-        store::Field,
-    },
-    database::{store::Wrap, tree::Direction},
+use crate::common::{
+    data::{bytes::EMPTY, Bytes},
+    tree::Direction,
 };
 
 use drop::crypto::Digest;
@@ -18,11 +15,8 @@ impl Path {
         Path(EMPTY)
     }
 
-    pub fn reaches<Key>(&self, key: &Wrap<Key>) -> bool
-    where
-        Key: Field,
-    {
-        self.0 == *key.digest()
+    pub fn reaches(&self, hash: Bytes) -> bool {
+        self.0 == hash
     }
 
     pub fn set(&mut self, index: u8, value: Direction) {

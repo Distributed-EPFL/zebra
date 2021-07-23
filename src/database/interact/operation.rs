@@ -1,6 +1,6 @@
 use crate::{
-    common::{data::Bytes, store::Field},
-    database::{interact::Action, store::Wrap, tree::Path},
+    common::{data::Bytes, store::Field, tree::Path},
+    database::{interact::Action, store::Wrap},
 };
 
 use drop::crypto::hash;
@@ -67,7 +67,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::tree::{Direction, Prefix};
+    use crate::common::tree::{Direction, Prefix};
 
     #[test]
     fn operation() {

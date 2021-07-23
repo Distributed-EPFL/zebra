@@ -1,4 +1,4 @@
-use crate::database::tree::{Direction, Path, PathIterator};
+use crate::common::tree::{Direction, Path, PathIterator};
 
 use std::iter::Take;
 use std::ops::Index;
