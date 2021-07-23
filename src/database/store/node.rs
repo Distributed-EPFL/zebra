@@ -8,9 +8,7 @@ use crate::{
 
 use drop::crypto::hash;
 
-use serde::Serialize;
-
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),

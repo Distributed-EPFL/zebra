@@ -3,14 +3,11 @@ use crate::common::{data::Bytes, store::Field};
 use drop::crypto::hash;
 use drop::crypto::hash::HashError;
 
-use serde::Serialize;
-
 use std::sync::Arc;
 
-#[derive(Debug, Serialize)]
+#[derive(Debug)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
-    #[serde(skip)]
     inner: Arc<Inner>,
 }
 
