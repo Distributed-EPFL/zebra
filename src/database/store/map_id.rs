@@ -1,9 +1,9 @@
 use crate::{
-    common::data::Bytes,
-    database::{
-        store::DEPTH,
+    common::{
+        data::Bytes,
         tree::{Direction, Prefix},
     },
+    database::store::DEPTH,
 };
 
 use serde::Serialize;

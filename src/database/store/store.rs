@@ -1,9 +1,6 @@
 use crate::{
-    common::{data::Bytes, store::Field},
-    database::{
-        store::{Entry, Label, MapId, Node, Split},
-        tree::Prefix,
-    },
+    common::{data::Bytes, store::Field, tree::Prefix},
+    database::store::{Entry, Label, MapId, Node, Split},
 };
 
 use oh_snap::Snap;
@@ -168,9 +165,9 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{
-        store::{Entry, Node, Wrap},
-        tree::{Direction, Path},
+    use crate::{
+        common::tree::{Direction, Path},
+        database::store::{Entry, Node, Wrap},
     };
 
     use std::collections::HashSet;

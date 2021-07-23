@@ -1,9 +1,8 @@
 use crate::{
-    common::store::Field,
+    common::{store::Field, tree::Path},
     database::{
         errors::{HashError, KeyCollision, QueryError},
         interact::{Batch, Operation},
-        tree::Path,
         Query,
     },
 };

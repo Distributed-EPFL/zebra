@@ -1,9 +1,9 @@
 use crate::{
-    common::store::Field,
-    database::{
-        store::{Label, Node, Store},
+    common::{
+        store::Field,
         tree::{Path, Prefix},
     },
+    database::store::{Label, Node, Store},
 };
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
@@ -74,9 +74,9 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{
-        interact::{apply, Batch},
-        tree::Direction,
+    use crate::{
+        common::tree::Direction,
+        database::interact::{apply, Batch},
     };
 
     #[tokio::test]

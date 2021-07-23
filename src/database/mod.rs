@@ -4,7 +4,6 @@ mod macros;
 mod interact;
 mod store;
 mod sync;
-mod tree;
 
 mod answer;
 mod database;

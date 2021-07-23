@@ -1,11 +1,13 @@
 use async_recursion::async_recursion;
 
 use crate::{
-    common::store::Field,
+    common::{
+        store::Field,
+        tree::{Direction, Path},
+    },
     database::{
         interact::{Action, Batch, Chunk, Operation, Task},
         store::{Label, Node, Split, Store},
-        tree::{Direction, Path},
     },
 };
 
@@ -251,7 +253,7 @@ where
         }
 
         (Node::Leaf(key, original_value), Task::Do(operation))
-            if operation.path.reaches(key) =>
+            if operation.path.reaches(*key.digest()) =>
         {
             match &mut operation.action {
                 Action::Get(holder) => {

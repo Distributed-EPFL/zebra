@@ -1,9 +1,6 @@
 use crate::{
-    common::store::Field,
-    database::{
-        interact::{Batch, Operation, Task},
-        tree::Prefix,
-    },
+    common::{store::Field, tree::Prefix},
+    database::interact::{Batch, Operation, Task},
 };
 
 use std::ops::Range;
@@ -126,7 +123,7 @@ impl Chunk {
 mod tests {
     use super::*;
 
-    use crate::database::tree::Direction;
+    use crate::common::tree::Direction;
 
     impl Chunk {
         pub fn from_directions<Key, Value, I, J>(

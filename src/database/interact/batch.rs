@@ -47,8 +47,8 @@ mod tests {
     use super::*;
 
     use crate::{
-        common::data::Bytes,
-        database::{interact::Action, tree::Path},
+        common::{data::Bytes, tree::Path},
+        database::interact::Action,
     };
 
     use drop::crypto::hash;
