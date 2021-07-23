@@ -22,7 +22,7 @@ where
 
         Ok(Operation {
             path: Path::from(hash),
-            action: Action::Get(None),
+            action: Action::Get,
         })
     }
 
