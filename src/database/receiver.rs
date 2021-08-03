@@ -115,7 +115,7 @@ where
         store: &mut Store<Key, Value>,
         node: Node<Key, Value>,
     ) -> Result<(), Severity> {
-        let hash = node.hash().into();
+        let hash = node.hash();
 
         let location = if self.root.is_some() {
             // Check if `hash` is in `frontier`. If so, retrieve `location`.
@@ -260,7 +260,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{Database, Sender};
+    use crate::database::{sync::ANSWER_DEPTH, Database, Sender};
 
     use std::array::IntoIter;
 
@@ -763,5 +763,126 @@ mod tests {
 
         first.assert_records((128..384).map(|i| (i, i)));
         second.assert_records((128..384).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_then_overlap_drop_received_midway() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let ([received], _) = run(&bob, [], [(&mut sender, receiver)]);
+
+        received.assert_records((0..256).map(|i| (i, i)));
+
+        let first_original =
+            alice.table_with_records((128..384).map(|i| (i, i))).await;
+        let mut first_sender = first_original.send();
+
+        let mut first_receiver = bob.receive();
+        let mut answer = first_sender.hello();
+
+        for _ in 0..2 {
+            let status = first_receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(_) => {
+                    panic!("Should take longer than 2 steps");
+                }
+                Status::Incomplete(receiver, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    first_receiver = receiver;
+                }
+            };
+        }
+
+        drop(received);
+
+        let first = loop {
+            let status = first_receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(table) => {
+                    break table;
+                }
+                Status::Incomplete(receiver, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    first_receiver = receiver;
+                }
+            };
+        };
+
+        bob.check([&first], []);
+        first.assert_records((128..384).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_acceptable_benign() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let mut receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        let max_benign = (1 << (ANSWER_DEPTH + 1)) - 2;
+
+        answer = Answer(
+            (0..max_benign + 1)
+                .map(|_| answer.0[0].clone())
+                .collect::<Vec<Node<_, _>>>(),
+        );
+
+        let first = loop {
+            let status = receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(table) => {
+                    break table;
+                }
+                Status::Incomplete(receiver_t, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    receiver = receiver_t;
+                }
+            };
+        };
+
+        bob.check([&first], []);
+        first.assert_records((0..256).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_unacceptable_benign() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        let max_benign = (1 << (ANSWER_DEPTH + 1)) - 2;
+
+        answer = Answer(
+            (0..max_benign + 2)
+                .map(|_| answer.0[0].clone())
+                .collect::<Vec<Node<_, _>>>(),
+        );
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
     }
 }
