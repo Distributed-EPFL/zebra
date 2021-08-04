@@ -887,7 +887,117 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn multiple_malign_recover() {
+    async fn multiple_malicious_internal_topology_empty_leaf() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..100).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        // Malicious tampering of Internal node's right child label ((empty, leaf) -> bad topology)
+        let fake_leaf = Node::Leaf(wrap!(u32::MAX), wrap!(u32::MAX - 4));
+        let fake_internal = Node::Internal(
+            Label::Empty,
+            Label::Leaf(
+                MapId::leaf(wrap!(u32::MAX).digest()),
+                fake_leaf.hash(),
+            ),
+        );
+        let fake_internal_label = Label::Internal(
+            MapId::internal(Prefix::root().left()),
+            fake_internal.hash(),
+        );
+        if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
+            answer.0[0] = Node::Internal(fake_internal_label, r);
+        }
+        answer.0[1] = fake_internal;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+    }
+
+    #[tokio::test]
+    async fn multiple_malicious_internal_topology_leaf_empty() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..100).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        // Malicious tampering of Internal node's right child label ((leaf, empty) -> bad topology)
+        let fake_leaf = Node::Leaf(wrap!(u32::MAX), wrap!(u32::MAX - 10));
+        let fake_internal = Node::Internal(
+            Label::Leaf(
+                MapId::leaf(wrap!(u32::MAX).digest()),
+                fake_leaf.hash(),
+            ),
+            Label::Empty,
+        );
+        let fake_internal_label = Label::Internal(
+            MapId::internal(Prefix::root().left()),
+            fake_internal.hash(),
+        );
+        if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
+            answer.0[0] = Node::Internal(fake_internal_label, r);
+        }
+        answer.0[1] = fake_internal;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+    }
+
+    #[tokio::test]
+    async fn multiple_malicious_internal_topology_empty_empty() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..100).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        // Malicious tampering of Internal node's right child label ((empty, empty) -> bad topology)
+        let fake_internal = Node::Internal(Label::Empty, Label::Empty);
+        let fake_internal_label = Label::Internal(
+            MapId::internal(Prefix::root().left()),
+            fake_internal.hash(),
+        );
+        if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
+            answer.0[0] = Node::Internal(fake_internal_label, r);
+        }
+        answer.0[1] = fake_internal;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+    }
+
+    #[tokio::test]
+    async fn multiple_malicious_internal_map_id() {
         let alice: Database<u32, u32> = Database::new();
         let bob: Database<u32, u32> = Database::new();
 
@@ -910,15 +1020,70 @@ mod tests {
             }
         };
 
-        let n: Node<u32, u32> = match answer.0[0].clone() {
-            Node::Internal(l, Label::Internal(_, bytes)) => {
+        // Malicious tampering of Internal node's right child map_id
+        for (i, v) in answer.0.clone().iter().enumerate() {
+            if let Node::<_, _>::Internal(l, Label::Internal(_, bytes)) = v {
                 let fake_map_id = MapId::internal(Prefix::root());
-                Node::Internal(l, Label::Internal(fake_map_id, bytes))
+                let n =
+                    Node::Internal(*l, Label::Internal(fake_map_id, *bytes));
+                answer.0[i] = n;
+                break;
             }
-            _ => unreachable!(),
+        }
+
+        let first = loop {
+            let status = receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(table) => {
+                    break table;
+                }
+                Status::Incomplete(receiver_t, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    receiver = receiver_t;
+                }
+            };
         };
 
-        answer.0[0] = n;
+        bob.check([&first], []);
+        first.assert_records((0..256).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn multiple_malicious_leaf_key_recover() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let mut receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        for _ in 0..2 {
+            let status = receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(_) => {
+                    unreachable!();
+                }
+                Status::Incomplete(receiver_t, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    receiver = receiver_t;
+                }
+            };
+        }
+
+        // Malicious tampering of Leaf node's key
+        for (i, v) in answer.0.clone().iter().enumerate() {
+            if let Node::<_, _>::Leaf(_, value) = v {
+                let fake_key = wrap!(u32::MAX);
+                let n = Node::Leaf(fake_key, value.clone());
+                answer.0[i] = n;
+                break;
+            }
+        }
 
         let first = loop {
             let status = receiver.learn(answer).unwrap();
