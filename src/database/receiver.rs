@@ -20,7 +20,7 @@ pub struct Receiver<Key: Field, Value: Field> {
     root: Option<Label>,
     held: HashSet<Label>,
     frontier: HashMap<Bytes, Context>,
-    acquired: HashMap<Label, Node<Key, Value>>,
+    acquired: HashMap<Bytes, Node<Key, Value>>,
     pub settings: Settings,
 }
 
@@ -178,7 +178,7 @@ where
                 self.sight(right, location.right());
             }
 
-            self.acquired.insert(label, node);
+            self.acquired.insert(*label.hash(), node);
         }
 
         self.frontier.remove(&hash);
@@ -217,7 +217,7 @@ where
             let recursion = if stored {
                 None
             } else {
-                let node = self.acquired.get(&label).unwrap();
+                let node = self.acquired.get(label.hash()).unwrap();
                 store.populate(label, node.clone());
 
                 match node {
@@ -884,5 +884,57 @@ mod tests {
             }
             _ => panic!("Receiver accepts too many benign faults from sender"),
         }
+    }
+
+    #[tokio::test]
+    async fn multiple_malign_recover() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let mut receiver = bob.receive();
+
+        let mut answer = sender.hello();
+
+        let status = receiver.learn(answer).unwrap();
+
+        match status {
+            Status::Complete(_) => {
+                panic!("Should take longer than 2 steps");
+            }
+            Status::Incomplete(receiver_t, question) => {
+                answer = sender.answer(&question).unwrap();
+                receiver = receiver_t;
+            }
+        };
+
+        let n: Node<u32, u32> = match answer.0[0].clone() {
+            Node::Internal(l, Label::Internal(_, bytes)) => {
+                let fake_map_id = MapId::internal(Prefix::root());
+                Node::Internal(l, Label::Internal(fake_map_id, bytes))
+            }
+            _ => unreachable!(),
+        };
+
+        answer.0[0] = n;
+
+        let first = loop {
+            let status = receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(table) => {
+                    break table;
+                }
+                Status::Incomplete(receiver_t, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    receiver = receiver_t;
+                }
+            };
+        };
+
+        bob.check([&first], []);
+        first.assert_records((0..256).map(|i| (i, i)));
     }
 }
