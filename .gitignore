@@ -87,3 +87,6 @@ $RECYCLE.BIN/
 
 ### VSCode ###
 .vscode
+
+# Code coverage reports
+lcov.info
