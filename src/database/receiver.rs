@@ -264,6 +264,46 @@ mod tests {
 
     use std::array::IntoIter;
 
+    enum Transfer<'a, Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        Complete(Table<Key, Value>),
+        Incomplete(
+            &'a mut Sender<Key, Value>,
+            Receiver<Key, Value>,
+            Answer<Key, Value>,
+        ),
+    }
+
+    fn run_for<Key, Value>(
+        mut receiver: Receiver<Key, Value>,
+        sender: &mut Sender<Key, Value>,
+        mut answer: Answer<Key, Value>,
+        steps: usize,
+    ) -> Transfer<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        for _ in 0..steps {
+            let status = receiver.learn(answer).unwrap();
+
+            match status {
+                Status::Complete(table) => {
+                    return Transfer::Complete(table);
+                }
+                Status::Incomplete(receiver_t, question) => {
+                    answer = sender.answer(&question).unwrap();
+                    receiver = receiver_t;
+                }
+            };
+        }
+
+        Transfer::Incomplete(sender, receiver, answer)
+    }
+
     impl<Key, Value> Receiver<Key, Value>
     where
         Key: Field,
@@ -284,19 +324,6 @@ mod tests {
         Value: Field,
         I: IntoIterator<Item = &'a Table<Key, Value>>,
     {
-        enum Transfer<'a, Key, Value>
-        where
-            Key: Field,
-            Value: Field,
-        {
-            Complete(Table<Key, Value>),
-            Incomplete(
-                &'a mut Sender<Key, Value>,
-                Receiver<Key, Value>,
-                Answer<Key, Value>,
-            ),
-        }
-
         let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
             IntoIter::new(transfers).map(|(sender, receiver)| {
                 let hello = sender.hello();
@@ -315,17 +342,7 @@ mod tests {
             transfers = array_init::from_iter(IntoIter::new(transfers).map(
                 |transfer| match transfer {
                     Transfer::Incomplete(sender, receiver, answer) => {
-                        let status = receiver.learn(answer).unwrap();
-
-                        match status {
-                            Status::Complete(table) => {
-                                Transfer::Complete(table)
-                            }
-                            Status::Incomplete(receiver, question) => {
-                                let answer = sender.answer(&question).unwrap();
-                                Transfer::Incomplete(sender, receiver, answer)
-                            }
-                        }
+                        run_for(receiver, sender, answer, 1)
                     }
                     complete => complete,
                 },
@@ -782,38 +799,26 @@ mod tests {
             alice.table_with_records((128..384).map(|i| (i, i))).await;
         let mut first_sender = first_original.send();
 
-        let mut first_receiver = bob.receive();
-        let mut answer = first_sender.hello();
+        let first_receiver = bob.receive();
+        let answer = first_sender.hello();
 
-        for _ in 0..2 {
-            let status = first_receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(_) => {
-                    panic!("Should take longer than 2 steps");
-                }
-                Status::Incomplete(receiver, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    first_receiver = receiver;
+        let (first_receiver, answer) =
+            match run_for(first_receiver, &mut sender, answer, 2) {
+                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+                Transfer::Complete(_) => {
+                    panic!("Should take longer than 2 steps")
                 }
             };
-        }
 
         drop(received);
 
-        let first = loop {
-            let status = first_receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(table) => {
-                    break table;
+        let first =
+            match run_for(first_receiver, &mut first_sender, answer, 100) {
+                Transfer::Incomplete(..) => {
+                    panic!("Transfer does not complete")
                 }
-                Status::Incomplete(receiver, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    first_receiver = receiver;
-                }
+                Transfer::Complete(table) => table,
             };
-        };
 
         bob.check([&first], []);
         first.assert_records((128..384).map(|i| (i, i)));
@@ -827,7 +832,7 @@ mod tests {
         let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
         let mut sender = original.send();
 
-        let mut receiver = bob.receive();
+        let receiver = bob.receive();
 
         let mut answer = sender.hello();
 
@@ -839,18 +844,11 @@ mod tests {
                 .collect::<Vec<Node<_, _>>>(),
         );
 
-        let first = loop {
-            let status = receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(table) => {
-                    break table;
-                }
-                Status::Incomplete(receiver_t, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    receiver = receiver_t;
-                }
-            };
+        let first = match run_for(receiver, &mut sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
         };
 
         bob.check([&first], []);
@@ -1004,21 +1002,17 @@ mod tests {
         let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
         let mut sender = original.send();
 
-        let mut receiver = bob.receive();
+        let receiver = bob.receive();
 
-        let mut answer = sender.hello();
+        let answer = sender.hello();
 
-        let status = receiver.learn(answer).unwrap();
-
-        match status {
-            Status::Complete(_) => {
-                panic!("Should take longer than 2 steps");
-            }
-            Status::Incomplete(receiver_t, question) => {
-                answer = sender.answer(&question).unwrap();
-                receiver = receiver_t;
-            }
-        };
+        let (receiver, mut answer) =
+            match run_for(receiver, &mut sender, answer, 1) {
+                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+                Transfer::Complete(_) => {
+                    panic!("Should take longer than 1 step to complete")
+                }
+            };
 
         // Malicious tampering of Internal node's right child map_id
         for (i, v) in answer.0.clone().iter().enumerate() {
@@ -1031,18 +1025,11 @@ mod tests {
             }
         }
 
-        let first = loop {
-            let status = receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(table) => {
-                    break table;
-                }
-                Status::Incomplete(receiver_t, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    receiver = receiver_t;
-                }
-            };
+        let first = match run_for(receiver, &mut sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
         };
 
         bob.check([&first], []);
@@ -1057,23 +1044,17 @@ mod tests {
         let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
         let mut sender = original.send();
 
-        let mut receiver = bob.receive();
+        let receiver = bob.receive();
 
-        let mut answer = sender.hello();
+        let answer = sender.hello();
 
-        for _ in 0..2 {
-            let status = receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(_) => {
-                    unreachable!();
-                }
-                Status::Incomplete(receiver_t, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    receiver = receiver_t;
+        let (receiver, mut answer) =
+            match run_for(receiver, &mut sender, answer, 2) {
+                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+                Transfer::Complete(_) => {
+                    panic!("Should take longer than 2 steps to complete")
                 }
             };
-        }
 
         // Malicious tampering of Leaf node's key
         for (i, v) in answer.0.clone().iter().enumerate() {
@@ -1085,18 +1066,11 @@ mod tests {
             }
         }
 
-        let first = loop {
-            let status = receiver.learn(answer).unwrap();
-
-            match status {
-                Status::Complete(table) => {
-                    break table;
-                }
-                Status::Incomplete(receiver_t, question) => {
-                    answer = sender.answer(&question).unwrap();
-                    receiver = receiver_t;
-                }
-            };
+        let first = match run_for(receiver, &mut sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
         };
 
         bob.check([&first], []);
