@@ -33,7 +33,10 @@ where
         let mut store = self.0.cell.take();
 
         for label in &question.0 {
-            Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH)?;
+            if let Err(e) = Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH) {
+                self.0.cell.restore(store);
+                return Err(e);
+            }
         }
 
         self.0.cell.restore(store);
@@ -78,7 +81,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::Database;
+    use crate::database::{
+        store::MapId,
+        Database
+    };
 
     use std::collections::hash_map::Entry::Occupied;
 
@@ -92,6 +98,25 @@ mod tests {
         let answer = send.answer(&Question(vec![Label::Empty])).unwrap();
 
         assert_eq!(answer, Answer(vec!()));
+    }
+
+    #[tokio::test]
+    async fn answer_non_existant() {
+        let database: Database<u32, u32> = Database::new();
+        let table = database.empty_table();
+
+        let mut send = table.send();
+        let leaf = leaf!(1u32, 1u32);
+        let leaf_label = Label::Leaf(MapId::leaf(&wrap!(1u32).digest()), leaf.hash());
+
+        let question = Question(vec![leaf_label]);
+        let answer = send.answer(&question);
+
+        match answer {
+            Err(SyncError::MalformedQuestion) => (),
+            Err(x) => panic!("Expected `SyncError::MalformedQuestion` but got {:?}", x),
+            _ => panic!("Expected `SyncError::MalformedQuestion` but got a valid answer"),
+        };
     }
 
     #[tokio::test]
