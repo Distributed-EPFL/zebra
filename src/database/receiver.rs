@@ -1076,4 +1076,27 @@ mod tests {
         bob.check([&first], []);
         first.assert_records((0..256).map(|i| (i, i)));
     }
+
+    #[tokio::test]
+    async fn swapped_leaf_positions() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((4..=5).map(|i| (i, i))).await;
+        let mut sender = original.send();
+        let receiver = bob.receive();
+        let mut answer = sender.hello();
+
+        if let Node::<_, _>::Internal(l, r) = answer.0[0].clone() {
+            answer.0[0] = Node::Internal(r, l);
+        };
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+    }
 }

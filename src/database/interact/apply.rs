@@ -562,6 +562,22 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn single_modify_overlap_same_value() {
+        let store = Store::<u32, u32>::new();
+
+        let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
+        let (store, root, _) = apply(store, Label::Empty, batch).await;
+
+        let batch = Batch::new((64..192).map(|i| set!(i, i)).collect());
+        let (store, root, _) = apply(store, root, batch).await;
+
+        let batch = Batch::new((0..192).map(|i| get!(i)).collect());
+        let (_, _, batch) = apply(store, root, batch).await;
+
+        batch.assert_gets((0..192).map(|i| (i, Some(i))));
+    }
+
+    #[tokio::test]
     async fn single_insert_hybrid_read_set() {
         let store = Store::<u32, u32>::new();
 

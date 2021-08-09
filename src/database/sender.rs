@@ -33,7 +33,9 @@ where
         let mut store = self.0.cell.take();
 
         for label in &question.0 {
-            if let Err(e) = Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH) {
+            if let Err(e) =
+                Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH)
+            {
                 self.0.cell.restore(store);
                 return Err(e);
             }
@@ -81,10 +83,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{
-        store::MapId,
-        Database
-    };
+    use crate::database::{store::MapId, Database};
 
     use std::collections::hash_map::Entry::Occupied;
 
@@ -107,7 +106,8 @@ mod tests {
 
         let mut send = table.send();
         let leaf = leaf!(1u32, 1u32);
-        let leaf_label = Label::Leaf(MapId::leaf(&wrap!(1u32).digest()), leaf.hash());
+        let leaf_label =
+            Label::Leaf(MapId::leaf(&wrap!(1u32).digest()), leaf.hash());
 
         let question = Question(vec![leaf_label]);
         let answer = send.answer(&question);
