@@ -103,4 +103,74 @@ mod tests {
             self.store.restore(store);
         }
     }
+
+    #[tokio::test]
+    async fn modify_basic() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut table =
+            database.table_with_records((0..256).map(|i| (i, i))).await;
+
+        let mut transaction = Transaction::new();
+        for i in 128..256 {
+            transaction.set(i, i + 1).unwrap();
+        }
+        let _ = table.execute(transaction).await;
+        table.assert_records(
+            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
+        );
+
+        database.check([&table], []);
+    }
+
+    #[tokio::test]
+    async fn clone_modify_original() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut table =
+            database.table_with_records((0..256).map(|i| (i, i))).await;
+        let table_clone = table.clone();
+
+        let mut transaction = Transaction::new();
+        for i in 128..256 {
+            transaction.set(i, i + 1).unwrap();
+        }
+        let _response = table.execute(transaction).await;
+        table.assert_records(
+            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
+        );
+        table_clone.assert_records((0..256).map(|i| (i, i)));
+
+        database.check([&table, &table_clone], []);
+        drop(table_clone);
+
+        table.assert_records(
+            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
+        );
+        database.check([&table], []);
+    }
+
+    #[tokio::test]
+    async fn clone_modify_drop() {
+        let database: Database<u32, u32> = Database::new();
+
+        let table = database.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut table_clone = table.clone();
+
+        let mut transaction = Transaction::new();
+        for i in 128..256 {
+            transaction.set(i, i + 1).unwrap();
+        }
+        let _response = table_clone.execute(transaction).await;
+        table_clone.assert_records(
+            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
+        );
+        table.assert_records((0..256).map(|i| (i, i)));
+
+        database.check([&table, &table_clone], []);
+        drop(table_clone);
+
+        table.assert_records((0..256).map(|i| (i, i)));
+        database.check([&table], []);
+    }
 }
