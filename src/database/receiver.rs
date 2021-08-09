@@ -1099,4 +1099,130 @@ mod tests {
             _ => panic!("Receiver accepts too many benign faults from sender"),
         }
     }
+
+    #[tokio::test]
+    async fn empty_node_hello() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..1).map(|i| (i, i))).await;
+        let mut sender = original.send();
+        let receiver = bob.receive();
+        let mut answer = sender.hello();
+
+        answer.0[0] = Node::Empty;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+    }
+
+    #[tokio::test]
+    async fn malicious_internal_swap_location_root() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let answer = sender.hello();
+        let right_label = match answer.0[0] {
+            Node::Internal(_, r) => r,
+            _ => unreachable!(),
+        };
+        let right =
+            sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
+
+        let first = match run_for(receiver, &mut sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
+        };
+
+        let original = alice.table_with_records((0..128).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let mut answer = sender.hello();
+
+        // Malicious swap. Swapping root with right child.
+        answer.0[0] = right;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+
+        bob.check([&first], []);
+        first.assert_records((0..256).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn malicious_internal_swap_location_deep() {
+        let alice: Database<u32, u32> = Database::new();
+        let bob: Database<u32, u32> = Database::new();
+
+        let original = alice.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+
+        let answer = sender.hello();
+        let right_label = match answer.0[0] {
+            Node::Internal(_, r) => r,
+            _ => unreachable!(),
+        };
+        let right_label =
+            match sender.answer(&Question(vec![right_label])).unwrap().0[0]
+                .clone()
+            {
+                Node::Internal(_, r) => r,
+                _ => unreachable!(),
+            };
+        let right =
+            sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
+
+        let first = match run_for(receiver, &mut sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
+        };
+
+        let original = alice.table_with_records((0..128).map(|i| (i, i))).await;
+        let mut sender = original.send();
+
+        let receiver = bob.receive();
+        let mut answer = sender.hello();
+
+        // Malicious swap. Swapping RRR with RR (same map_id)
+        match answer.0[0] {
+            Node::Internal(l, _) => {
+                answer.0[0] = Node::Internal(l, right_label);
+            }
+            _ => unreachable!(),
+        };
+        answer.0[1] = right;
+
+        match receiver.learn(answer) {
+            Err(SyncError::MalformedAnswer) => (),
+            Err(x) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            }
+            _ => panic!("Receiver accepts too many benign faults from sender"),
+        }
+
+        bob.check([&first], []);
+        first.assert_records((0..256).map(|i| (i, i)));
+    }
 }
