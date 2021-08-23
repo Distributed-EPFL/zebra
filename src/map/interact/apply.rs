@@ -12,11 +12,11 @@ use crate::{
 use std::rc::Rc;
 
 fn branch<Key, Value>(
-    left: Box<Node<Key, Value>>,
-    right: Box<Node<Key, Value>>,
+    left: Node<Key, Value>,
+    right: Node<Key, Value>,
     depth: u8,
     operation: Operation<Key, Value>,
-) -> (Box<Node<Key, Value>>, Result<Option<Rc<Value>>, ()>)
+) -> (Node<Key, Value>, Result<Option<Rc<Value>>, ()>)
 where
     Key: Field,
     Value: Field,
@@ -29,8 +29,8 @@ where
         (left, right, get)
     };
 
-    let node = match (&*left, &*right) {
-        (Node::Empty, Node::Empty) => left,
+    let node = match (&left, &right) {
+        (Node::Empty, Node::Empty) => Node::Empty,
         (Node::Leaf { .. }, Node::Empty) => left,
         (Node::Empty, Node::Leaf { .. }) => right,
         _ => Node::internal(left, right),
@@ -40,22 +40,22 @@ where
 }
 
 fn recur<Key, Value>(
-    node: Box<Node<Key, Value>>,
+    node: Node<Key, Value>,
     depth: u8,
     operation: Operation<Key, Value>,
-) -> (Box<Node<Key, Value>>, Result<Option<Rc<Value>>, ()>)
+) -> (Node<Key, Value>, Result<Option<Rc<Value>>, ()>)
 where
     Key: Field,
     Value: Field,
 {
-    match (*node, operation) {
+    match (node, operation) {
         (
             Node::Empty,
             Operation {
-                action: Action::Get,
+                action: Action::Get | Action::Remove,
                 ..
             },
-        ) => (Node::empty(), Ok(None)),
+        ) => (Node::Empty, Ok(None)),
         (
             Node::Empty,
             Operation {
@@ -63,62 +63,54 @@ where
                 ..
             },
         ) => (Node::leaf(key, value), Ok(None)),
-        (
-            Node::Empty,
-            Operation {
-                action: Action::Remove,
-                ..
-            },
-        ) => (Node::empty(), Ok(None)),
 
-        (Node::Internal { left, right, .. }, operation) => {
+        (Node::Internal(internal), operation) => {
+            let (left, right) = internal.children();
             branch(left, right, depth, operation)
         }
 
         (
-            Node::Leaf {
-                key,
-                value: original_value,
-                ..
-            },
-            Operation { path, action },
-        ) if path.reaches(*key.digest()) => match action {
-            Action::Get => {
-                let get = Some(original_value.inner().clone());
-                let node = Node::leaf(key, original_value);
-
-                (node, Ok(get))
-            }
-            Action::Set(_, new_value) => (Node::leaf(key, new_value), Ok(None)),
-            Action::Remove => (Node::empty(), Ok(None)),
-        },
-        (
-            Node::Leaf { key, value, .. },
+            Node::Leaf(leaf),
             Operation {
+                path,
                 action: Action::Get,
+            },
+        ) if path.reaches(*leaf.key().digest()) => {
+            let get = Some(leaf.value().inner().clone());
+            (Node::Leaf(leaf), Ok(get))
+        }
+        (
+            Node::Leaf(leaf),
+            Operation {
+                path,
+                action: Action::Set(_, value),
+            },
+        ) if path.reaches(*leaf.key().digest()) => {
+            let (key, _) = leaf.fields();
+            (Node::leaf(key, value), Ok(None))
+        }
+        (
+            Node::Leaf(leaf),
+            Operation {
+                path,
+                action: Action::Remove,
+            },
+        ) if path.reaches(*leaf.key().digest()) => (Node::Empty, Ok(None)),
+        (
+            Node::Leaf(leaf),
+            Operation {
+                action: Action::Get | Action::Remove,
                 ..
             },
-        ) => (Node::leaf(key, value), Ok(None)),
-        (Node::Leaf { key, value, .. }, operation) => {
-            if Path::from(*key.digest())[depth] == Direction::Left {
-                branch(Node::leaf(key, value), Node::empty(), depth, operation)
+        ) => (Node::Leaf(leaf), Ok(None)),
+        (Node::Leaf(leaf), operation) => {
+            if Path::from(*leaf.key().digest())[depth] == Direction::Left {
+                branch(Node::Leaf(leaf), Node::Empty, depth, operation)
             } else {
-                branch(Node::empty(), Node::leaf(key, value), depth, operation)
+                branch(Node::Empty, Node::Leaf(leaf), depth, operation)
             }
         }
 
-        (Node::Stub { hash }, _) => (Node::stub(hash), Err(())),
+        (Node::Stub(stub), _) => (Node::Stub(stub), Err(())),
     }
-}
-
-pub(crate) fn apply<Key, Value>(
-    root: Box<Node<Key, Value>>,
-    operation: Operation<Key, Value>,
-) -> (Box<Node<Key, Value>>, Result<Option<Rc<Value>>, ()>)
-// TODO: Fill `Err` with appropriate error type
-where
-    Key: Field,
-    Value: Field,
-{
-    recur(root, 0, operation)
 }
