@@ -1,12 +1,10 @@
 use crate::{
     common::{
-        data::{bytes::EMPTY, Bytes},
-        store::Field,
+        data::Bytes,
+        store::{hash, Field},
     },
     map::store::Wrap,
 };
-
-use drop::crypto::hash;
 
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
@@ -38,15 +36,12 @@ where
         left: Box<Node<Key, Value>>,
         right: Box<Node<Key, Value>>,
     ) -> Box<Self> {
-        let hash = hash::hash(&(left.hash(), right.hash())).unwrap().into();
+        let hash = hash::internal(left.hash(), right.hash());
         Box::new(Node::Internal { hash, left, right })
     }
 
     pub fn leaf(key: Wrap<Key>, value: Wrap<Value>) -> Box<Self> {
-        let hash = hash::hash(&(*key.digest(), *value.digest()))
-            .unwrap()
-            .into();
-
+        let hash = hash::leaf(*key.digest(), *value.digest());
         Box::new(Node::Leaf { hash, key, value })
     }
 
@@ -56,7 +51,7 @@ where
 
     pub fn hash(&self) -> Bytes {
         match self {
-            Node::Empty => EMPTY,
+            Node::Empty => hash::empty(),
             Node::Internal { hash, .. } => *hash,
             Node::Leaf { hash, .. } => *hash,
             Node::Stub { hash } => *hash,
