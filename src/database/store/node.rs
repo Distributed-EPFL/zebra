@@ -1,12 +1,10 @@
 use crate::{
     common::{
-        data::{bytes::EMPTY, Bytes},
-        store::Field,
+        data::Bytes,
+        store::{hash, Field},
     },
     database::store::{Label, Wrap},
 };
-
-use drop::crypto::hash;
 
 #[derive(Debug)]
 pub(crate) enum Node<Key: Field, Value: Field> {
@@ -22,14 +20,12 @@ where
 {
     pub fn hash(&self) -> Bytes {
         match self {
-            Node::Empty => EMPTY,
+            Node::Empty => hash::empty(),
             Node::Internal(left, right) => {
-                hash::hash(&(*left.hash(), *right.hash())).unwrap().into()
+                hash::internal(*left.hash(), *right.hash())
             }
             Node::Leaf(key, value) => {
-                hash::hash(&(*key.digest(), *value.digest()))
-                    .unwrap()
-                    .into()
+                hash::leaf(*key.digest(), *value.digest())
             }
         }
     }
