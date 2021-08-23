@@ -6,6 +6,76 @@ use crate::{
     },
 };
 
+/// A datastrucure for memory-efficient storage and transfer of maps with a
+/// large degree of similarity (% of key-pairs in common).
+///
+/// A database maintains a collection of [`Table`]s which in turn represent
+/// a collection of key-value pairs. A [`Table`] can be read and modified by
+/// creating and executing a [`Transaction`].
+///
+/// We optimize for the following use cases:
+/// 1) Storing multiple maps with a lot of similarities (e.g. snapshots in a system)
+/// 2) Transfering maps to databases with similar maps
+/// 3) Applying large batches of operations (read, write, remove) to a single map
+/// ([`Table`]). In particular, within a batch, we apply operations concurrently
+/// and with minimal synchronization between threads.
+///
+/// The default hashing algorithm is currently Blake3, though this is
+/// subject to change at any point in the future.
+///
+/// It is required that the keys implement `'static` and the [`Serialize`],
+/// [`Send`] and [`Sync`] traits.
+///
+/// [`Field`]: crate::common::store::Field
+/// [`Table`]: crate::database::Table
+/// [`Transaction`]: crate::database::Transaction
+/// [`Serialize`]: serde::Serialize
+/// [`Send`]: Send
+/// [`Sync`]: Sync
+///
+/// # Examples
+///
+/// ```rust
+///
+/// use zebra::database::{Database, Table, Transaction, Response, Query};
+///
+/// #[tokio::main]
+/// async fn main() {
+///     // Type inference lets us omit an explicit type signature (which
+///     // would be `Database<&str, integer>` in this example).
+///     let database = Database::new();
+///
+///     // We create a new transaction. See [`Transaction`] for more details.
+///     let mut modify = Transaction::new();
+///     modify.set("Alice", 42).unwrap();
+///
+///     let mut table = database.empty_table();
+///     let _ = table.execute(modify).await;
+///
+///     let mut read = Transaction::new();
+///     let query_key = read.get(&"Alice").unwrap();
+///     let response = table.execute(read).await;
+///
+///     assert_eq!(response.get(&query_key), Some(&42));
+///
+///     // Let's remove "Alice" and set "Bob".
+///     let mut modify = Transaction::new();
+///     modify.remove(&"Alice").unwrap();
+///     modify.set(&"Bob", 23).unwrap();
+///
+///     // Ignore the response (modify only)
+///     let _ = table.execute(modify).await;
+///
+///     let mut read = Transaction::new();
+///     let query_key_alice = read.get(&"Alice").unwrap();
+///     let query_key_bob = read.get(&"Bob").unwrap();
+///     let response = table.execute(read).await;
+///
+///     assert_eq!(response.get(&query_key_alice), None);
+///     assert_eq!(response.get(&query_key_bob), Some(&23));
+/// }
+/// ```
+
 pub struct Database<Key, Value>
 where
     Key: Field,
@@ -19,16 +89,51 @@ where
     Key: Field,
     Value: Field,
 {
+    /// Creates an empty `Database`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::database::Database;
+    /// let mut database: Database<&str, i32> = Database::new();
+    /// ```
     pub fn new() -> Self {
         Database {
             store: Cell::new(Store::new()),
         }
     }
 
+    /// Creates and assigns an empty [`Table`] to the `Database`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::database::Database;
+    /// let mut database: Database<&str, i32> = Database::new();
+    ///
+    /// let table = database.empty_table();
+    /// ```
     pub fn empty_table(&self) -> Table<Key, Value> {
         Table::empty(self.store.clone())
     }
 
+    /// Creates a [`Receiver`] assigned to this `Database`. The
+    /// receiver is used to efficiently receive a [`Table`]
+    /// from other databases and add them this one.
+    ///
+    /// See [`Receiver`] for more details on its operation.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::database::Database;
+    /// let mut database: Database<&str, i32> = Database::new();
+    ///
+    /// let mut receiver = database.receive();
+    ///
+    /// // Do things with receiver...
+    ///
+    /// ```
     pub fn receive(&self) -> Receiver<Key, Value> {
         Receiver::new(self.store.clone())
     }

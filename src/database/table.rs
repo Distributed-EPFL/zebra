@@ -6,6 +6,24 @@ use crate::{
     },
 };
 
+// Documentation links
+use crate::database::{Database, Receiver};
+
+/// A map implemented using Merkle Patricia Trees.
+///
+/// Allows for:
+/// 1) Concurrent processing of operations on different keys with minimal
+/// thread synchronization.
+/// 2) Cheap cloning (O(1)).
+/// 3) Efficient sending to [`Database`]s containing similar maps (high % of
+/// key-value pairs in common)
+///
+/// [`Database`]: crate::database::Database
+/// [`Table`]: crate::database::Table
+/// [`Transaction`]: crate::database::Transaction
+/// [`Sender`]: crate::database::Sender
+/// [`Receiver`]: crate::database::Receiver
+
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
 
 impl<Key, Value> Table<Key, Value>
@@ -21,6 +39,40 @@ where
         Table(Handle::new(cell, root))
     }
 
+    /// Executes a [`Transaction`] returning a [`Response`]
+    /// (see their respective documentations for more details).
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::database::{Database, Transaction};
+    ///
+    /// #[tokio::main]
+    /// async fn main() {
+    ///
+    ///     let mut database = Database::new();
+    ///
+    ///     // Create a new transaction.
+    ///     let mut transaction = Transaction::new();
+    ///
+    ///     // Set (key = 0, value = 0)
+    ///     transaction.set(0, 0).unwrap();
+    ///
+    ///     // Remove record with (key = 1)
+    ///     transaction.remove(&1).unwrap();
+    ///
+    ///     // Read records with (key = 2)
+    ///     let read_key = transaction.get(&2).unwrap();
+    ///
+    ///     let mut table = database.empty_table();
+    ///     
+    ///     // Executes the transaction, returning a response.
+    ///     let response = table.execute(transaction).await;
+    ///
+    ///     let value_read = response.get(&read_key);
+    ///     assert_eq!(value_read, None);
+    /// }
+    /// ```
     pub async fn execute(
         &mut self,
         transaction: Transaction<Key, Value>,
@@ -30,6 +82,21 @@ where
         Response::new(tid, batch)
     }
 
+    /// Transforms the table into a [`Sender`], preparing it for sending to
+    /// to a [`Receiver`] of another [`Database`]. For details on how to use
+    /// Senders and Receivers check their respective documentation.
+    /// ```
+    /// use zebra::database::Database;
+    ///
+    /// let mut database = Database::new();
+    /// let original = database.empty_table();
+    ///
+    /// // Sending consumes the copy so we typically clone first, which is cheap.
+    /// let copy = original.clone();
+    /// let sender = copy.send();
+    ///
+    /// // Use sender...
+    /// ```
     pub fn send(self) -> Sender<Key, Value> {
         Sender::new(self.0)
     }
