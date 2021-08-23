@@ -31,6 +31,18 @@ where
     }
 }
 
+impl<Inner> Clone for Wrap<Inner>
+where
+    Inner: Field,
+{
+    fn clone(&self) -> Self {
+        Wrap {
+            digest: self.digest,
+            inner: self.inner.clone(),
+        }
+    }
+}
+
 impl<Inner> PartialEq for Wrap<Inner>
 where
     Inner: Field,
