@@ -89,7 +89,7 @@ where
     /// ```
     /// use zebra::database::Database;
     ///
-    /// let mut database = Database::new();
+    /// let mut database: Database<u32, u32> = Database::new();
     /// let original = database.empty_table();
     ///
     /// // Sending consumes the copy so we typically clone first, which is cheap.
