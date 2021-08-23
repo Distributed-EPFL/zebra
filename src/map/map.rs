@@ -5,7 +5,7 @@ where
     Key: Field,
     Value: Field,
 {
-    root: Box<Node<Key, Value>>,
+    root: Node<Key, Value>,
 }
 
 impl<Key, Value> Map<Key, Value>
@@ -14,8 +14,6 @@ where
     Value: Field,
 {
     pub fn new() -> Self {
-        Map {
-            root: Node::empty(),
-        }
+        Map { root: Node::Empty }
     }
 }
