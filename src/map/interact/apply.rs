@@ -6,6 +6,7 @@ use crate::{
     map::{
         interact::{Action, Operation},
         store::Node,
+        errors::MapError,
     },
 };
 
@@ -16,7 +17,7 @@ fn branch<Key, Value>(
     right: Node<Key, Value>,
     depth: u8,
     operation: Operation<Key, Value>,
-) -> (Node<Key, Value>, Result<Option<Rc<Value>>, ()>)
+) -> (Node<Key, Value>, Result<Option<Rc<Value>>, MapError>)
 where
     Key: Field,
     Value: Field,
@@ -43,7 +44,7 @@ fn recur<Key, Value>(
     node: Node<Key, Value>,
     depth: u8,
     operation: Operation<Key, Value>,
-) -> (Node<Key, Value>, Result<Option<Rc<Value>>, ()>)
+) -> (Node<Key, Value>, Result<Option<Rc<Value>>, MapError>)
 where
     Key: Field,
     Value: Field,
@@ -111,6 +112,6 @@ where
             }
         }
 
-        (Node::Stub(stub), _) => (Node::Stub(stub), Err(())),
+        (Node::Stub(stub), _) => (Node::Stub(stub), Err(MapError::BranchUnknown)),
     }
 }

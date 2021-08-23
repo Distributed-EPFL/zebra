@@ -5,4 +5,6 @@ mod store;
 
 mod map;
 
+pub mod errors;
+
 pub use map::Map;
