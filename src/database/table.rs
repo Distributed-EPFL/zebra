@@ -7,6 +7,7 @@ use crate::{
 };
 
 // Documentation links
+#[allow(unused_imports)]
 use crate::database::{Database, Receiver};
 
 /// A map implemented using Merkle Patricia Trees.

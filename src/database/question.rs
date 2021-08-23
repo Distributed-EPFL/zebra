@@ -2,7 +2,9 @@ use crate::database::store::Label;
 
 use std::vec::Vec;
 
-use crate::database::{Receiver, Sender, Answer};
+// Documentation links
+#[allow(unused_imports)]
+use crate::database::{Answer, Receiver, Sender};
 
 /// A [`Receiver`]'s query for a [`Sender`], to be replied to with an [`Answer`].
 ///
