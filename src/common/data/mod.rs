@@ -1,3 +1,3 @@
-pub(crate) mod bytes;
+mod bytes;
 
 pub(crate) use bytes::Bytes;

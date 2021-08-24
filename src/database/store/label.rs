@@ -1,5 +1,5 @@
 use crate::{
-    common::data::{bytes::EMPTY, Bytes},
+    common::{data::Bytes, store::hash},
     database::store::MapId,
 };
 
@@ -31,7 +31,7 @@ impl Label {
         match self {
             Label::Internal(_, hash) => *hash,
             Label::Leaf(_, hash) => *hash,
-            Label::Empty => EMPTY,
+            Label::Empty => hash::empty(),
         }
     }
 }

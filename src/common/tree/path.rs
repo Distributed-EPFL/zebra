@@ -1,8 +1,6 @@
-use crate::common::{
-    data::{bytes::EMPTY, Bytes},
-    tree::Direction,
-};
+use crate::common::{data::Bytes, tree::Direction};
 
+use drop::crypto::hash::SIZE;
 use drop::crypto::Digest;
 
 use std::ops::Index;
@@ -10,9 +8,11 @@ use std::ops::Index;
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Path(Bytes);
 
+pub(crate) const EMPTY_PATH: Bytes = Bytes([0; SIZE]);
+
 impl Path {
     pub fn empty() -> Self {
-        Path(EMPTY)
+        Path(EMPTY_PATH)
     }
 
     pub fn reaches(&self, hash: Bytes) -> bool {
