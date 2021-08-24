@@ -50,6 +50,14 @@ where
     pub fn children(self) -> (Node<Key, Value>, Node<Key, Value>) {
         (*self.left, *self.right)
     }
+
+    pub fn left(&self) -> &Node<Key, Value> {
+        &*self.left
+    }
+
+    pub fn right(&self) -> &Node<Key, Value> {
+        &*self.right
+    }
 }
 
 impl<Key, Value> Leaf<Key, Value>
