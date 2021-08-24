@@ -4,9 +4,9 @@ use crate::{
         tree::{Direction, Path},
     },
     map::{
+        errors::MapError,
         interact::{Action, Operation},
         store::Node,
-        errors::MapError,
     },
 };
 
@@ -112,6 +112,19 @@ where
             }
         }
 
-        (Node::Stub(stub), _) => (Node::Stub(stub), Err(MapError::BranchUnknown)),
+        (Node::Stub(stub), _) => {
+            (Node::Stub(stub), Err(MapError::BranchUnknown))
+        }
     }
+}
+
+pub(crate) fn apply<Key, Value>(
+    root: Node<Key, Value>,
+    operation: Operation<Key, Value>,
+) -> (Node<Key, Value>, Result<Option<Rc<Value>>, MapError>)
+where
+    Key: Field,
+    Value: Field,
+{
+    recur(root, 0, operation)
 }
