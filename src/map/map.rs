@@ -277,8 +277,8 @@ mod tests {
 
     use std::collections::HashMap;
     use std::collections::HashSet;
-    use std::hash::Hash;
     use std::fmt::Debug;
+    use std::hash::Hash;
 
     impl<Key, Value> Map<Key, Value>
     where
@@ -374,5 +374,67 @@ mod tests {
 
             assert_eq!(differences, HashSet::new());
         }
+    }
+
+    #[test]
+    fn stress() {
+        let mut map: Map<u32, u32> = Map::new();
+        map.check_tree();
+        map.assert_records([]);
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            assert_eq!(map.insert(key, value).unwrap(), None);
+
+            map.check_tree();
+            map.assert_records((0..=key).map(|i| (i, i)));
+        }
+
+        for key in 0..2048 {
+            if key < 1024 {
+                assert_eq!(map.get(&key).unwrap(), Some(&key))
+            } else {
+                assert_eq!(map.get(&key).unwrap(), None)
+            }
+        }
+
+        for key in 512..1024 {
+            assert_eq!(map.remove(&key).unwrap(), Some(key));
+        }
+
+        for key in 0..2048 {
+            if key < 512 {
+                assert_eq!(map.get(&key).unwrap(), Some(&key))
+            } else {
+                assert_eq!(map.get(&key).unwrap(), None)
+            }
+        }
+
+        for (key, value) in (0..512).map(|i| (i, i + 1)) {
+            assert_eq!(map.insert(key, value).unwrap(), Some(key));
+
+            map.check_tree();
+            map.assert_records((0..512).map(|i| {
+                if i <= key {
+                    (i, i + 1)
+                } else {
+                    (i, i)
+                }
+            }));
+        }
+
+        for key in 0..2048 {
+            if key < 512 {
+                assert_eq!(map.get(&key).unwrap(), Some(&(key + 1)))
+            } else {
+                assert_eq!(map.get(&key).unwrap(), None)
+            }
+        }
+
+        for key in 0..512 {
+            assert_eq!(map.remove(&key).unwrap(), Some(key + 1));
+        }
+
+        map.check_tree();
+        map.assert_records([]);
     }
 }
