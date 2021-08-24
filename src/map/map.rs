@@ -138,11 +138,7 @@ use snafu::ResultExt;
 ///          k2   k3
 /// ```
 
-pub struct Map<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
+pub struct Map<Key: Field, Value: Field> {
     root: Lender<Node<Key, Value>>,
 }
 
@@ -191,7 +187,6 @@ where
     /// ```
     pub fn get(&self, key: &Key) -> Result<Option<&Value>, MapError> {
         let query = Query::new(key).context(HashError)?;
-
         interact::get(self.root.borrow(), query)
     }
 
@@ -227,7 +222,6 @@ where
         value: Value,
     ) -> Result<Option<Value>, MapError> {
         let update = Update::set(key, value).context(HashError)?;
-
         self.update(update)
     }
 
@@ -257,7 +251,6 @@ where
     /// ```
     pub fn remove(&mut self, key: &Key) -> Result<Option<Value>, MapError> {
         let update = Update::remove(key).context(HashError)?;
-
         self.update(update)
     }
 
@@ -270,5 +263,116 @@ where
         self.root.restore(root);
 
         result
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::{
+        common::tree::{Path, Prefix},
+        map::store::{Internal, Leaf},
+    };
+
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+    use std::hash::Hash;
+    use std::fmt::Debug;
+
+    impl<Key, Value> Map<Key, Value>
+    where
+        Key: Field,
+        Value: Field,
+    {
+        pub(crate) fn check_internal(internal: &Internal<Key, Value>) {
+            match (internal.left(), internal.right()) {
+                (Node::Empty, Node::Empty)
+                | (Node::Empty, Node::Leaf(..))
+                | (Node::Leaf(..), Node::Empty) => {
+                    panic!("`check_internal`: children violate compactness")
+                }
+                _ => {}
+            }
+        }
+
+        pub(crate) fn check_leaf(leaf: &Leaf<Key, Value>, location: Prefix) {
+            if !location.contains(&Path::from(*leaf.key().digest())) {
+                panic!("`check_leaf`: leaf outside of its key path");
+            }
+        }
+
+        pub(crate) fn check_tree(&self) {
+            fn recursion<Key, Value>(node: &Node<Key, Value>, location: Prefix)
+            where
+                Key: Field,
+                Value: Field,
+            {
+                match node {
+                    Node::Internal(internal) => {
+                        Map::check_internal(internal);
+
+                        recursion(internal.left(), location.left());
+                        recursion(internal.right(), location.right());
+                    }
+                    Node::Leaf(leaf) => {
+                        Map::check_leaf(leaf, location);
+                    }
+                    Node::Empty | Node::Stub(_) => {}
+                }
+            }
+        }
+
+        pub(crate) fn collect_records(&self) -> HashMap<Key, Value>
+        where
+            Key: Field + Clone + Eq + Hash,
+            Value: Field + Clone,
+        {
+            fn recursion<Key, Value>(
+                node: &Node<Key, Value>,
+                collector: &mut HashMap<Key, Value>,
+            ) where
+                Key: Field + Clone + Eq + Hash,
+                Value: Field + Clone,
+            {
+                match node {
+                    Node::Internal(internal) => {
+                        recursion(internal.left(), collector);
+                        recursion(internal.right(), collector);
+                    }
+                    Node::Leaf(leaf) => {
+                        collector.insert(
+                            leaf.key().inner().clone(),
+                            leaf.value().inner().clone(),
+                        );
+                    }
+                    Node::Empty | Node::Stub(_) => {}
+                }
+            }
+
+            let mut collector = HashMap::new();
+            recursion(self.root.borrow(), &mut collector);
+            collector
+        }
+
+        pub fn assert_records<I>(&self, reference: I)
+        where
+            Key: Field + Debug + Clone + Eq + Hash,
+            Value: Field + Debug + Clone + Eq + Hash,
+            I: IntoIterator<Item = (Key, Value)>,
+        {
+            let actual: HashSet<(Key, Value)> =
+                self.collect_records().into_iter().collect();
+
+            let reference: HashSet<(Key, Value)> =
+                reference.into_iter().collect();
+
+            let differences: HashSet<(Key, Value)> = reference
+                .symmetric_difference(&actual)
+                .map(|r| r.clone())
+                .collect();
+
+            assert_eq!(differences, HashSet::new());
+        }
     }
 }

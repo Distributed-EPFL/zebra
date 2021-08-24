@@ -5,3 +5,8 @@ mod wrap;
 
 pub(crate) use node::Node;
 pub(crate) use wrap::Wrap;
+
+#[cfg(test)]
+pub(crate) use node::Internal;
+#[cfg(test)]
+pub(crate) use node::Leaf;
