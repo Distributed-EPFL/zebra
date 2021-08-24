@@ -9,14 +9,12 @@ use crate::{
 
 use snafu::ResultExt;
 
-use std::rc::Rc;
-
 pub struct Map<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
-    root: Option<Node<Key, Value>>,
+    root: Node<Key, Value>,
 }
 
 impl<Key, Value> Map<Key, Value>
@@ -34,48 +32,118 @@ where
     /// let mut tree: Map<&str, i32> = Map::new();
     /// ```
     pub fn new() -> Self {
-        Map {
-            root: Some(Node::Empty),
-        }
+        Map { root: Node::Empty }
     }
 
-    /// Returns an `Rc` to the value corresponding to the key, if it is present in the `Map`.
-    ///
-    /// [`Eq`]: https://doc.rust-lang.org/std/cmp/trait.Eq.html
-    /// [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
-    ///
-    /// # Return
-    /// If the map did not have the key present and it is guaranteed to not exist,
-    /// `None` is returned.
+    /// Returns a reference to the value corresponding to the key.
     ///
     /// # Errors
-    /// If the map did not have the key present but it cannot determine if association exists or not
+    ///
+    /// If the map did not have the key present but it cannot determine if the association exists or not
     /// (e.g. locally part of the tree is missing, replaced by a `Stub`), [`BranchUnknown`] is returned.
     ///
     /// If the `Key` or `Value` cannot be hashed (via `drop::crypto::hash`), [`HashError`] is returned
     ///
-    /// [`BranchUnknown`]: error/enum.MapError.html
-    /// [`HashError`]: error/enum.MapError.html
+    /// [`Stub`]: store/node/enum.Node.html
+    /// [`BranchUnknown`]: errors/enum.MapError.html
+    /// [`HashError`]: errors/enum.MapError.html
     ///
     /// # Examples
     ///
     /// ```
     /// use zebra::map::Map;
-    /// use zebra::map::errors::MapError;
     ///
-    /// // let mut map = Map::new();
-    /// // map.insert(1, "a");
-    /// // assert_eq!(map.get(&1), Ok(Some("a")));
-    /// // assert_eq!(map.get(&2), Err(MapError));
+    /// let mut map = Map::new();
+    /// map.insert(1, "a");
+    /// assert_eq!(map.get(&1).unwrap(), Some(&"a"));
+    /// assert_eq!(map.get(&2).unwrap(), None);
     /// ```
-    pub fn get(&mut self, key: &Key) -> Result<Option<Rc<Value>>, MapError> {
-        // let operation = Operation::get(key).context(HashError)?;
+    pub fn get(&self, key: &Key) -> Result<Option<&Value>, MapError> {
+        let query = Query::new(key).context(HashError)?;
 
-        // let root = self.root.take().unwrap();
-        // let (root, result) = interact::apply(root, operation);
-        // self.root = Some(root);
+        interact::get(&self.root, query)
+    }
 
-        // result
-        unimplemented!();
+    /// Inserts a key-value pair into the map.
+    ///
+    /// If the map did not have this key present, [`None`] is returned.
+    ///
+    /// If the map did have this key present, the value is updated, and the old value is returned.
+    ///
+    /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
+    /// [`Stub`]: store/node/enum.Node.html
+    ///
+    /// # Errors
+    ///
+    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a [`Stub`]
+    /// on the key's path), [`BranchUnknown`] is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::map::Map;
+    ///
+    /// let mut map = Map::new();
+    /// assert_eq!(map.insert("Alice", 1).unwrap(), None);
+    ///
+    /// map.insert("Alice", 2);
+    /// assert_eq!(map.insert("Alice", 3).unwrap(), Some(2));
+    /// assert_eq!(map.get(&"Alice").unwrap(), Some(&3));
+    /// ```
+    pub fn insert(
+        &mut self,
+        key: Key,
+        value: Value,
+    ) -> Result<Option<Value>, MapError> {
+        let update = Update::set(key, value).context(HashError)?;
+
+        self.update(update)
+    }
+
+    /// Removes a key from the map, returning the value at the key if the
+    /// key was previously in the map.
+    ///
+    /// If the map did not have this key present, [`None`] is returned.
+    ///
+    /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
+    /// [`Stub`]: store/node/enum.Node.html
+    ///
+    /// # Errors
+    ///
+    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a [`Stub`]
+    /// on the key's path, [`BranchUnknown`] is returned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::map::Map;
+    ///
+    /// let mut map = Map::new();
+    ///
+    /// map.insert(1, "a");
+    /// assert_eq!(map.remove(&1).unwrap(), Some("a"));
+    /// assert_eq!(map.remove(&1).unwrap(), None);
+    /// ```
+    pub fn remove(&mut self, key: &Key) -> Result<Option<Value>, MapError> {
+        let update = Update::remove(key).context(HashError)?;
+
+        self.update(update)
+    }
+
+    fn update(
+        &mut self,
+        update: Update<Key, Value>,
+    ) -> Result<Option<Value>, MapError> {
+        let mut root = Node::Empty;
+        std::mem::swap(&mut root, &mut self.root); // `interact::apply` needs ownership of `self.root`:
+                                                   // swap `self.root` with a `Node::Empty` placeholder,
+                                                   // to be restored as soon as `interact::apply` returns.
+
+        let (mut new_root, result) = interact::apply(root, update);
+
+        std::mem::swap(&mut new_root, &mut self.root); // Restore `self.root` to guarantee a consistent state
+                                                       // when this method returns.
+
+        result
     }
 }
