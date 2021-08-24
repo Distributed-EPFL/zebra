@@ -177,7 +177,7 @@ where
                 self.sight(right, location.right());
             }
 
-            self.acquired.insert(*label.hash(), node);
+            self.acquired.insert(label.hash(), node);
         }
 
         self.frontier.remove(&hash);
@@ -187,7 +187,7 @@ where
     fn sight(&mut self, label: &Label, location: Prefix) {
         if !label.is_empty() {
             self.frontier.insert(
-                *label.hash(),
+                label.hash(),
                 Context {
                     location,
                     remote_label: *label,
@@ -216,7 +216,7 @@ where
             let recursion = if stored {
                 None
             } else {
-                let node = self.acquired.get(label.hash()).unwrap();
+                let node = self.acquired.get(&label.hash()).unwrap();
                 store.populate(label, node.clone());
 
                 match node {

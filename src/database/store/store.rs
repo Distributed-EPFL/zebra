@@ -74,7 +74,7 @@ where
 
     pub fn entry(&mut self, label: Label) -> EntryMapEntry<Key, Value> {
         let map = label.map().id() - self.maps.range().start;
-        let hash = *label.hash();
+        let hash = label.hash();
         self.maps[map].entry(hash)
     }
 

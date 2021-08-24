@@ -22,7 +22,7 @@ where
         match self {
             Node::Empty => hash::empty(),
             Node::Internal(left, right) => {
-                hash::internal(*left.hash(), *right.hash())
+                hash::internal(left.hash(), right.hash())
             }
             Node::Leaf(key, value) => {
                 hash::leaf(*key.digest(), *value.digest())
