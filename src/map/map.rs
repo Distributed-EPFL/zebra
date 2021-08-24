@@ -1,11 +1,13 @@
 use crate::{
-    common::store::Field,
+    common::{data::Lender, store::Field},
     map::{
         errors::{HashError, MapError},
         interact::{self, Query, Update},
         store::Node,
     },
 };
+
+use std::borrow::Borrow;
 
 use snafu::ResultExt;
 
@@ -141,7 +143,7 @@ where
     Key: Field,
     Value: Field,
 {
-    root: Node<Key, Value>,
+    root: Lender<Node<Key, Value>>,
 }
 
 impl<Key, Value> Map<Key, Value>
@@ -159,7 +161,9 @@ where
     /// let mut tree: Map<&str, i32> = Map::new();
     /// ```
     pub fn new() -> Self {
-        Map { root: Node::Empty }
+        Map {
+            root: Lender::new(Node::Empty),
+        }
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -188,7 +192,7 @@ where
     pub fn get(&self, key: &Key) -> Result<Option<&Value>, MapError> {
         let query = Query::new(key).context(HashError)?;
 
-        interact::get(&self.root, query)
+        interact::get(self.root.borrow(), query)
     }
 
     /// Inserts a key-value pair into the map.
@@ -261,15 +265,9 @@ where
         &mut self,
         update: Update<Key, Value>,
     ) -> Result<Option<Value>, MapError> {
-        let mut root = Node::Empty;
-        std::mem::swap(&mut root, &mut self.root); // `interact::apply` needs ownership of `self.root`:
-                                                   // swap `self.root` with a `Node::Empty` placeholder,
-                                                   // to be restored as soon as `interact::apply` returns.
-
-        let (mut new_root, result) = interact::apply(root, update);
-
-        std::mem::swap(&mut new_root, &mut self.root); // Restore `self.root` to guarantee a consistent state
-                                                       // when this method returns.
+        let root = self.root.take();
+        let (root, result) = interact::apply(root, update);
+        self.root.restore(root);
 
         result
     }
