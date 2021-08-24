@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::mem;
 
 pub(crate) struct Lender<Inner> {
@@ -31,6 +32,17 @@ impl<Inner> Lender<Inner> {
             self.state = State::Available(inner);
         } else {
             panic!("attempted to `Lender::restore` more than once without `Lender::take`");
+        }
+    }
+}
+
+impl<Inner> Borrow<Inner> for Lender<Inner> {
+    fn borrow(&self) -> &Inner {
+        match &self.state {
+            State::Available(inner) => &inner,
+            State::Lent => panic!(
+                "attempted to `borrow` `Lender` without `Lender::restore`"
+            ),
         }
     }
 }

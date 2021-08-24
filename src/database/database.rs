@@ -1,5 +1,5 @@
 use crate::{
-    common::{store::Field, data::AtomicLender},
+    common::{data::AtomicLender, store::Field},
     database::{
         store::{Cell, Store},
         Receiver, Table,
