@@ -27,11 +27,11 @@ impl Label {
         }
     }
 
-    pub fn hash(&self) -> &Bytes {
+    pub fn hash(&self) -> Bytes {
         match self {
-            Label::Internal(_, hash) => hash,
-            Label::Leaf(_, hash) => hash,
-            Label::Empty => &EMPTY,
+            Label::Internal(_, hash) => *hash,
+            Label::Leaf(_, hash) => *hash,
+            Label::Empty => EMPTY,
         }
     }
 }
