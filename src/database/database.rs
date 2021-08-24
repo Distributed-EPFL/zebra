@@ -1,5 +1,5 @@
 use crate::{
-    common::store::Field,
+    common::{store::Field, data::AtomicLender},
     database::{
         store::{Cell, Store},
         Receiver, Table,
@@ -99,7 +99,7 @@ where
     /// ```
     pub fn new() -> Self {
         Database {
-            store: Cell::new(Store::new()),
+            store: Cell::new(AtomicLender::new(Store::new())),
         }
     }
 
