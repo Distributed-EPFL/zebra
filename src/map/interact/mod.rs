@@ -1,8 +1,12 @@
 mod action;
 mod apply;
-mod operation;
+mod get;
+mod query;
+mod update;
 
 pub(crate) use apply::apply;
+pub(crate) use get::get;
 
 pub(crate) use action::Action;
-pub(crate) use operation::Operation;
+pub(crate) use query::Query;
+pub(crate) use update::Update;

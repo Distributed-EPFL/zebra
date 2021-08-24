@@ -1,6 +1,10 @@
 use crate::{
     common::store::Field,
-    map::{interact::{self, Operation}, store::Node, errors::{MapError, HashError}},
+    map::{
+        errors::{HashError, MapError},
+        interact::{self, Query, Update},
+        store::Node,
+    },
 };
 
 use snafu::ResultExt;
@@ -30,7 +34,9 @@ where
     /// let mut tree: Map<&str, i32> = Map::new();
     /// ```
     pub fn new() -> Self {
-        Map { root: Some(Node::Empty) }
+        Map {
+            root: Some(Node::Empty),
+        }
     }
 
     /// Returns an `Rc` to the value corresponding to the key, if it is present in the `Map`.
@@ -45,7 +51,7 @@ where
     /// # Errors
     /// If the map did not have the key present but it cannot determine if association exists or not
     /// (e.g. locally part of the tree is missing, replaced by a `Stub`), [`BranchUnknown`] is returned.
-    /// 
+    ///
     /// If the `Key` or `Value` cannot be hashed (via `drop::crypto::hash`), [`HashError`] is returned
     ///
     /// [`BranchUnknown`]: error/enum.MapError.html
@@ -63,12 +69,13 @@ where
     /// // assert_eq!(map.get(&2), Err(MapError));
     /// ```
     pub fn get(&mut self, key: &Key) -> Result<Option<Rc<Value>>, MapError> {
-        let operation = Operation::get(key).context(HashError)?;
+        // let operation = Operation::get(key).context(HashError)?;
 
-        let root = self.root.take().unwrap();
-        let (root, result) = interact::apply(root, operation);
-        self.root = Some(root);
+        // let root = self.root.take().unwrap();
+        // let (root, result) = interact::apply(root, operation);
+        // self.root = Some(root);
 
-        result
+        // result
+        unimplemented!();
     }
 }
