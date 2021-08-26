@@ -60,7 +60,7 @@ mod tests {
     use std::time::Duration;
 
     #[test]
-    fn lender_stress() {
+    fn stress() {
         let lender = Arc::new(AtomicLender::new(1));
 
         let threads: Vec<JoinHandle<()>> = (0..32)
