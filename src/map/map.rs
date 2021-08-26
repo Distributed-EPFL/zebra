@@ -285,10 +285,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::{
-        common::tree::{Path, Prefix},
-        map::store::{Internal, Leaf},
-    };
+    use crate::map::store;
 
     use std::collections::HashMap;
     use std::collections::HashSet;
@@ -300,44 +297,8 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub(crate) fn check_internal(internal: &Internal<Key, Value>) {
-            match (internal.left(), internal.right()) {
-                (Node::Empty, Node::Empty)
-                | (Node::Empty, Node::Leaf(..))
-                | (Node::Leaf(..), Node::Empty) => {
-                    panic!("`check_internal`: children violate compactness")
-                }
-                _ => {}
-            }
-        }
-
-        pub(crate) fn check_leaf(leaf: &Leaf<Key, Value>, location: Prefix) {
-            if !location.contains(&Path::from(*leaf.key().digest())) {
-                panic!("`check_leaf`: leaf outside of its key path");
-            }
-        }
-
         pub(crate) fn check_tree(&self) {
-            fn recursion<Key, Value>(node: &Node<Key, Value>, location: Prefix)
-            where
-                Key: Field,
-                Value: Field,
-            {
-                match node {
-                    Node::Internal(internal) => {
-                        Map::check_internal(internal);
-
-                        recursion(internal.left(), location.left());
-                        recursion(internal.right(), location.right());
-                    }
-                    Node::Leaf(leaf) => {
-                        Map::check_leaf(leaf, location);
-                    }
-                    Node::Empty | Node::Stub(_) => {}
-                }
-            }
-
-            recursion(self.root.borrow(), Prefix::root());
+            store::check(self.root.borrow()).unwrap();
         }
 
         pub(crate) fn collect_records(&self) -> HashMap<Key, Value>
