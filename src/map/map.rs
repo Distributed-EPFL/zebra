@@ -336,6 +336,8 @@ mod tests {
                     Node::Empty | Node::Stub(_) => {}
                 }
             }
+
+            recursion(self.root.borrow(), Prefix::root());
         }
 
         pub(crate) fn collect_records(&self) -> HashMap<Key, Value>
