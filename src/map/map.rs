@@ -1,13 +1,14 @@
 use crate::{
     common::{data::Lender, store::Field},
     map::{
-        errors::{HashError, MapError},
+        errors::{FlawedTopology, HashError, MapError},
         interact::{self, Query, Update},
-        store::Node,
+        store::{self, Node},
     },
 };
 
-use serde::{Serialize, Serializer};
+use serde::de::Error as DeError;
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use snafu::ResultExt;
 
@@ -278,6 +279,27 @@ where
         S: Serializer,
     {
         self.root.serialize(serializer)
+    }
+}
+
+impl<'de, Key, Value> Deserialize<'de> for Map<Key, Value>
+where
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let root = Node::deserialize(deserializer)?;
+
+        store::check(&root)
+            .context(FlawedTopology)
+            .map_err(|err| DeError::custom(err))?;
+
+        Ok(Map {
+            root: Lender::new(root),
+        })
     }
 }
 
