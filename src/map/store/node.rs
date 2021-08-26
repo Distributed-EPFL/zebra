@@ -6,6 +6,9 @@ use crate::{
     map::store::Wrap,
 };
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+#[derive(Serialize, Deserialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Internal<Key, Value>),
@@ -15,16 +18,27 @@ pub(crate) enum Node<Key: Field, Value: Field> {
 
 pub(crate) struct Internal<Key: Field, Value: Field> {
     hash: Bytes,
+    children: Children<Key, Value>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Children<Key: Field, Value: Field> {
     left: Box<Node<Key, Value>>,
     right: Box<Node<Key, Value>>,
 }
 
 pub(crate) struct Leaf<Key: Field, Value: Field> {
     hash: Bytes,
+    fields: Fields<Key, Value>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Fields<Key: Field, Value: Field> {
     key: Wrap<Key>,
     value: Wrap<Value>,
 }
 
+#[derive(Serialize, Deserialize)]
 pub(crate) struct Stub {
     hash: Bytes,
 }
@@ -35,12 +49,15 @@ where
     Value: Field,
 {
     pub fn new(left: Node<Key, Value>, right: Node<Key, Value>) -> Self {
-        let hash = hash::internal(left.hash(), right.hash());
-        Internal {
-            hash,
+        Internal::from_children(Children {
             left: Box::new(left),
             right: Box::new(right),
-        }
+        })
+    }
+
+    fn from_children(children: Children<Key, Value>) -> Self {
+        let hash = hash::internal(children.left.hash(), children.right.hash());
+        Internal { hash, children }
     }
 
     pub fn hash(&self) -> Bytes {
@@ -48,15 +65,15 @@ where
     }
 
     pub fn children(self) -> (Node<Key, Value>, Node<Key, Value>) {
-        (*self.left, *self.right)
+        (*self.children.left, *self.children.right)
     }
 
     pub fn left(&self) -> &Node<Key, Value> {
-        &*self.left
+        &*self.children.left
     }
 
     pub fn right(&self) -> &Node<Key, Value> {
-        &*self.right
+        &*self.children.right
     }
 }
 
@@ -66,8 +83,12 @@ where
     Value: Field,
 {
     pub fn new(key: Wrap<Key>, value: Wrap<Value>) -> Self {
-        let hash = hash::leaf(*key.digest(), *value.digest());
-        Leaf { hash, key, value }
+        Leaf::from_fields(Fields { key, value })
+    }
+
+    fn from_fields(fields: Fields<Key, Value>) -> Self {
+        let hash = hash::leaf(*fields.key.digest(), *fields.value.digest());
+        Leaf { hash, fields }
     }
 
     pub fn hash(&self) -> Bytes {
@@ -75,15 +96,15 @@ where
     }
 
     pub fn fields(self) -> (Wrap<Key>, Wrap<Value>) {
-        (self.key, self.value)
+        (self.fields.key, self.fields.value)
     }
 
     pub fn key(&self) -> &Wrap<Key> {
-        &self.key
+        &self.fields.key
     }
 
     pub fn value(&self) -> &Wrap<Value> {
-        &self.value
+        &self.fields.value
     }
 }
 
@@ -121,5 +142,59 @@ where
             Node::Leaf(leaf) => leaf.hash(),
             Node::Stub(stub) => stub.hash(),
         }
+    }
+}
+
+impl<Key, Value> Serialize for Internal<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.children.serialize(serializer)
+    }
+}
+
+impl<'de, Key, Value> Deserialize<'de> for Internal<Key, Value>
+where
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let children = Children::deserialize(deserializer)?;
+        Ok(Internal::from_children(children))
+    }
+}
+
+impl<Key, Value> Serialize for Leaf<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.fields.serialize(serializer)
+    }
+}
+
+impl<'de, Key, Value> Deserialize<'de> for Leaf<Key, Value>
+where
+    Key: Field + Deserialize<'de>,
+    Value: Field + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let fields = Fields::deserialize(deserializer)?;
+        Ok(Leaf::from_fields(fields))
     }
 }
