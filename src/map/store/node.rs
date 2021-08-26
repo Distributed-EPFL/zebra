@@ -60,6 +60,20 @@ where
         Internal { hash, children }
     }
 
+    pub(crate) fn raw(
+        hash: Bytes,
+        left: Node<Key, Value>,
+        right: Node<Key, Value>,
+    ) -> Self {
+        Internal {
+            hash,
+            children: Children {
+                left: Box::new(left),
+                right: Box::new(right),
+            },
+        }
+    }
+
     pub fn hash(&self) -> Bytes {
         self.hash
     }
@@ -89,6 +103,13 @@ where
     fn from_fields(fields: Fields<Key, Value>) -> Self {
         let hash = hash::leaf(*fields.key.digest(), *fields.value.digest());
         Leaf { hash, fields }
+    }
+
+    pub(crate) fn raw(hash: Bytes, key: Wrap<Key>, value: Wrap<Value>) -> Self {
+        Leaf {
+            hash: hash,
+            fields: Fields { key, value },
+        }
     }
 
     pub fn hash(&self) -> Bytes {

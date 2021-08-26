@@ -174,9 +174,8 @@ where
     ///
     /// If the `Key` or `Value` cannot be hashed (via `drop::crypto::hash`), [`HashError`] is returned
     ///
-    /// [`Stub`]: store/node/enum.Node.html
-    /// [`BranchUnknown`]: errors/enum.MapError.html
-    /// [`HashError`]: errors/enum.MapError.html
+    /// [`BranchUnknown`]: map/errors/enum.MapError.html
+    /// [`HashError`]: map/errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -200,12 +199,13 @@ where
     /// If the map did have this key present, the value is updated, and the old value is returned.
     ///
     /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
-    /// [`Stub`]: store/node/enum.Node.html
     ///
     /// # Errors
     ///
-    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a [`Stub`]
+    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a `Stub`
     /// on the key's path), [`BranchUnknown`] is returned.
+    ///
+    /// [`BranchUnknown`]: map/errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -234,12 +234,13 @@ where
     /// If the map did not have this key present, [`None`] is returned.
     ///
     /// [`None`]: https://doc.rust-lang.org/std/option/enum.Option.html#variant.None
-    /// [`Stub`]: store/node/enum.Node.html
     ///
     /// # Errors
     ///
-    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a [`Stub`]
+    /// If the portion of the map pertaining to the key is incomplete, i.e. there is a `Stub`
     /// on the key's path, [`BranchUnknown`] is returned.
+    ///
+    /// [`BranchUnknown`]: map/errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -266,6 +267,56 @@ where
         self.root.restore(root);
 
         result
+    }
+
+    /// Exports a subset of the map containing only branches along the given keys.
+    /// Excluded branches are replaced by `Stub`s.
+    ///
+    /// The keys may be any borrowed form of the tree's key type, but
+    /// [`Serialize`] on the borrowed form *must* match that of
+    /// the key type.
+    ///
+    /// [`Serialize`]: https://docs.serde.rs/serde/trait.Serialize.html
+    ///
+    /// # Errors
+    /// If the it cannot be determined if the key does or does not exist
+    /// (e.g. locally part of the map is missing, replaced by a `Stub`), [`BranchUnknown`] is returned.
+    ///
+    /// [`BranchUnknown`]: map/errors/enum.MapError.html
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::map::Map;
+    /// use zebra::map::errors::MapError;
+    ///
+    /// let mut map = Map::new();
+    ///
+    /// map.insert(1, "a");
+    /// map.insert(2, "b");
+    /// map.insert(3, "c");
+    ///
+    /// let submap = map.export([&1]).unwrap();
+    ///
+    /// assert_eq!(submap.get(&1).unwrap(), Some(&"a"));
+    /// assert!(submap.get(&2).is_err()); // MapError::BranchUnknown
+    /// assert!(submap.get(&3).is_err()); // MapError::BranchUnknown
+    ///
+    /// assert_eq!(map.get(&1).unwrap(), Some(&"a"));
+    /// assert_eq!(map.get(&2).unwrap(), Some(&"b"));
+    /// assert_eq!(map.get(&3).unwrap(), Some(&"c"));
+    /// ```
+    pub fn export<I, K>(&self, keys: I) -> Result<Map<Key, Value>, MapError>
+    where
+        Key: Clone,
+        Value: Clone,
+        I: IntoIterator<Item = K>,
+        K: Borrow<Key>,
+    {
+        let root = interact::export(self.root.borrow(), keys)?;
+
+        Ok(Map {
+            root: Lender::new(root),
+        })
     }
 }
 

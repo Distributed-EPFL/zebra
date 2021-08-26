@@ -6,7 +6,7 @@ use drop::crypto::hash::HashError;
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
     inner: Box<Inner>,
