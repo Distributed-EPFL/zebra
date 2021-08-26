@@ -4,7 +4,6 @@ mod check;
 mod node;
 mod wrap;
 
-#[cfg(test)]
 pub(crate) use check::check;
 pub(crate) use node::Internal;
 pub(crate) use node::Leaf;
