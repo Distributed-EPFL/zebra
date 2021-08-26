@@ -7,9 +7,11 @@ use crate::{
     },
 };
 
-use std::borrow::Borrow;
+use serde::{Serialize, Serializer};
 
 use snafu::ResultExt;
+
+use std::borrow::Borrow;
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
@@ -263,6 +265,19 @@ where
         self.root.restore(root);
 
         result
+    }
+}
+
+impl<Key, Value> Serialize for Map<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.root.serialize(serializer)
     }
 }
 
