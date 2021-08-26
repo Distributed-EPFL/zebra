@@ -1,3 +1,5 @@
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use std::borrow::Borrow;
 use std::mem;
 
@@ -47,12 +49,55 @@ impl<Inner> Borrow<Inner> for Lender<Inner> {
     }
 }
 
-impl<Inner> Drop for Lender<Inner> {
-    fn drop(&mut self) {
-        if let State::Lent = self.state {
-            panic!(
-                "dropping `Lender` without previously `Lender::restore`ing it"
-            );
+impl<Inner> Serialize for Lender<Inner>
+where
+    Inner: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match &self.state {
+            State::Available(inner) => inner.serialize(serializer),
+            State::Lent => panic!("attempted to serialize lent `Lender`"),
         }
+    }
+}
+
+impl<'de, Inner> Deserialize<'de> for Lender<Inner>
+where
+    Inner: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let inner = Inner::deserialize(deserializer)?;
+        Ok(Lender::new(inner))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serialize_available() {
+        let lender: Lender<u32> = Lender::new(3);
+        let serialized = bincode::serialize(&lender).unwrap();
+        let mut lender: Lender<u32> =
+            bincode::deserialize(&serialized).unwrap();
+
+        let value = lender.take();
+        assert_eq!(value, 3);
+        lender.restore(value);
+    }
+
+    #[test]
+    #[should_panic(expected = "attempted to serialize lent `Lender`")]
+    fn serialize_lent() {
+        let mut lender: Lender<u32> = Lender::new(3);
+        lender.take();
+        let _result = bincode::serialize(&lender);
     }
 }
