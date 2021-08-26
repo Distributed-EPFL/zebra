@@ -1,10 +1,12 @@
 use drop::crypto::hash::{Digest, SIZE};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use std::fmt::{Debug, Error, Formatter, LowerHex};
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize)]
+#[derive(
+    Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
+)]
 pub(crate) struct Bytes(pub [u8; SIZE]);
 
 impl From<Digest> for Bytes {
