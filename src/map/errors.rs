@@ -7,8 +7,10 @@ use snafu::Snafu;
 pub enum MapError {
     #[snafu(display("failed to hash field: {}", source))]
     HashError { source: DropHashError },
-    #[snafu(display("attempt to operate on an unknown branch"))]
+    #[snafu(display("attempted to operate on an unknown branch"))]
     BranchUnknown,
+    #[snafu(display("attempted to import incompatible map"))]
+    MapIncompatible,
 }
 
 #[derive(Debug, Snafu)]
