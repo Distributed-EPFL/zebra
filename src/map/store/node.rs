@@ -43,6 +43,61 @@ pub(crate) struct Stub {
     hash: Bytes,
 }
 
+impl<Key, Value> Node<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    pub fn internal(left: Node<Key, Value>, right: Node<Key, Value>) -> Self {
+        Node::Internal(Internal::new(left, right))
+    }
+
+    pub fn leaf(key: Wrap<Key>, value: Wrap<Value>) -> Self {
+        Node::Leaf(Leaf::new(key, value))
+    }
+
+    pub fn stub(hash: Bytes) -> Self {
+        Node::Stub(Stub::new(hash))
+    }
+
+    pub fn hash(&self) -> Bytes {
+        match self {
+            Node::Empty => hash::empty(),
+            Node::Internal(internal) => internal.hash(),
+            Node::Leaf(leaf) => leaf.hash(),
+            Node::Stub(stub) => stub.hash(),
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Node::Empty => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Node::Internal(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_leaf(&self) -> bool {
+        match self {
+            Node::Leaf(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_stub(&self) -> bool {
+        match self {
+            Node::Stub(_) => true,
+            _ => false,
+        }
+    }
+}
+
 impl<Key, Value> Internal<Key, Value>
 where
     Key: Field,
@@ -86,8 +141,16 @@ where
         &*self.children.left
     }
 
+    pub fn left_mut(&mut self) -> &mut Node<Key, Value> {
+        &mut *self.children.left
+    }
+
     pub fn right(&self) -> &Node<Key, Value> {
         &*self.children.right
+    }
+
+    pub fn right_mut(&mut self) -> &mut Node<Key, Value> {
+        &mut *self.children.right
     }
 }
 
@@ -136,33 +199,6 @@ impl Stub {
 
     pub fn hash(&self) -> Bytes {
         self.hash
-    }
-}
-
-impl<Key, Value> Node<Key, Value>
-where
-    Key: Field,
-    Value: Field,
-{
-    pub fn internal(left: Node<Key, Value>, right: Node<Key, Value>) -> Self {
-        Node::Internal(Internal::new(left, right))
-    }
-
-    pub fn leaf(key: Wrap<Key>, value: Wrap<Value>) -> Self {
-        Node::Leaf(Leaf::new(key, value))
-    }
-
-    pub fn stub(hash: Bytes) -> Self {
-        Node::Stub(Stub::new(hash))
-    }
-
-    pub fn hash(&self) -> Bytes {
-        match self {
-            Node::Empty => hash::empty(),
-            Node::Internal(internal) => internal.hash(),
-            Node::Leaf(leaf) => leaf.hash(),
-            Node::Stub(stub) => stub.hash(),
-        }
     }
 }
 
