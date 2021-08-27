@@ -1,6 +1,6 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 use std::mem;
 
 pub(crate) struct Lender<Inner> {
@@ -44,6 +44,17 @@ impl<Inner> Borrow<Inner> for Lender<Inner> {
             State::Available(inner) => &inner,
             State::Lent => panic!(
                 "attempted to `borrow` `Lender` without `Lender::restore`"
+            ),
+        }
+    }
+}
+
+impl<Inner> BorrowMut<Inner> for Lender<Inner> {
+    fn borrow_mut(&mut self) -> &mut Inner {
+        match &mut self.state {
+            State::Available(inner) => inner,
+            State::Lent => panic!(
+                "attempted to `borrow_mut `Lender` without `Lender::restore`"
             ),
         }
     }
