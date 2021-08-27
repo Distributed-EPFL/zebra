@@ -12,7 +12,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 use snafu::ResultExt;
 
-use std::borrow::Borrow;
+use std::borrow::{Borrow, BorrowMut};
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
@@ -174,8 +174,8 @@ where
     ///
     /// If the `Key` or `Value` cannot be hashed (via `drop::crypto::hash`), [`HashError`] is returned
     ///
-    /// [`BranchUnknown`]: map/errors/enum.MapError.html
-    /// [`HashError`]: map/errors/enum.MapError.html
+    /// [`BranchUnknown`]: errors/enum.MapError.html
+    /// [`HashError`]: errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -205,7 +205,7 @@ where
     /// If the portion of the map pertaining to the key is incomplete, i.e. there is a `Stub`
     /// on the key's path), [`BranchUnknown`] is returned.
     ///
-    /// [`BranchUnknown`]: map/errors/enum.MapError.html
+    /// [`BranchUnknown`]: errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -240,7 +240,7 @@ where
     /// If the portion of the map pertaining to the key is incomplete, i.e. there is a `Stub`
     /// on the key's path, [`BranchUnknown`] is returned.
     ///
-    /// [`BranchUnknown`]: map/errors/enum.MapError.html
+    /// [`BranchUnknown`]: errors/enum.MapError.html
     ///
     /// # Examples
     ///
@@ -282,7 +282,7 @@ where
     /// If the it cannot be determined if the key does or does not exist
     /// (e.g. locally part of the map is missing, replaced by a `Stub`), [`BranchUnknown`] is returned.
     ///
-    /// [`BranchUnknown`]: map/errors/enum.MapError.html
+    /// [`BranchUnknown`]: errors/enum.MapError.html
     /// # Examples
     ///
     /// ```
@@ -317,6 +317,56 @@ where
         Ok(Map {
             root: Lender::new(root),
         })
+    }
+
+    /// Computes the union of two *compatible* maps.
+    /// Two `Map`s are compatible if they share the same underlying key-value associations.
+    ///
+    /// Concretely, it replaces `Stub`s in the first map with the concrete information
+    /// in the second map. The first map is therefore extended with the missing information
+    /// (key-value associations) that the second map possesses.
+    ///
+    /// This can be used as a method to merge (and condense) multiple maps into one.
+    ///
+    /// # Errors
+    /// If the maps are not compatible, [`MapIncompatible`] is returned.
+    ///
+    /// [`MapIncompatible`]: errors/enum.MapError.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::map::Map;
+    /// use zebra::map::errors::MapError;
+    ///
+    /// let mut map = Map::new();
+    ///
+    /// map.insert(1, "a");
+    /// map.insert(2, "b");
+    /// map.insert(3, "c");
+    ///
+    /// let mut first_submap = map.export([&1]).unwrap();
+    /// let second_submap = map.export([&2]).unwrap();
+    ///
+    /// first_submap.import(second_submap).unwrap();
+    ///
+    /// assert_eq!(first_submap.get(&1).unwrap(), Some(&"a"));
+    /// assert_eq!(first_submap.get(&2).unwrap(), Some(&"b"));
+    /// assert!(first_submap.get(&3).is_err());
+    ///
+    /// let mut incompatible_map = Map::new();
+    ///
+    /// incompatible_map.insert(3, "c");
+    ///
+    /// // MapError::MapIncompatible
+    /// assert!(first_submap.import(incompatible_map).is_err())
+    /// ```
+    pub fn import(
+        &mut self,
+        mut other: Map<Key, Value>,
+    ) -> Result<(), MapError> {
+        interact::import(self.root.borrow_mut(), other.root.take())?;
+        Ok(())
     }
 }
 
