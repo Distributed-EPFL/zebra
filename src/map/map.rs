@@ -757,6 +757,7 @@ mod tests {
         export.assert_records((0..1024).map(|i| (i, i)));
     }
 
+    #[test]
     fn export_all_then_get() {
         let mut map: Map<u32, u32> = Map::new();
 
@@ -769,5 +770,95 @@ mod tests {
         for (key, value) in (0..1024).map(|i| (i, i)) {
             assert_eq!(export.get(&key).unwrap(), Some(&value));
         }
+    }
+
+    #[test]
+    fn import_disjoint_singles() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export([33]).unwrap();
+        let secondary = map.export([34]).unwrap();
+
+        main.import(secondary).unwrap();
+
+        assert_eq!(map.root(), main.root());
+        main.check_tree();
+        main.assert_records([(33, 33), (34, 34)]);
+    }
+
+    #[test]
+    fn import_same_singles() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export([33]).unwrap();
+        let secondary = map.export([33]).unwrap();
+
+        main.import(secondary).unwrap();
+
+        assert_eq!(map.root(), main.root());
+        main.check_tree();
+        main.assert_records([(33, 33)]);
+    }
+
+    #[test]
+    fn import_disjoint_halves() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export(0..512).unwrap();
+        let secondary = map.export(512..1024).unwrap();
+
+        main.import(secondary).unwrap();
+
+        assert_eq!(map.root(), main.root());
+        main.check_tree();
+        main.assert_records((0..1024).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn import_overlapping_halves() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export(0..512).unwrap();
+        let secondary = map.export(256..768).unwrap();
+
+        main.import(secondary).unwrap();
+
+        assert_eq!(map.root(), main.root());
+        main.check_tree();
+        main.assert_records((0..768).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn import_same_halves() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export(0..512).unwrap();
+        let secondary = map.export(0..512).unwrap();
+
+        main.import(secondary).unwrap();
+
+        assert_eq!(map.root(), main.root());
+        main.check_tree();
+        main.assert_records((0..512).map(|i| (i, i)));
     }
 }
