@@ -26,7 +26,7 @@ where
             }
         }
         Node::Leaf(leaf) => {
-            if query.path.reaches(*leaf.key().digest()) {
+            if query.path.reaches(leaf.key().digest()) {
                 Ok(Some(leaf.value().inner()))
             } else {
                 Ok(None)

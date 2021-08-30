@@ -27,8 +27,8 @@ where
         self.inner
     }
 
-    pub fn digest(&self) -> &Bytes {
-        &self.digest
+    pub fn digest(&self) -> Bytes {
+        self.digest
     }
 
     pub fn inner(&self) -> &Inner {

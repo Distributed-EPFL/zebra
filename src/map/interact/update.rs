@@ -22,7 +22,7 @@ where
         let value = Wrap::new(value)?;
 
         Ok(Update {
-            path: Path::from(*key.digest()),
+            path: Path::from(key.digest()),
             action: Action::Insert(key, value),
         })
     }

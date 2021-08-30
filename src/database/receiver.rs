@@ -136,8 +136,8 @@ where
                 _ => Ok(Label::Internal(MapId::internal(location), hash)),
             },
             Node::Leaf(ref key, _) => {
-                if location.contains(&(*key.digest()).into()) {
-                    Ok(Label::Leaf(MapId::leaf(key.digest()), hash))
+                if location.contains(&key.digest().into()) {
+                    Ok(Label::Leaf(MapId::leaf(&key.digest()), hash))
                 } else {
                     Err(Severity::malicious())
                 }
@@ -900,7 +900,7 @@ mod tests {
         let fake_internal = Node::Internal(
             Label::Empty,
             Label::Leaf(
-                MapId::leaf(wrap!(u32::MAX).digest()),
+                MapId::leaf(&wrap!(u32::MAX).digest()),
                 fake_leaf.hash(),
             ),
         );
@@ -938,7 +938,7 @@ mod tests {
         let fake_leaf = Node::Leaf(wrap!(u32::MAX), wrap!(u32::MAX - 10));
         let fake_internal = Node::Internal(
             Label::Leaf(
-                MapId::leaf(wrap!(u32::MAX).digest()),
+                MapId::leaf(&wrap!(u32::MAX).digest()),
                 fake_leaf.hash(),
             ),
             Label::Empty,

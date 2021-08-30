@@ -275,7 +275,7 @@ mod tests {
 
         pub fn check_leaf(&mut self, label: Label, location: Prefix) {
             let (key, _) = self.fetch_leaf(label);
-            if !location.contains(&Path::from(*key.digest())) {
+            if !location.contains(&Path::from(key.digest())) {
                 panic!("`check_leaf`: leaf outside of its key path")
             }
         }
@@ -467,7 +467,7 @@ mod tests {
     fn split() {
         let (mut store, labels) = Store::raw_leaves([(0u32, 1u32)]);
 
-        let path = Path::from(*wrap!(0u32).digest());
+        let path = Path::from(wrap!(0u32).digest());
         let label = labels[0];
 
         for splits in 0..DEPTH {
