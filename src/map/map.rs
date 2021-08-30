@@ -660,4 +660,64 @@ mod tests {
             map.assert_records(((key + 1)..512).map(|i| (i, i)));
         }
     }
+
+    #[test]
+    fn export_none() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export::<[u32; 0], u32>([]).unwrap(); // Explicit type arguments are to aid type inference on an empty array
+
+        assert_eq!(map.root(), export.root());
+        export.check_tree();
+        export.assert_records([]);
+    }
+
+    #[test]
+    fn export_single() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export([33]).unwrap();
+
+        assert_eq!(map.root(), export.root());
+        export.check_tree();
+        export.assert_records([(33, 33)]);
+    }
+
+    #[test]
+    fn export_half() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(0..512).unwrap();
+
+        assert_eq!(map.root(), export.root());
+        export.check_tree();
+        export.assert_records((0..512).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn export_all() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(0..1024).unwrap();
+
+        assert_eq!(map.root(), export.root());
+        export.check_tree();
+        export.assert_records((0..1024).map(|i| (i, i)));
+    }
 }
