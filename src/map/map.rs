@@ -224,7 +224,7 @@ where
         key: Key,
         value: Value,
     ) -> Result<Option<Value>, MapError> {
-        let update = Update::set(key, value).context(HashError)?;
+        let update = Update::insert(key, value).context(HashError)?;
         self.update(update)
     }
 
