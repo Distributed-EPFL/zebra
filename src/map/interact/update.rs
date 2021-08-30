@@ -17,13 +17,13 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn set(key: Key, value: Value) -> Result<Self, HashError> {
+    pub fn insert(key: Key, value: Value) -> Result<Self, HashError> {
         let key = Wrap::new(key)?;
         let value = Wrap::new(value)?;
 
         Ok(Update {
             path: Path::from(*key.digest()),
-            action: Action::Set(key, value),
+            action: Action::Insert(key, value),
         })
     }
 

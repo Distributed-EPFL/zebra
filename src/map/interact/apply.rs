@@ -58,7 +58,7 @@ where
         (
             Node::Empty,
             Update {
-                action: Action::Set(key, value),
+                action: Action::Insert(key, value),
                 ..
             },
         ) => (Node::leaf(key, value), Ok(None)),
@@ -72,7 +72,7 @@ where
             Node::Leaf(leaf),
             Update {
                 path,
-                action: Action::Set(_, new_value),
+                action: Action::Insert(_, new_value),
             },
         ) if path.reaches(*leaf.key().digest()) => {
             let (key, old_value) = leaf.fields();
