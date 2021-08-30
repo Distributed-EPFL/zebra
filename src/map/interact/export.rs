@@ -1,22 +1,15 @@
 use crate::{
     common::{
-        data::Bytes,
         store::Field,
         tree::{Direction, Path},
     },
     map::{
-        errors::{BranchUnknown, HashError, MapError},
+        errors::{BranchUnknown, MapError},
         store::{Internal, Leaf, Node},
     },
 };
 
-use drop::crypto::hash;
-
-use snafu::ResultExt;
-
-use std::borrow::Borrow;
-
-fn split(depth: u8, paths: &[Path]) -> (&[Path], &[Path]) {
+fn split(paths: &[Path], depth: u8) -> (&[Path], &[Path]) {
     let partition =
         paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
 
@@ -37,47 +30,35 @@ where
 {
     match node {
         Node::Internal(internal) if !paths.is_empty() => {
-            let (left_paths, right_paths) = split(depth, paths);
+            let (left_paths, right_paths) = split(paths, depth);
 
-            let left = recur(internal.left(), depth + 1, left_paths)?;
-            let right = recur(internal.right(), depth + 1, right_paths)?;
+            let left = recur(internal.left(), depth + 1, left_paths)?; // Clone relevant subtrees under `left`..
+            let right = recur(internal.right(), depth + 1, right_paths)?; // .. and `right`
 
-            Ok(Node::Internal(Internal::raw(internal.hash(), left, right)))
+            Ok(Node::Internal(Internal::raw(internal.hash(), left, right))) // `internal.hash()` is guaranteed to be correct, no need to recompute
         }
         Node::Leaf(leaf) if !paths.is_empty() => Ok(Node::Leaf(Leaf::raw(
+            // If some `path` in `paths` does not reach `leaf.key().digest()`,
+            // then `leaf` is a proof of exclusion for `path`, and needs to be cloned
             leaf.hash(),
             leaf.key().clone(),
             leaf.value().clone(),
         ))),
         Node::Stub(_) if !paths.is_empty() => BranchUnknown.fail(),
 
-        Node::Empty => Ok(Node::Empty),
+        Node::Empty => Ok(Node::Empty), // `Node::Empty` is cheaper to clone than `Node::Stub`
 
         node => Ok(Node::stub(node.hash())),
     }
 }
 
-pub(crate) fn export<Key, Value, I, K>(
+pub(crate) fn export<Key, Value>(
     root: &Node<Key, Value>,
-    keys: I,
+    paths: &[Path],
 ) -> Result<Node<Key, Value>, MapError>
 where
     Key: Field + Clone,
     Value: Field + Clone,
-    I: IntoIterator<Item = K>,
-    K: Borrow<Key>,
 {
-    let paths: Result<Vec<Path>, MapError> = keys
-        .into_iter()
-        .map(|key| {
-            hash::hash(key.borrow())
-                .map(|digest| Path::from(Bytes::from(digest)))
-                .context(HashError)
-        })
-        .collect();
-
-    let mut paths = paths?;
-    paths.sort();
-
-    recur(root, 0, &paths)
+    recur(root, 0, paths)
 }
