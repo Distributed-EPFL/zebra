@@ -11,7 +11,7 @@ use crate::{
     },
 };
 
-use drop::crypto::hash;
+use drop::crypto::{hash, Digest};
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -169,6 +169,23 @@ where
         Map {
             root: Lender::new(Node::Empty),
         }
+    }
+
+    /// Returns the root hash of the map.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use zebra::map::Map;
+    ///
+    /// let mut tree: Map<&str, i32> = Map::new();
+    /// // ...
+    /// println!("{}", tree.root());
+    /// ```
+    pub fn root(&self) -> Digest {
+        // TODO: Decide if using `drop`'s `Digest` is acceptable
+        let root: &Node<Key, Value> = self.root.borrow();
+        root.hash().0.into()
     }
 
     /// Returns a reference to the value corresponding to the key.
