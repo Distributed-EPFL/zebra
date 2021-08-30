@@ -49,7 +49,7 @@ where
 {
     match store.entry(label) {
         Occupied(entry) => match &entry.get().node {
-            Node::Leaf(key, _) => Path::from(*key.digest()),
+            Node::Leaf(key, _) => Path::from(key.digest()),
             _ => unreachable!(),
         },
         Vacant(..) => unreachable!(),

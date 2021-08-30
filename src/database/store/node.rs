@@ -24,9 +24,7 @@ where
             Node::Internal(left, right) => {
                 hash::internal(left.hash(), right.hash())
             }
-            Node::Leaf(key, value) => {
-                hash::leaf(*key.digest(), *value.digest())
-            }
+            Node::Leaf(key, value) => hash::leaf(key.digest(), value.digest()),
         }
     }
 }

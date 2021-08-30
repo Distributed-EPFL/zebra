@@ -32,7 +32,7 @@ where
     Key: Field,
     Value: Field,
 {
-    if !location.contains(&Path::from(*leaf.key().digest())) {
+    if !location.contains(&Path::from(leaf.key().digest())) {
         PathViolation.fail()
     } else {
         Ok(())

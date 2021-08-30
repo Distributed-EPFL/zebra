@@ -253,7 +253,7 @@ where
         }
 
         (Node::Leaf(key, original_value), Task::Do(operation))
-            if operation.path.reaches(*key.digest()) =>
+            if operation.path.reaches(key.digest()) =>
         {
             match &mut operation.action {
                 Action::Get(holder) => {
@@ -280,7 +280,7 @@ where
         ) => (store, batch, target.label),
         (Node::Leaf(key, _), _) => {
             let (left, right) =
-                if Path::from(*key.digest())[depth] == Direction::Left {
+                if Path::from(key.digest())[depth] == Direction::Left {
                     (target, Entry::empty())
                 } else {
                     (Entry::empty(), target)

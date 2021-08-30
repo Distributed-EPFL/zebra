@@ -31,7 +31,7 @@ where
         let value = Wrap::new(value)?;
 
         Ok(Operation {
-            path: Path::from(*key.digest()),
+            path: Path::from(key.digest()),
             action: Action::Set(key, value),
         })
     }

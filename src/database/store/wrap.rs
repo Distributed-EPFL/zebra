@@ -22,8 +22,8 @@ where
         })
     }
 
-    pub fn digest(&self) -> &Bytes {
-        &self.digest
+    pub fn digest(&self) -> Bytes {
+        self.digest
     }
 
     pub fn inner(&self) -> &Arc<Inner> {

@@ -164,7 +164,7 @@ where
     }
 
     fn from_fields(fields: Fields<Key, Value>) -> Self {
-        let hash = hash::leaf(*fields.key.digest(), *fields.value.digest());
+        let hash = hash::leaf(fields.key.digest(), fields.value.digest());
         Leaf { hash, fields }
     }
 

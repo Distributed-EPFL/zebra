@@ -74,7 +74,7 @@ where
                 path,
                 action: Action::Insert(_, new_value),
             },
-        ) if path.reaches(*leaf.key().digest()) => {
+        ) if path.reaches(leaf.key().digest()) => {
             let (key, old_value) = leaf.fields();
             (Node::leaf(key, new_value), Ok(Some(old_value.take())))
         }
@@ -84,7 +84,7 @@ where
                 path,
                 action: Action::Remove,
             },
-        ) if path.reaches(*leaf.key().digest()) => {
+        ) if path.reaches(leaf.key().digest()) => {
             (Node::Empty, Ok(Some(leaf.fields().1.take())))
         }
         (
@@ -95,7 +95,7 @@ where
             },
         ) => (Node::Leaf(leaf), Ok(None)),
         (Node::Leaf(leaf), update) => {
-            if Path::from(*leaf.key().digest())[depth] == Direction::Left {
+            if Path::from(leaf.key().digest())[depth] == Direction::Left {
                 branch(Node::Leaf(leaf), Node::Empty, depth, update)
             } else {
                 branch(Node::Empty, Node::Leaf(leaf), depth, update)
