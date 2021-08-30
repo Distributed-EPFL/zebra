@@ -861,4 +861,24 @@ mod tests {
         main.check_tree();
         main.assert_records((0..512).map(|i| (i, i)));
     }
+
+    #[test]
+    fn double_export() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let mut main = map.export(0..128).unwrap();
+        let secondary = map.export(128..256).unwrap();
+
+        main.import(secondary).unwrap();
+
+        let export = main.export(64..192).unwrap();
+
+        assert_eq!(map.root(), export.root());
+        export.check_tree();
+        export.assert_records((64..192).map(|i| (i, i)));
+    }
 }
