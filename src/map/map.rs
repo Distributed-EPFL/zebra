@@ -496,16 +496,31 @@ mod tests {
     }
 
     #[test]
-    fn stress() {
-        let mut map: Map<u32, u32> = Map::new();
+    fn empty() {
+        let map: Map<u32, u32> = Map::new();
+
         map.check_tree();
         map.assert_records([]);
+    }
+
+    #[test]
+    fn insert() {
+        let mut map: Map<u32, u32> = Map::new();
 
         for (key, value) in (0..1024).map(|i| (i, i)) {
             assert_eq!(map.insert(key, value).unwrap(), None);
 
             map.check_tree();
             map.assert_records((0..=key).map(|i| (i, i)));
+        }
+    }
+
+    #[test]
+    fn insert_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
         }
 
         for key in 0..2048 {
@@ -515,9 +530,38 @@ mod tests {
                 assert_eq!(map.get(&key).unwrap(), None)
             }
         }
+    }
+
+    #[test]
+    fn insert_then_remove_half() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
 
         for key in 512..1024 {
             assert_eq!(map.remove(&key).unwrap(), Some(key));
+
+            map.check_tree();
+            map.assert_records(
+                (0..512)
+                    .map(|i| (i, i))
+                    .chain(((key + 1)..1024).map(|i| (i, i))),
+            );
+        }
+    }
+
+    #[test]
+    fn insert_then_remove_half_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        for key in 512..1024 {
+            map.remove(&key).unwrap();
         }
 
         for key in 0..2048 {
@@ -526,6 +570,19 @@ mod tests {
             } else {
                 assert_eq!(map.get(&key).unwrap(), None)
             }
+        }
+    }
+
+    #[test]
+    fn insert_then_remove_half_then_increment() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        for key in 512..1024 {
+            map.remove(&key).unwrap();
         }
 
         for (key, value) in (0..512).map(|i| (i, i + 1)) {
@@ -540,6 +597,23 @@ mod tests {
                 }
             }));
         }
+    }
+
+    #[test]
+    fn insert_then_remove_half_then_increment_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        for key in 512..1024 {
+            map.remove(&key).unwrap();
+        }
+
+        for (key, value) in (0..512).map(|i| (i, i + 1)) {
+            map.insert(key, value).unwrap();
+        }
 
         for key in 0..2048 {
             if key < 512 {
@@ -548,12 +622,25 @@ mod tests {
                 assert_eq!(map.get(&key).unwrap(), None)
             }
         }
+    }
 
-        for key in 0..512 {
-            assert_eq!(map.remove(&key).unwrap(), Some(key + 1));
+    #[test]
+    fn insert_then_remove_half_then_remove_other_half() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
         }
 
-        map.check_tree();
-        map.assert_records([]);
+        for key in 512..1024 {
+            map.remove(&key).unwrap();
+        }
+
+        for key in 0..512 {
+            assert_eq!(map.remove(&key).unwrap(), Some(key));
+
+            map.check_tree();
+            map.assert_records(((key + 1)..512).map(|i| (i, i)));
+        }
     }
 }
