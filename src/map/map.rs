@@ -1,11 +1,17 @@
 use crate::{
-    common::{data::Lender, store::Field},
+    common::{
+        data::{Bytes, Lender},
+        store::Field,
+        tree::Path,
+    },
     map::{
         errors::{FlawedTopology, HashError, MapError},
         interact::{self, Query, Update},
         store::{self, Node},
     },
 };
+
+use drop::crypto::hash;
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -312,7 +318,19 @@ where
         I: IntoIterator<Item = K>,
         K: Borrow<Key>,
     {
-        let root = interact::export(self.root.borrow(), keys)?;
+        let paths: Result<Vec<Path>, MapError> = keys
+            .into_iter()
+            .map(|key| {
+                hash::hash(key.borrow())
+                    .map(|digest| Path::from(Bytes::from(digest)))
+                    .context(HashError)
+            })
+            .collect();
+
+        let mut paths = paths?;
+        paths.sort();
+
+        let root = interact::export(self.root.borrow(), &paths)?;
 
         Ok(Map {
             root: Lender::new(root),
