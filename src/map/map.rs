@@ -691,6 +691,24 @@ mod tests {
         export.assert_records([(33, 33)]);
     }
 
+    fn export_single_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export([33]).unwrap();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            if key == 33 {
+                assert_eq!(export.get(&key).unwrap(), Some(&value));
+            } else {
+                export.get(&key).unwrap_err();
+            }
+        }
+    }
+
     #[test]
     fn export_half() {
         let mut map: Map<u32, u32> = Map::new();
@@ -706,6 +724,24 @@ mod tests {
         export.assert_records((0..512).map(|i| (i, i)));
     }
 
+    fn export_half_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(0..512).unwrap();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            if key < 512 {
+                assert_eq!(export.get(&key).unwrap(), Some(&value));
+            } else {
+                export.get(&key).unwrap_err();
+            }
+        }
+    }
+
     #[test]
     fn export_all() {
         let mut map: Map<u32, u32> = Map::new();
@@ -719,5 +755,19 @@ mod tests {
         assert_eq!(map.root(), export.root());
         export.check_tree();
         export.assert_records((0..1024).map(|i| (i, i)));
+    }
+
+    fn export_all_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(0..1024).unwrap();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            assert_eq!(export.get(&key).unwrap(), Some(&value));
+        }
     }
 }
