@@ -9,7 +9,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 #[derive(Debug, Clone)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
-    inner: Box<Inner>,
+    inner: Inner,
 }
 
 impl<Inner> Wrap<Inner>
@@ -19,12 +19,12 @@ where
     pub fn new(inner: Inner) -> Result<Self, HashError> {
         Ok(Wrap {
             digest: hash::hash(&inner)?.into(),
-            inner: Box::new(inner),
+            inner,
         })
     }
 
     pub fn take(self) -> Inner {
-        *self.inner
+        self.inner
     }
 
     pub fn digest(&self) -> &Bytes {
