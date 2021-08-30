@@ -392,15 +392,15 @@ where
     where
         D: Deserializer<'de>,
     {
-        let root = Node::deserialize(deserializer)?;
+        let root = Node::deserialize(deserializer)?; // Deserializes and computes node hashes
 
-        store::check(&root)
+        store::check(&root) // Checks correctness of tree topology
             .context(FlawedTopology)
             .map_err(|err| DeError::custom(err))?;
 
         Ok(Map {
             root: Lender::new(root),
-        })
+        }) // If a `Map` is `Deserialize`d, then it is correct
     }
 }
 
