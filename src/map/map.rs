@@ -443,7 +443,10 @@ where
 mod tests {
     use super::*;
 
-    use crate::map::store;
+    use crate::{
+        common::store::hash,
+        map::store::{self, Internal},
+    };
 
     use std::collections::HashMap;
     use std::collections::HashSet;
@@ -880,5 +883,273 @@ mod tests {
         assert_eq!(map.root(), export.root());
         export.check_tree();
         export.assert_records((64..192).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn serialize_empty() {
+        let original: Map<u32, u32> = Map::new();
+        let serialized = bincode::serialize(&original).unwrap();
+
+        let deserialized: Map<u32, u32> =
+            bincode::deserialize(&serialized).unwrap();
+
+        assert_eq!(original.root(), deserialized.root());
+        deserialized.check_tree();
+        deserialized.assert_records([]);
+    }
+
+    #[test]
+    fn serialize_full() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            original.insert(key, value).unwrap();
+        }
+
+        let serialized = bincode::serialize(&original).unwrap();
+        let deserialized: Map<u32, u32> =
+            bincode::deserialize(&serialized).unwrap();
+
+        assert_eq!(original.root(), deserialized.root());
+        deserialized.check_tree();
+        deserialized.assert_records((0..1024).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn serialize_half() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            original.insert(key, value).unwrap();
+        }
+
+        let export = original.export(0..512).unwrap();
+        let serialized = bincode::serialize(&export).unwrap();
+        let deserialized: Map<u32, u32> =
+            bincode::deserialize(&serialized).unwrap();
+
+        assert_eq!(original.root(), deserialized.root());
+        deserialized.check_tree();
+        deserialized.assert_records((0..512).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn serialize_mislabled_small() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        original.insert(3, 3).unwrap();
+        original.insert(4, 4).unwrap();
+
+        let original_root = original.root();
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let (left, right) = internal.children();
+                Node::Internal(Internal::raw(hash::empty(), left, right))
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        let deserialized: Map<u32, u32> =
+            bincode::deserialize(&serialized).unwrap();
+
+        assert_eq!(original_root, deserialized.root());
+        deserialized.check_tree();
+        deserialized.assert_records([(3, 3), (4, 4)]);
+    }
+
+    #[test]
+    fn serialize_flawed_small() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        original.insert(3, 3).unwrap();
+        original.insert(4, 4).unwrap();
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let (left, right) = internal.children();
+                Node::internal(right, left)
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        assert!(bincode::deserialize::<Map<u32, u32>>(&serialized).is_err());
+    }
+
+    #[test]
+    fn serialize_flawed_mislabled_small() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        original.insert(3, 3).unwrap();
+        original.insert(4, 4).unwrap();
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let hash = internal.hash();
+                let (left, right) = internal.children();
+                Node::Internal(Internal::raw(hash, right, left))
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        assert!(bincode::deserialize::<Map<u32, u32>>(&serialized).is_err());
+    }
+
+    #[test]
+    fn serialize_mislabled_big() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            original.insert(key, value).unwrap();
+        }
+
+        let original_root = original.root();
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let (left, right) = internal.children();
+                let left = match left {
+                    Node::Internal(internal) => {
+                        let (left, right) = internal.children();
+                        let left = match left {
+                            Node::Internal(internal) => {
+                                let (left, right) = internal.children();
+                                let left = match left {
+                                    Node::Internal(internal) => {
+                                        let (left, right) = internal.children();
+                                        Node::Internal(Internal::raw(
+                                            hash::empty(),
+                                            left,
+                                            right,
+                                        ))
+                                    }
+                                    _ => unreachable!(),
+                                };
+                                Node::internal(left, right)
+                            }
+                            _ => unreachable!(),
+                        };
+                        Node::internal(left, right)
+                    }
+                    _ => unreachable!(),
+                };
+                Node::internal(left, right)
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        let deserialized =
+            bincode::deserialize::<Map<u32, u32>>(&serialized).unwrap();
+
+        assert_eq!(original_root, deserialized.root());
+        deserialized.check_tree();
+        deserialized.assert_records((0..1024).map(|i| (i, i)));
+    }
+
+    #[test]
+    fn serialize_flawed_big() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            original.insert(key, value).unwrap();
+        }
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let (left, right) = internal.children();
+                let left = match left {
+                    Node::Internal(internal) => {
+                        let (left, right) = internal.children();
+                        let left = match left {
+                            Node::Internal(internal) => {
+                                let (left, right) = internal.children();
+                                let left = match left {
+                                    Node::Internal(internal) => {
+                                        let (left, right) = internal.children();
+                                        Node::internal(right, left)
+                                    }
+                                    _ => unreachable!(),
+                                };
+                                Node::internal(left, right)
+                            }
+                            _ => unreachable!(),
+                        };
+                        Node::internal(left, right)
+                    }
+                    _ => unreachable!(),
+                };
+                Node::internal(left, right)
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        assert!(bincode::deserialize::<Map<u32, u32>>(&serialized).is_err());
+    }
+
+    #[test]
+    fn serialize_flawed_mislabled_big() {
+        let mut original: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            original.insert(key, value).unwrap();
+        }
+
+        let root = original.root.take();
+        let root = match root {
+            Node::Internal(internal) => {
+                let (left, right) = internal.children();
+                let left = match left {
+                    Node::Internal(internal) => {
+                        let (left, right) = internal.children();
+                        let left = match left {
+                            Node::Internal(internal) => {
+                                let (left, right) = internal.children();
+                                let left = match left {
+                                    Node::Internal(internal) => {
+                                        let hash = internal.hash();
+                                        let (left, right) = internal.children();
+                                        Node::Internal(Internal::raw(
+                                            hash, right, left,
+                                        ))
+                                    }
+                                    _ => unreachable!(),
+                                };
+                                Node::internal(left, right)
+                            }
+                            _ => unreachable!(),
+                        };
+                        Node::internal(left, right)
+                    }
+                    _ => unreachable!(),
+                };
+                Node::internal(left, right)
+            }
+            _ => unreachable!(),
+        };
+
+        original.root.restore(root);
+
+        let serialized = bincode::serialize(&original).unwrap();
+        assert!(bincode::deserialize::<Map<u32, u32>>(&serialized).is_err());
     }
 }
