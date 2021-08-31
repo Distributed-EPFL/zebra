@@ -6,6 +6,8 @@ use crate::{
     },
 };
 
+use ::drop::crypto::Digest;
+
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
     pub root: Label,
@@ -25,6 +27,10 @@ where
 
     pub fn new(cell: Cell<Key, Value>, root: Label) -> Self {
         Handle { cell, root }
+    }
+
+    pub fn commitment(&self) -> Digest {
+        self.root.hash().0.into()
     }
 
     pub async fn apply(

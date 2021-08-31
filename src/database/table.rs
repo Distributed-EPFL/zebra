@@ -6,6 +6,8 @@ use crate::{
     },
 };
 
+use drop::crypto::Digest;
+
 // Documentation links
 #[allow(unused_imports)]
 use crate::database::{Database, Receiver};
@@ -38,6 +40,11 @@ where
 
     pub(crate) fn new(cell: Cell<Key, Value>, root: Label) -> Self {
         Table(Handle::new(cell, root))
+    }
+
+    /// Returns a cryptographic commitment to the contents of the `Table`.
+    pub fn commitment(&self) -> Digest {
+        self.0.commitment()
     }
 
     /// Executes a [`Transaction`] returning a [`Response`]
