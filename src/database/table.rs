@@ -233,4 +233,38 @@ mod tests {
         map.check_tree();
         map.assert_records([(33, 33)]);
     }
+
+    #[tokio::test]
+    async fn export_half() {
+        let database: Database<u32, u32> = Database::new();
+        let mut table = database.empty_table();
+
+        let mut transaction = Transaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        table.execute(transaction).await;
+
+        let map = table.export(0..512).await.unwrap();
+        map.check_tree();
+        map.assert_records((0..512).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn export_all() {
+        let database: Database<u32, u32> = Database::new();
+        let mut table = database.empty_table();
+
+        let mut transaction = Transaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        table.execute(transaction).await;
+
+        let map = table.export(0..1024).await.unwrap();
+        map.check_tree();
+        map.assert_records((0..1024).map(|i| (i, i)));
+    }
 }
