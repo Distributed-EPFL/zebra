@@ -1,12 +1,15 @@
 use crate::{
-    common::store::Field,
+    common::{store::Field, tree::Path},
     database::{
-        interact::{apply, drop, Batch},
+        interact::{apply, drop, export, Batch},
         store::{Cell, Label},
     },
+    map::store::Node as MapNode,
 };
 
 use ::drop::crypto::Digest;
+
+use oh_snap::Snap;
 
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
@@ -44,6 +47,18 @@ where
 
         self.cell.restore(store);
         batch
+    }
+
+    pub async fn export(&mut self, paths: Snap<Path>) -> MapNode<Key, Value>
+    where
+        Key: Clone,
+        Value: Clone,
+    {
+        let store = self.cell.take();
+        let (store, root) = export::export(store, self.root, paths).await;
+        self.cell.restore(store);
+
+        root
     }
 }
 
