@@ -41,7 +41,8 @@ fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
     let partition =
         paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
 
-    paths.snap(partition)
+    let (right, left) = paths.snap(partition);
+    (left, right)
 }
 
 #[async_recursion]
