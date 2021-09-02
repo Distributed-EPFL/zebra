@@ -46,7 +46,7 @@ fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
 
 #[async_recursion]
 async fn branch<Key, Value>(
-    mut store: Store<Key, Value>,
+    store: Store<Key, Value>,
     depth: u8,
     paths: Snap<Path>,
     left: Label,
