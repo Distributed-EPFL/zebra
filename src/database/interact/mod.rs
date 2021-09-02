@@ -9,6 +9,7 @@ use task::Task;
 
 pub(crate) mod apply;
 pub(crate) mod drop;
+pub(crate) mod export;
 
 pub(crate) use action::Action;
 pub(crate) use batch::Batch;
