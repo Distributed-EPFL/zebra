@@ -171,6 +171,12 @@ where
         }
     }
 
+    pub(crate) fn raw(root: Node<Key, Value>) -> Self {
+        Map {
+            root: Lender::new(root),
+        }
+    }
+
     /// Returns a cryptographic commitment to the contents of the `Map`.
     /// Exporting a `Map`, even partially, preserves its commitment.
     /// A `Map` can be imported only by another `Map` with matching
