@@ -23,6 +23,10 @@ where
         })
     }
 
+    pub fn raw(digest: Bytes, inner: Inner) -> Self {
+        Wrap { digest, inner }
+    }
+
     pub fn take(self) -> Inner {
         self.inner
     }
