@@ -1,12 +1,20 @@
 use crate::{
-    common::store::Field,
+    common::{data::Bytes, store::Field, tree::Path},
     database::{
+        errors::{HashError, QueryError},
         store::{Cell, Handle, Label},
         Response, Sender, Transaction,
     },
+    map::Map,
 };
 
-use drop::crypto::Digest;
+use drop::crypto::{hash, Digest};
+
+use oh_snap::Snap;
+
+use snafu::ResultExt;
+
+use std::borrow::Borrow;
 
 // Documentation links
 #[allow(unused_imports)]
@@ -88,6 +96,34 @@ where
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch).await;
         Response::new(tid, batch)
+    }
+
+    pub async fn export<I, K>(
+        &mut self,
+        keys: I,
+    ) -> Result<Map<Key, Value>, QueryError>
+    // TODO: Decide if a `QueryError` is appropriate here
+    where
+        Key: Clone,
+        Value: Clone,
+        I: IntoIterator<Item = K>,
+        K: Borrow<Key>,
+    {
+        let paths: Result<Vec<Path>, QueryError> = keys
+            .into_iter()
+            .map(|key| {
+                hash::hash(key.borrow())
+                    .map(|digest| Path::from(Bytes::from(digest)))
+                    .context(HashError)
+            })
+            .collect();
+
+        let mut paths = paths?;
+        paths.sort();
+        let paths = Snap::new(paths);
+
+        let root = self.0.export(paths).await;
+        Ok(Map::raw(root))
     }
 
     /// Transforms the table into a [`Sender`], preparing it for sending to
