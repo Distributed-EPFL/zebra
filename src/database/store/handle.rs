@@ -9,6 +9,8 @@ use crate::{
 
 use oh_snap::Snap;
 
+use tokio::task;
+
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
     pub root: Label,
@@ -39,8 +41,13 @@ where
         batch: Batch<Key, Value>,
     ) -> Batch<Key, Value> {
         let store = self.cell.take();
+        let root = self.root;
 
-        let (store, root, batch) = apply::apply(store, self.root, batch).await;
+        let (store, root, batch) =
+            task::spawn_blocking(move || apply::apply(store, root, batch))
+                .await
+                .unwrap();
+
         self.root = root;
 
         self.cell.restore(store);

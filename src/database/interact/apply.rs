@@ -1,5 +1,3 @@
-use async_recursion::async_recursion;
-
 use crate::{
     common::{
         store::Field,
@@ -73,10 +71,9 @@ where
     }
 }
 
-#[async_recursion]
-async fn branch<Key, Value>(
+fn branch<Key, Value>(
     store: Store<Key, Value>,
-    original: Option<&'async_recursion Entry<Key, Value>>,
+    original: Option<&Entry<Key, Value>>,
     preserve: bool,
     depth: u8,
     batch: Batch<Key, Value>,
@@ -100,34 +97,31 @@ where
             let (left_batch, left_chunk, right_batch, right_chunk) =
                 chunk.snap(batch);
 
-            let left_task = tokio::spawn(async move {
-                recur(
-                    left_store,
-                    left,
-                    preserve_branches,
-                    depth + 1,
-                    left_batch,
-                    left_chunk,
-                )
-                .await
-            });
-
-            let right_task = tokio::spawn(async move {
-                recur(
-                    right_store,
-                    right,
-                    preserve_branches,
-                    depth + 1,
-                    right_batch,
-                    right_chunk,
-                )
-                .await
-            });
-
-            let (left_join, right_join) = tokio::join!(left_task, right_task);
-
-            let (left_store, left_batch, left_label) = left_join.unwrap();
-            let (right_store, right_batch, right_label) = right_join.unwrap();
+            let (
+                (left_store, left_batch, left_label),
+                (right_store, right_batch, right_label),
+            ) = rayon::join(
+                move || {
+                    recur(
+                        left_store,
+                        left,
+                        preserve_branches,
+                        depth + 1,
+                        left_batch,
+                        left_chunk,
+                    )
+                },
+                move || {
+                    recur(
+                        right_store,
+                        right,
+                        preserve_branches,
+                        depth + 1,
+                        right_batch,
+                        right_chunk,
+                    )
+                },
+            );
 
             let store = Store::merge(left_store, right_store);
             let batch = Batch::merge(left_batch, right_batch);
@@ -144,8 +138,7 @@ where
                 depth + 1,
                 batch,
                 left_chunk,
-            )
-            .await;
+            );
 
             let (store, batch, right_label) = recur(
                 store,
@@ -154,8 +147,7 @@ where
                 depth + 1,
                 batch,
                 right_chunk,
-            )
-            .await;
+            );
 
             (store, batch, left_label, right_label)
         }
@@ -211,8 +203,7 @@ where
     (store, batch, new_label)
 }
 
-#[async_recursion]
-async fn recur<Key, Value>(
+fn recur<Key, Value>(
     mut store: Store<Key, Value>,
     target: Entry<Key, Value>,
     preserve: bool,
@@ -238,19 +229,16 @@ where
             }
             Action::Remove => (store, batch, Label::Empty),
         },
-        (Node::Empty, Task::Split) => {
-            branch(
-                store,
-                None,
-                preserve,
-                depth,
-                batch,
-                chunk,
-                Entry::empty(),
-                Entry::empty(),
-            )
-            .await
-        }
+        (Node::Empty, Task::Split) => branch(
+            store,
+            None,
+            preserve,
+            depth,
+            batch,
+            chunk,
+            Entry::empty(),
+            Entry::empty(),
+        ),
 
         (Node::Leaf(key, original_value), Task::Do(operation))
             if operation.path.reaches(key.digest()) =>
@@ -287,7 +275,6 @@ where
                 };
 
             branch(store, None, preserve, depth, batch, chunk, left, right)
-                .await
         }
 
         (Node::Internal(left, right), _) => {
@@ -304,12 +291,11 @@ where
                 left,
                 right,
             )
-            .await
         }
     }
 }
 
-pub(crate) async fn apply<Key, Value>(
+pub(crate) fn apply<Key, Value>(
     mut store: Store<Key, Value>,
     root: Label,
     batch: Batch<Key, Value>,
@@ -322,7 +308,7 @@ where
     let root_chunk = Chunk::root(&batch);
 
     let (mut store, batch, new_root) =
-        recur(store, root_node, false, 0, batch, root_chunk).await;
+        recur(store, root_node, false, 0, batch, root_chunk);
 
     let old_root = root;
     if new_root != old_root {
@@ -362,7 +348,7 @@ mod tests {
             set!(7, 7),
         ]);
 
-        let (mut store, root, _) = apply(store, Label::Empty, batch).await;
+        let (mut store, root, _) = apply(store, Label::Empty, batch);
         store.check_tree(root);
         store.check_leaks([root]);
 
@@ -408,7 +394,7 @@ mod tests {
         // {0: 1}
 
         let batch = Batch::new(vec![set!(0, 1)]);
-        let (mut store, root, _) = apply(store, Label::Empty, batch).await;
+        let (mut store, root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(root);
         store.check_leaks([root]);
@@ -418,7 +404,7 @@ mod tests {
         // {0: 0}
 
         let batch = Batch::new(vec![set!(0, 0)]);
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.check_leaks([root]);
@@ -428,7 +414,7 @@ mod tests {
         // {0: 0, 1: 0}
 
         let batch = Batch::new(vec![set!(1, 0)]);
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.check_leaks([root]);
@@ -446,7 +432,7 @@ mod tests {
         // {1: 1}
 
         let batch = Batch::new(vec![set!(1, 1), remove!(0)]);
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.check_leaks([root]);
@@ -456,7 +442,7 @@ mod tests {
         // {}
 
         let batch = Batch::new(vec![remove!(1)]);
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.check_leaks([root]);
@@ -469,7 +455,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, root, _) = apply(store, Label::Empty, batch).await;
+        let (mut store, root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(root);
         store.assert_records(root, (0..128).map(|i| (i, i)));
@@ -481,10 +467,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..128).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets((0..128).map(|i| (i, Some(i))));
     }
@@ -494,10 +480,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..64).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets((0..64).map(|i| (i, Some(i))));
     }
@@ -507,10 +493,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((128..256).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets((128..256).map(|i| (i, None)));
     }
@@ -520,10 +506,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets(
             (64..192).map(|i| (i, if i < 128 { Some(i) } else { None })),
@@ -535,10 +521,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..128).map(|i| set!(i, i + 1)).collect());
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (0..128).map(|i| (i, i + 1)));
@@ -550,13 +536,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..128).map(|i| set!(i, i + 1)).collect());
-        let (store, root, _) = apply(store, root, batch).await;
+        let (store, root, _) = apply(store, root, batch);
 
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets(
             (64..192).map(|i| (i, if i < 128 { Some(i + 1) } else { None })),
@@ -568,13 +554,13 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((64..192).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, root, batch).await;
+        let (store, root, _) = apply(store, root, batch);
 
         let batch = Batch::new((0..192).map(|i| get!(i)).collect());
-        let (_, _, batch) = apply(store, root, batch).await;
+        let (_, _, batch) = apply(store, root, batch);
 
         batch.assert_gets((0..192).map(|i| (i, Some(i))));
     }
@@ -584,7 +570,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..192).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new(
             (0..128)
@@ -593,7 +579,7 @@ mod tests {
                 .collect(),
         );
 
-        let (mut store, root, batch) = apply(store, root, batch).await;
+        let (mut store, root, batch) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(
@@ -612,10 +598,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..128).map(|i| remove!(i)).collect());
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         assert_eq!(root, Label::Empty);
         store.check_leaks([root]);
@@ -626,10 +612,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..64).map(|i| remove!(i)).collect());
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i)));
@@ -641,10 +627,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..127).map(|i| remove!(i)).collect());
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (127..128).map(|i| (i, i)));
@@ -656,14 +642,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { remove!(i) } else { set!(i, i) })
                 .collect(),
         );
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i)));
@@ -675,14 +661,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 64 { remove!(i) } else { set!(i, i + 1) })
                 .collect(),
         );
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (64..128).map(|i| (i, i + 1)));
@@ -694,14 +680,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
-        let (store, root, _) = apply(store, Label::Empty, batch).await;
+        let (store, root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new(
             (0..128)
                 .map(|i| if i < 32 { remove!(i) } else { set!(i, i + 1) })
                 .collect(),
         );
-        let (mut store, root, _) = apply(store, root, batch).await;
+        let (mut store, root, _) = apply(store, root, batch);
 
         store.check_tree(root);
         store.assert_records(root, (32..128).map(|i| (i, i + 1)));
@@ -743,7 +729,7 @@ mod tests {
                 .collect();
 
             let batch = Batch::new(operations);
-            let next = apply(store, root, batch).await;
+            let next = apply(store, root, batch);
 
             store = next.0;
             root = next.1;
@@ -762,11 +748,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((128..256).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -782,9 +767,8 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch()).await;
-        let (mut store, second_root, _) =
-            apply(store, Label::Empty, batch()).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch());
+        let (mut store, second_root, _) = apply(store, Label::Empty, batch());
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -800,11 +784,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..129).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -820,11 +803,10 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch);
 
         let batch = Batch::new((0..256).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, Label::Empty, batch).await;
+        let (mut store, second_root, _) = apply(store, Label::Empty, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -840,12 +822,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch()).await;
-        let (store, second_root, _) = apply(store, Label::Empty, batch()).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch());
+        let (store, second_root, _) = apply(store, Label::Empty, batch());
 
         let batch = Batch::new((0..128).map(|i| remove!(i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, second_root, batch).await;
+        let (mut store, second_root, _) = apply(store, second_root, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -861,12 +842,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch()).await;
-        let (store, second_root, _) = apply(store, Label::Empty, batch()).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch());
+        let (store, second_root, _) = apply(store, Label::Empty, batch());
 
         let batch = Batch::new((0..127).map(|i| remove!(i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, second_root, batch).await;
+        let (mut store, second_root, _) = apply(store, second_root, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -882,12 +862,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch()).await;
-        let (store, second_root, _) = apply(store, Label::Empty, batch()).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch());
+        let (store, second_root, _) = apply(store, Label::Empty, batch());
 
         let batch = Batch::new((0..64).map(|i| remove!(i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, second_root, batch).await;
+        let (mut store, second_root, _) = apply(store, second_root, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..128).map(|i| (i, i)));
@@ -903,15 +882,14 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (store, first_root, _) = apply(store, Label::Empty, batch()).await;
-        let (store, second_root, _) = apply(store, Label::Empty, batch()).await;
+        let (store, first_root, _) = apply(store, Label::Empty, batch());
+        let (store, second_root, _) = apply(store, Label::Empty, batch());
 
         let batch = Batch::new((64..128).map(|i| remove!(i)).collect());
-        let (store, first_root, _) = apply(store, first_root, batch).await;
+        let (store, first_root, _) = apply(store, first_root, batch);
 
         let batch = Batch::new((0..64).map(|i| remove!(i)).collect());
-        let (mut store, second_root, _) =
-            apply(store, second_root, batch).await;
+        let (mut store, second_root, _) = apply(store, second_root, batch);
 
         store.check_tree(first_root);
         store.assert_records(first_root, (0..64).map(|i| (i, i)));
@@ -964,7 +942,7 @@ mod tests {
                     .collect();
 
                 let batch = Batch::new(operations);
-                let next = apply(store, *root, batch).await;
+                let next = apply(store, *root, batch);
 
                 store = next.0;
                 *root = next.1;
