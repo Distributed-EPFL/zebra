@@ -196,8 +196,12 @@ mod tests {
         let mut table = database.empty_table();
 
         let map = table.export::<[u32; 0], u32>([]).await.unwrap(); // Explicit type arguments are to aid type inference on an empty array
+
         map.check_tree();
         map.assert_records([]);
+
+        table.check_tree();
+        table.assert_records([]);
     }
 
     #[tokio::test]
@@ -213,8 +217,12 @@ mod tests {
         table.execute(transaction).await;
 
         let map = table.export::<[u32; 0], u32>([]).await.unwrap(); // Explicit type arguments are to aid type inference on an empty array
+
         map.check_tree();
         map.assert_records([]);
+
+        table.check_tree();
+        table.assert_records((0..1024).map(|i| (i, i)));
     }
 
     #[tokio::test]
@@ -230,8 +238,12 @@ mod tests {
         table.execute(transaction).await;
 
         let map = table.export([33]).await.unwrap();
+
         map.check_tree();
         map.assert_records([(33, 33)]);
+
+        table.check_tree();
+        table.assert_records((0..1024).map(|i| (i, i)));
     }
 
     #[tokio::test]
@@ -249,6 +261,9 @@ mod tests {
         let map = table.export(0..512).await.unwrap();
         map.check_tree();
         map.assert_records((0..512).map(|i| (i, i)));
+
+        table.check_tree();
+        table.assert_records((0..1024).map(|i| (i, i)));
     }
 
     #[tokio::test]
@@ -266,5 +281,8 @@ mod tests {
         let map = table.export(0..1024).await.unwrap();
         map.check_tree();
         map.assert_records((0..1024).map(|i| (i, i)));
+
+        table.check_tree();
+        table.assert_records((0..1024).map(|i| (i, i)));
     }
 }
