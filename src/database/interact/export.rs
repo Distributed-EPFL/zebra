@@ -1,5 +1,3 @@
-use async_recursion::async_recursion;
-
 use crate::{
     common::{
         store::Field,
@@ -45,8 +43,7 @@ fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
     (left, right)
 }
 
-#[async_recursion]
-async fn branch<Key, Value>(
+fn branch<Key, Value>(
     store: Store<Key, Value>,
     depth: u8,
     paths: Snap<Path>,
@@ -61,34 +58,24 @@ where
 
     match store.split() {
         Split::Split(left_store, right_store) => {
-            let left_task = tokio::spawn(async move {
-                recur(left_store, left, depth + 1, left_paths).await
-            });
-
-            let right_task = tokio::spawn(async move {
-                recur(right_store, right, depth + 1, right_paths).await
-            });
-
-            let (left_join, right_join) = tokio::join!(left_task, right_task);
-
-            let (left_store, left) = left_join.unwrap();
-            let (right_store, right) = right_join.unwrap();
+            let ((left_store, left), (right_store, right)) = rayon::join(
+                move || recur(left_store, left, depth + 1, left_paths),
+                move || recur(right_store, right, depth + 1, right_paths),
+            );
 
             let store = Store::merge(left_store, right_store);
             (store, left, right)
         }
         Split::Unsplittable(store) => {
-            let (store, left) = recur(store, left, depth + 1, left_paths).await;
-            let (store, right) =
-                recur(store, right, depth + 1, right_paths).await;
+            let (store, left) = recur(store, left, depth + 1, left_paths);
+            let (store, right) = recur(store, right, depth + 1, right_paths);
 
             (store, left, right)
         }
     }
 }
 
-#[async_recursion]
-async fn recur<Key, Value>(
+fn recur<Key, Value>(
     mut store: Store<Key, Value>,
     node: Label,
     depth: u8,
@@ -102,8 +89,7 @@ where
 
     match get(&mut store, node) {
         Node::Internal(left, right) if !paths.is_empty() => {
-            let (store, left, right) =
-                branch(store, depth, paths, left, right).await;
+            let (store, left, right) = branch(store, depth, paths, left, right);
 
             (
                 store,
@@ -123,7 +109,7 @@ where
     }
 }
 
-pub(crate) async fn export<Key, Value>(
+pub(crate) fn export<Key, Value>(
     store: Store<Key, Value>,
     root: Label,
     paths: Snap<Path>,
@@ -132,5 +118,5 @@ where
     Key: Field + Clone,
     Value: Field + Clone,
 {
-    recur(store, root, 0, paths).await
+    recur(store, root, 0, paths)
 }
