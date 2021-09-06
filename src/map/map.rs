@@ -706,6 +706,7 @@ mod tests {
         export.assert_records([(33, 33)]);
     }
 
+    #[test]
     fn export_single_then_get() {
         let mut map: Map<u32, u32> = Map::new();
 
@@ -725,6 +726,19 @@ mod tests {
     }
 
     #[test]
+    fn export_outsider_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export([1025]).unwrap();
+
+        assert_eq!(export.get(&1025).unwrap(), None);
+    }
+
+    #[test]
     fn export_half() {
         let mut map: Map<u32, u32> = Map::new();
 
@@ -739,6 +753,7 @@ mod tests {
         export.assert_records((0..512).map(|i| (i, i)));
     }
 
+    #[test]
     fn export_half_then_get() {
         let mut map: Map<u32, u32> = Map::new();
 
@@ -784,6 +799,41 @@ mod tests {
 
         for (key, value) in (0..1024).map(|i| (i, i)) {
             assert_eq!(export.get(&key).unwrap(), Some(&value));
+        }
+    }
+
+    #[test]
+    fn export_all_then_get_outsider() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(0..1024).unwrap();
+
+        assert_eq!(export.get(&1025).unwrap(), None);
+    }
+
+    #[test]
+    fn export_overlap_then_get() {
+        let mut map: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..512).map(|i| (i, i)) {
+            map.insert(key, value).unwrap();
+        }
+
+        let export = map.export(256..1024).unwrap();
+
+        assert_eq!(map.commitment(), export.commitment());
+        export.check_tree();
+
+        for (key, value) in (256..1024).map(|i| (i, i)) {
+            if key < 512 {
+                assert_eq!(export.get(&key).unwrap(), Some(&value));
+            } else {
+                assert_eq!(export.get(&key).unwrap(), None);
+            }
         }
     }
 
@@ -878,6 +928,25 @@ mod tests {
     }
 
     #[test]
+    fn import_mismatched() {
+        let mut first: Map<u32, u32> = Map::new();
+        let mut second: Map<u32, u32> = Map::new();
+
+        for (key, value) in (0..128).map(|i| (i, i)) {
+            first.insert(key, value).unwrap();
+        }
+
+        for (key, value) in (64..192).map(|i| (i, i)) {
+            second.insert(key, value).unwrap();
+        }
+
+        let mut first_export = first.export([1]).unwrap();
+        let second_export = second.export([2]).unwrap();
+
+        assert!(first_export.import(second_export).is_err());
+    }
+
+    #[test]
     fn double_export() {
         let mut map: Map<u32, u32> = Map::new();
 
@@ -954,8 +1023,7 @@ mod tests {
 
         let original_commitment = original.commitment();
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let (left, right) = internal.children();
                 Node::Internal(Internal::raw(hash::empty(), left, right))
@@ -981,8 +1049,7 @@ mod tests {
         original.insert(3, 3).unwrap();
         original.insert(4, 4).unwrap();
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let (left, right) = internal.children();
                 Node::internal(right, left)
@@ -1003,8 +1070,7 @@ mod tests {
         original.insert(3, 3).unwrap();
         original.insert(4, 4).unwrap();
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let hash = internal.hash();
                 let (left, right) = internal.children();
@@ -1029,8 +1095,7 @@ mod tests {
 
         let original_commitment = original.commitment();
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let (left, right) = internal.children();
                 let left = match left {
@@ -1082,8 +1147,7 @@ mod tests {
             original.insert(key, value).unwrap();
         }
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let (left, right) = internal.children();
                 let left = match left {
@@ -1126,8 +1190,7 @@ mod tests {
             original.insert(key, value).unwrap();
         }
 
-        let root = original.root.take();
-        let root = match root {
+        let root = match original.root.take() {
             Node::Internal(internal) => {
                 let (left, right) = internal.children();
                 let left = match left {
