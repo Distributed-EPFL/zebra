@@ -40,17 +40,20 @@ where
         &mut self,
         batch: Batch<Key, Value>,
     ) -> Batch<Key, Value> {
-        let store = self.cell.take();
+        let cell = self.cell.clone();
         let root = self.root;
 
-        let (store, root, batch) =
-            task::spawn_blocking(move || apply::apply(store, root, batch))
-                .await
-                .unwrap();
+        let (root, batch) = task::spawn_blocking(move || {
+            let store = cell.take();
+            let (store, root, batch) = apply::apply(store, root, batch);
+            cell.restore(store);
+            (root, batch)
+        })
+        .await
+        .unwrap();
 
         self.root = root;
 
-        self.cell.restore(store);
         batch
     }
 
@@ -59,17 +62,17 @@ where
         Key: Clone,
         Value: Clone,
     {
-        let store = self.cell.take();
+        let cell = self.cell.clone();
         let root = self.root;
 
-        let (store, root) =
-            task::spawn_blocking(move || export::export(store, root, paths))
-                .await
-                .unwrap();
-
-        self.cell.restore(store);
-
-        root
+        task::spawn_blocking(move || {
+            let store = cell.take();
+            let (store, root) = export::export(store, root, paths);
+            cell.restore(store);
+            root
+        })
+        .await
+        .unwrap()
     }
 }
 
