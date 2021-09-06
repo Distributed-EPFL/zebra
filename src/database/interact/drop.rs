@@ -31,8 +31,7 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+        let (mut store, root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([root]);
 
         drop(&mut store, root);
@@ -45,12 +44,12 @@ mod tests {
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((128..256).map(|i| set!(i, i)).collect());
         let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -66,12 +65,12 @@ mod tests {
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -87,12 +86,12 @@ mod tests {
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
         let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((64..192).map(|i| set!(i, i)).collect());
         let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch).await;
+            apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -115,7 +114,7 @@ mod tests {
                 let batch =
                     Batch::new(keys.iter().map(|&i| set!(i, i)).collect());
 
-                let result = apply::apply(store, Label::Empty, batch).await;
+                let result = apply::apply(store, Label::Empty, batch);
                 store = result.0;
                 roots.push(result.1);
             } else {
