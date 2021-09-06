@@ -60,7 +60,13 @@ where
         Value: Clone,
     {
         let store = self.cell.take();
-        let (store, root) = export::export(store, self.root, paths).await;
+        let root = self.root;
+
+        let (store, root) =
+            task::spawn_blocking(move || export::export(store, root, paths))
+                .await
+                .unwrap();
+
         self.cell.restore(store);
 
         root
