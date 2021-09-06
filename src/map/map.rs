@@ -3,6 +3,7 @@ use crate::{
         data::{Bytes, Lender},
         store::Field,
         tree::Path,
+        Commitment,
     },
     map::{
         errors::{FlawedTopology, HashError, MapError},
@@ -11,7 +12,7 @@ use crate::{
     },
 };
 
-use drop::crypto::{hash, Digest};
+use drop::crypto::hash;
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
@@ -192,12 +193,11 @@ where
     /// map.insert("bob", 44);
     ///
     /// let export = map.export(["alice"]).unwrap();
-    /// assert_eq!(map.commitment(), export.commitment());
+    /// assert_eq!(map.commit(), export.commit());
     /// ```
-    pub fn commitment(&self) -> Digest {
-        // TODO: Decide if using `drop`'s `Digest` is acceptable
+    pub fn commit(&self) -> Commitment {
         let root: &Node<Key, Value> = self.root.borrow();
-        root.hash().0.into()
+        root.hash().into()
     }
 
     /// Returns a reference to the value corresponding to the key.
@@ -686,7 +686,7 @@ mod tests {
 
         let export = map.export::<[u32; 0], u32>([]).unwrap(); // Explicit type arguments are to aid type inference on an empty array
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
         export.assert_records([]);
     }
@@ -701,7 +701,7 @@ mod tests {
 
         let export = map.export([33]).unwrap();
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
         export.assert_records([(33, 33)]);
     }
@@ -748,7 +748,7 @@ mod tests {
 
         let export = map.export(0..512).unwrap();
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
         export.assert_records((0..512).map(|i| (i, i)));
     }
@@ -782,7 +782,7 @@ mod tests {
 
         let export = map.export(0..1024).unwrap();
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
         export.assert_records((0..1024).map(|i| (i, i)));
     }
@@ -825,7 +825,7 @@ mod tests {
 
         let export = map.export(256..1024).unwrap();
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
 
         for (key, value) in (256..1024).map(|i| (i, i)) {
@@ -850,7 +850,7 @@ mod tests {
 
         main.import(secondary).unwrap();
 
-        assert_eq!(map.commitment(), main.commitment());
+        assert_eq!(map.commit(), main.commit());
         main.check_tree();
         main.assert_records([(33, 33), (34, 34)]);
     }
@@ -868,7 +868,7 @@ mod tests {
 
         main.import(secondary).unwrap();
 
-        assert_eq!(map.commitment(), main.commitment());
+        assert_eq!(map.commit(), main.commit());
         main.check_tree();
         main.assert_records([(33, 33)]);
     }
@@ -886,7 +886,7 @@ mod tests {
 
         main.import(secondary).unwrap();
 
-        assert_eq!(map.commitment(), main.commitment());
+        assert_eq!(map.commit(), main.commit());
         main.check_tree();
         main.assert_records((0..1024).map(|i| (i, i)));
     }
@@ -904,7 +904,7 @@ mod tests {
 
         main.import(secondary).unwrap();
 
-        assert_eq!(map.commitment(), main.commitment());
+        assert_eq!(map.commit(), main.commit());
         main.check_tree();
         main.assert_records((0..768).map(|i| (i, i)));
     }
@@ -922,7 +922,7 @@ mod tests {
 
         main.import(secondary).unwrap();
 
-        assert_eq!(map.commitment(), main.commitment());
+        assert_eq!(map.commit(), main.commit());
         main.check_tree();
         main.assert_records((0..512).map(|i| (i, i)));
     }
@@ -961,7 +961,7 @@ mod tests {
 
         let export = main.export(64..192).unwrap();
 
-        assert_eq!(map.commitment(), export.commitment());
+        assert_eq!(map.commit(), export.commit());
         export.check_tree();
         export.assert_records((64..192).map(|i| (i, i)));
     }
@@ -974,7 +974,7 @@ mod tests {
         let deserialized: Map<u32, u32> =
             bincode::deserialize(&serialized).unwrap();
 
-        assert_eq!(original.commitment(), deserialized.commitment());
+        assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
         deserialized.assert_records([]);
     }
@@ -991,7 +991,7 @@ mod tests {
         let deserialized: Map<u32, u32> =
             bincode::deserialize(&serialized).unwrap();
 
-        assert_eq!(original.commitment(), deserialized.commitment());
+        assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
         deserialized.assert_records((0..1024).map(|i| (i, i)));
     }
@@ -1009,7 +1009,7 @@ mod tests {
         let deserialized: Map<u32, u32> =
             bincode::deserialize(&serialized).unwrap();
 
-        assert_eq!(original.commitment(), deserialized.commitment());
+        assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
         deserialized.assert_records((0..512).map(|i| (i, i)));
     }
@@ -1021,7 +1021,7 @@ mod tests {
         original.insert(3, 3).unwrap();
         original.insert(4, 4).unwrap();
 
-        let original_commitment = original.commitment();
+        let original_commitment = original.commit();
 
         let root = match original.root.take() {
             Node::Internal(internal) => {
@@ -1037,7 +1037,7 @@ mod tests {
         let deserialized: Map<u32, u32> =
             bincode::deserialize(&serialized).unwrap();
 
-        assert_eq!(original_commitment, deserialized.commitment());
+        assert_eq!(original_commitment, deserialized.commit());
         deserialized.check_tree();
         deserialized.assert_records([(3, 3), (4, 4)]);
     }
@@ -1093,7 +1093,7 @@ mod tests {
             original.insert(key, value).unwrap();
         }
 
-        let original_commitment = original.commitment();
+        let original_commitment = original.commit();
 
         let root = match original.root.take() {
             Node::Internal(internal) => {
@@ -1134,7 +1134,7 @@ mod tests {
         let deserialized =
             bincode::deserialize::<Map<u32, u32>>(&serialized).unwrap();
 
-        assert_eq!(original_commitment, deserialized.commitment());
+        assert_eq!(original_commitment, deserialized.commit());
         deserialized.check_tree();
         deserialized.assert_records((0..1024).map(|i| (i, i)));
     }

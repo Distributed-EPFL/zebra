@@ -1,5 +1,5 @@
 use crate::{
-    common::{data::Bytes, store::Field, tree::Path},
+    common::{data::Bytes, store::Field, tree::Path, Commitment},
     database::{
         errors::{HashError, QueryError},
         store::{Cell, Handle, Label},
@@ -8,7 +8,7 @@ use crate::{
     map::Map,
 };
 
-use drop::crypto::{hash, Digest};
+use drop::crypto::hash;
 
 use oh_snap::Snap;
 
@@ -51,8 +51,8 @@ where
     }
 
     /// Returns a cryptographic commitment to the contents of the `Table`.
-    pub fn commitment(&self) -> Digest {
-        self.0.commitment()
+    pub fn commit(&self) -> Commitment {
+        self.0.commit()
     }
 
     /// Executes a [`Transaction`] returning a [`Response`]
