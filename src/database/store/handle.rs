@@ -1,13 +1,11 @@
 use crate::{
-    common::{store::Field, tree::Path},
+    common::{store::Field, tree::Path, Commitment},
     database::{
         interact::{apply, drop, export, Batch},
         store::{Cell, Label},
     },
     map::store::Node as MapNode,
 };
-
-use ::drop::crypto::Digest;
 
 use oh_snap::Snap;
 
@@ -32,8 +30,8 @@ where
         Handle { cell, root }
     }
 
-    pub fn commitment(&self) -> Digest {
-        self.root.hash().0.into()
+    pub fn commit(&self) -> Commitment {
+        self.root.hash().into()
     }
 
     pub async fn apply(
