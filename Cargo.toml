@@ -10,7 +10,7 @@ edition = "2018"
 debug = 2
 
 [dependencies]
-drop = { git = "https://github.com/Distributed-EPFL/drop" }
+drop = { git = "https://github.com/Distributed-EPFL/drop", branch = "carbon" }
 tokio = { version = "1", features = [ "rt" ] }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
 async-recursion = { version = "0.3.2" }
