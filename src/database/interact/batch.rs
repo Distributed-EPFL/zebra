@@ -51,11 +51,11 @@ mod tests {
         database::interact::Action,
     };
 
-    use drop::crypto::hash;
-
     use std::collections::{HashMap, HashSet};
     use std::fmt::Debug;
     use std::hash::Hash;
+
+    use talk::crypto::primitives::hash;
 
     impl<Key, Value> Batch<Key, Value>
     where

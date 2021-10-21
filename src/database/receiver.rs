@@ -1,13 +1,15 @@
 use crate::{
     common::{data::Bytes, store::Field, tree::Prefix},
     database::{
-        errors::{MalformedAnswer, SyncError},
+        errors::SyncError,
         interact::drop,
         store::{Cell, Label, MapId, Node, Store},
         sync::{locate, Severity},
         Answer, Question, Table,
     },
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 use std::collections::{HashMap, HashSet};
@@ -58,7 +60,7 @@ where
     pub fn learn(
         mut self,
         answer: Answer<Key, Value>,
-    ) -> Result<Status<Key, Value>, SyncError> {
+    ) -> Result<Status<Key, Value>, Top<SyncError>> {
         let mut store = self.cell.take();
         let mut severity = Severity::ok();
 
@@ -105,7 +107,7 @@ where
             }
         } else {
             self.cell.restore(store);
-            MalformedAnswer.fail()
+            SyncError::MalformedAnswer.fail().spot(here!())
         }
     }
 
@@ -875,7 +877,7 @@ mod tests {
         );
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -914,7 +916,7 @@ mod tests {
         answer.0[1] = fake_internal;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -953,7 +955,7 @@ mod tests {
         answer.0[1] = fake_internal;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -985,7 +987,7 @@ mod tests {
         answer.0[1] = fake_internal;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -1091,7 +1093,7 @@ mod tests {
         };
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -1112,9 +1114,9 @@ mod tests {
         answer.0[0] = Node::Empty;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
-            Err(x) => {
-                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
+            Err(e) => {
+                panic!("Expected `SyncError::MalformedAnswer` but got {:?}", e)
             }
             _ => panic!("Receiver accepts too many benign faults from sender"),
         }
@@ -1155,7 +1157,7 @@ mod tests {
         answer.0[0] = right;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }
@@ -1214,7 +1216,7 @@ mod tests {
         answer.0[1] = right;
 
         match receiver.learn(answer) {
-            Err(SyncError::MalformedAnswer) => (),
+            Err(e) if *e.top() == SyncError::MalformedAnswer => (),
             Err(x) => {
                 panic!("Expected `SyncError::MalformedAnswer` but got {:?}", x)
             }

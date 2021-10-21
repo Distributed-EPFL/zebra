@@ -1,10 +1,12 @@
 use crate::common::{data::Bytes, store::Field};
 
-use drop::crypto::hash;
-use drop::crypto::hash::HashError;
+use doomstack::Top;
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HashError;
 
 #[derive(Debug, Clone)]
 pub(crate) struct Wrap<Inner: Field> {
@@ -16,7 +18,7 @@ impl<Inner> Wrap<Inner>
 where
     Inner: Field,
 {
-    pub fn new(inner: Inner) -> Result<Self, HashError> {
+    pub fn new(inner: Inner) -> Result<Self, Top<HashError>> {
         Ok(Wrap {
             digest: hash::hash(&inner)?.into(),
             inner,

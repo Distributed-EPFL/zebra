@@ -4,18 +4,20 @@ use crate::{
         tree::{Direction, Path},
     },
     map::{
-        errors::{BranchUnknown, MapError},
+        errors::MapError,
         interact::{Action, Update},
         store::Node,
     },
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 fn branch<Key, Value>(
     left: Node<Key, Value>,
     right: Node<Key, Value>,
     depth: u8,
     update: Update<Key, Value>,
-) -> (Node<Key, Value>, Result<Option<Value>, MapError>)
+) -> (Node<Key, Value>, Result<Option<Value>, Top<MapError>>)
 where
     Key: Field,
     Value: Field,
@@ -42,7 +44,7 @@ fn recur<Key, Value>(
     node: Node<Key, Value>,
     depth: u8,
     update: Update<Key, Value>,
-) -> (Node<Key, Value>, Result<Option<Value>, MapError>)
+) -> (Node<Key, Value>, Result<Option<Value>, Top<MapError>>)
 where
     Key: Field,
     Value: Field,
@@ -102,14 +104,17 @@ where
             }
         }
 
-        (Node::Stub(stub), _) => (Node::Stub(stub), BranchUnknown.fail()),
+        (Node::Stub(stub), _) => (
+            Node::Stub(stub),
+            MapError::BranchUnknown.fail().spot(here!()),
+        ),
     }
 }
 
 pub(crate) fn apply<Key, Value>(
     root: Node<Key, Value>,
     update: Update<Key, Value>,
-) -> (Node<Key, Value>, Result<Option<Value>, MapError>)
+) -> (Node<Key, Value>, Result<Option<Value>, Top<MapError>>)
 where
     Key: Field,
     Value: Field,

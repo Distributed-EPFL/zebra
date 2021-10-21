@@ -4,10 +4,12 @@ use crate::{
         tree::{Direction, Path},
     },
     map::{
-        errors::{BranchUnknown, MapError},
+        errors::MapError,
         store::{Internal, Leaf, Node},
     },
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 fn split(paths: &[Path], depth: u8) -> (&[Path], &[Path]) {
     let partition =
@@ -23,7 +25,7 @@ pub(crate) fn recur<Key, Value>(
     node: &Node<Key, Value>,
     depth: u8,
     paths: &[Path],
-) -> Result<Node<Key, Value>, MapError>
+) -> Result<Node<Key, Value>, Top<MapError>>
 where
     Key: Field + Clone,
     Value: Field + Clone,
@@ -44,7 +46,9 @@ where
             leaf.key().clone(),
             leaf.value().clone(),
         ))),
-        Node::Stub(_) if !paths.is_empty() => BranchUnknown.fail(),
+        Node::Stub(_) if !paths.is_empty() => {
+            MapError::BranchUnknown.fail().spot(here!())
+        }
 
         Node::Empty => Ok(Node::Empty), // `Node::Empty` is cheaper to clone than `Node::Stub`
 
@@ -55,7 +59,7 @@ where
 pub(crate) fn export<Key, Value>(
     root: &Node<Key, Value>,
     paths: &[Path],
-) -> Result<Node<Key, Value>, MapError>
+) -> Result<Node<Key, Value>, Top<MapError>>
 where
     Key: Field + Clone,
     Value: Field + Clone,

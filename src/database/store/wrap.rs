@@ -1,7 +1,9 @@
 use crate::common::{data::Bytes, store::Field};
 
-use drop::crypto::hash;
-use drop::crypto::hash::HashError;
+use doomstack::Top;
+
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HashError;
 
 use std::sync::Arc;
 
@@ -15,7 +17,7 @@ impl<Inner> Wrap<Inner>
 where
     Inner: Field,
 {
-    pub fn new(inner: Inner) -> Result<Self, HashError> {
+    pub fn new(inner: Inner) -> Result<Self, Top<HashError>> {
         Ok(Wrap {
             digest: hash::hash(&inner)?.into(),
             inner: Arc::new(inner),

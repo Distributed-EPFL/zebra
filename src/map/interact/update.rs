@@ -3,8 +3,10 @@ use crate::{
     map::{interact::Action, store::Wrap},
 };
 
-use drop::crypto::hash;
-use drop::crypto::hash::HashError;
+use doomstack::Top;
+
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HashError;
 
 #[derive(Debug)]
 pub(crate) struct Update<Key: Field, Value: Field> {
@@ -17,7 +19,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn insert(key: Key, value: Value) -> Result<Self, HashError> {
+    pub fn insert(key: Key, value: Value) -> Result<Self, Top<HashError>> {
         let key = Wrap::new(key)?;
         let value = Wrap::new(value)?;
 
@@ -27,7 +29,7 @@ where
         })
     }
 
-    pub fn remove(key: &Key) -> Result<Self, HashError> {
+    pub fn remove(key: &Key) -> Result<Self, Top<HashError>> {
         let hash: Bytes = hash::hash(key)?.into();
 
         Ok(Update {

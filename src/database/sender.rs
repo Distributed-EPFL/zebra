@@ -1,12 +1,14 @@
 use crate::{
     common::store::Field,
     database::{
-        errors::{MalformedQuestion, SyncError},
+        errors::SyncError,
         store::{Handle, Label, Node, Store},
         sync::ANSWER_DEPTH,
         Answer, Question,
     },
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
@@ -28,7 +30,7 @@ where
     pub fn answer(
         &mut self,
         question: &Question,
-    ) -> Result<Answer<Key, Value>, SyncError> {
+    ) -> Result<Answer<Key, Value>, Top<SyncError>> {
         let mut collector: Vec<Node<Key, Value>> = Vec::new();
         let mut store = self.0.cell.take();
 
@@ -50,14 +52,14 @@ where
         collector: &mut Vec<Node<Key, Value>>,
         label: Label,
         ttl: u8,
-    ) -> Result<(), SyncError> {
+    ) -> Result<(), Top<SyncError>> {
         if !label.is_empty() {
             let node = match store.entry(label) {
                 Occupied(entry) => {
                     let node = entry.get().node.clone();
                     Ok(node)
                 }
-                Vacant(..) => MalformedQuestion.fail(),
+                Vacant(..) => SyncError::MalformedQuestion.fail().spot(here!()),
             }?;
 
             let recur = match node {
@@ -113,7 +115,7 @@ mod tests {
         let answer = send.answer(&question);
 
         match answer {
-            Err(SyncError::MalformedQuestion) => (),
+            Err(e) if *e.top() == SyncError::MalformedQuestion => (),
             Err(x) => panic!("Expected `SyncError::MalformedQuestion` but got {:?}", x),
             _ => panic!("Expected `SyncError::MalformedQuestion` but got a valid answer"),
         };

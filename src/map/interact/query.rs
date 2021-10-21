@@ -1,7 +1,9 @@
 use crate::common::{data::Bytes, store::Field, tree::Path};
 
-use drop::crypto::hash;
-use drop::crypto::hash::HashError;
+use doomstack::Top;
+
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HashError;
 
 #[derive(Debug)]
 pub(crate) struct Query {
@@ -9,7 +11,7 @@ pub(crate) struct Query {
 }
 
 impl Query {
-    pub fn new<Key>(key: &Key) -> Result<Self, HashError>
+    pub fn new<Key>(key: &Key) -> Result<Self, Top<HashError>>
     where
         Key: Field,
     {

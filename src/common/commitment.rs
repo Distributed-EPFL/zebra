@@ -1,11 +1,11 @@
 use crate::common::data::Bytes;
 
-use drop::crypto::hash::SIZE;
-
 use serde::{Deserialize, Serialize};
 
+use talk::crypto::primitives::hash::HASH_LENGTH;
+
 #[derive(Clone, Copy, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Commitment([u8; SIZE]);
+pub struct Commitment([u8; HASH_LENGTH]);
 
 impl From<Bytes> for Commitment {
     fn from(bytes: Bytes) -> Commitment {

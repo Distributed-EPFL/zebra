@@ -1,10 +1,9 @@
 use crate::{
     common::store::Field,
-    map::{
-        errors::{MapError, MapIncompatible},
-        store::Node,
-    },
+    map::{errors::MapError, store::Node},
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 fn recur<Key, Value>(
     destination: &mut Node<Key, Value>,
@@ -29,7 +28,7 @@ fn recur<Key, Value>(
 pub(crate) fn import<Key, Value>(
     destination_root: &mut Node<Key, Value>,
     source_root: Node<Key, Value>,
-) -> Result<(), MapError>
+) -> Result<(), Top<MapError>>
 where
     Key: Field,
     Value: Field,
@@ -38,6 +37,6 @@ where
         recur(destination_root, source_root);
         Ok(())
     } else {
-        MapIncompatible.fail()
+        MapError::MapIncompatible.fail().spot(here!())
     }
 }

@@ -1,14 +1,13 @@
 use crate::common::{data::Bytes, tree::Direction};
 
-use drop::crypto::hash::SIZE;
-use drop::crypto::Digest;
-
 use std::ops::Index;
+
+use talk::crypto::primitives::hash::{Hash, HASH_LENGTH};
 
 #[derive(Debug, Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Path(Bytes);
 
-pub(crate) const EMPTY_PATH: Bytes = Bytes([0; SIZE]);
+pub(crate) const EMPTY_PATH: Bytes = Bytes([0; HASH_LENGTH]);
 
 impl Path {
     pub fn empty() -> Self {
@@ -55,8 +54,8 @@ impl From<Bytes> for Path {
     }
 }
 
-impl From<Digest> for Path {
-    fn from(digest: Digest) -> Path {
+impl From<Hash> for Path {
+    fn from(digest: Hash) -> Path {
         Path::from(Bytes::from(digest))
     }
 }
@@ -116,8 +115,8 @@ impl IntoIterator for Path {
 mod tests {
     use super::*;
 
-    use drop::crypto::hash;
-    use drop::crypto::hash::SIZE;
+    use talk::crypto::primitives::hash;
+    use talk::crypto::primitives::hash::HASH_LENGTH;
 
     use std::iter;
     use std::vec::Vec;
@@ -147,14 +146,14 @@ mod tests {
         let reference = vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L];
 
         assert_eq!(
-            Path::empty().into_vec(8 * SIZE - 1),
+            Path::empty().into_vec(8 * HASH_LENGTH - 1),
             iter::repeat(Direction::Right)
-                .take(8 * SIZE - 1)
+                .take(8 * HASH_LENGTH - 1)
                 .collect::<Vec<Direction>>()
         );
 
         assert_eq!(
-            Path::from(hash(&0u32).unwrap()).into_vec(reference.len()),
+            Path::from(hash::hash(&0u32).unwrap()).into_vec(reference.len()),
             reference
         );
 

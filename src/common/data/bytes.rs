@@ -1,17 +1,17 @@
-use drop::crypto::hash::{Digest, SIZE};
-
 use serde::{Deserialize, Serialize};
 
 use std::fmt::{Debug, Error, Formatter, LowerHex};
 
+use talk::crypto::primitives::hash::{Hash, HASH_LENGTH};
+
 #[derive(
     Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
 )]
-pub(crate) struct Bytes(pub [u8; SIZE]);
+pub(crate) struct Bytes(pub [u8; HASH_LENGTH]);
 
-impl From<Digest> for Bytes {
-    fn from(digest: Digest) -> Bytes {
-        Bytes(*digest.as_bytes())
+impl From<Hash> for Bytes {
+    fn from(digest: Hash) -> Bytes {
+        Bytes(digest.to_bytes())
     }
 }
 

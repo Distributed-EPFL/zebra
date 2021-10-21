@@ -1,20 +1,20 @@
 use crate::{
     common::{data::Bytes, store::Field, tree::Path, Commitment},
     database::{
-        errors::{HashError, QueryError},
+        errors::QueryError,
         store::{Cell, Handle, Label},
         Response, Sender, Transaction,
     },
     map::Map,
 };
 
-use drop::crypto::hash;
+use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
 
-use snafu::ResultExt;
-
 use std::borrow::Borrow;
+
+use talk::crypto::primitives::hash;
 
 // Documentation links
 #[allow(unused_imports)]
@@ -101,7 +101,7 @@ where
     pub async fn export<I, K>(
         &mut self,
         keys: I,
-    ) -> Result<Map<Key, Value>, QueryError>
+    ) -> Result<Map<Key, Value>, Top<QueryError>>
     // TODO: Decide if a `QueryError` is appropriate here
     where
         Key: Clone,
@@ -109,12 +109,12 @@ where
         I: IntoIterator<Item = K>,
         K: Borrow<Key>,
     {
-        let paths: Result<Vec<Path>, QueryError> = keys
+        let paths: Result<Vec<Path>, Top<QueryError>> = keys
             .into_iter()
             .map(|key| {
                 hash::hash(key.borrow())
+                    .pot(QueryError::HashError, here!())
                     .map(|digest| Path::from(Bytes::from(digest)))
-                    .context(HashError)
             })
             .collect();
 

@@ -1,17 +1,15 @@
 use crate::{
     common::{store::Field, tree::Direction},
-    map::{
-        errors::{BranchUnknown, MapError},
-        interact::Query,
-        store::Node,
-    },
+    map::{errors::MapError, interact::Query, store::Node},
 };
+
+use doomstack::{here, Doom, ResultExt, Top};
 
 fn recur<Key, Value>(
     node: &Node<Key, Value>,
     depth: u8,
     query: Query,
-) -> Result<Option<&Value>, MapError>
+) -> Result<Option<&Value>, Top<MapError>>
 where
     Key: Field,
     Value: Field,
@@ -32,14 +30,14 @@ where
                 Ok(None)
             }
         }
-        Node::Stub(_) => BranchUnknown.fail(),
+        Node::Stub(_) => MapError::BranchUnknown.fail().spot(here!()),
     }
 }
 
 pub(crate) fn get<Key, Value>(
     root: &Node<Key, Value>,
     query: Query,
-) -> Result<Option<&Value>, MapError>
+) -> Result<Option<&Value>, Top<MapError>>
 where
     Key: Field,
     Value: Field,

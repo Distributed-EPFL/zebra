@@ -1,21 +1,17 @@
-use drop::crypto::hash::HashError as DropHashError;
+use doomstack::Doom;
 
-use snafu::Snafu;
-
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[derive(Doom)]
 pub enum QueryError {
-    #[snafu(display("failed to hash field: {}", source))]
-    HashError { source: DropHashError },
-    #[snafu(display("key collision within transaction"))]
-    KeyCollision {},
+    #[doom(description("Failed to hash field"))]
+    HashError,
+    #[doom(description("Key collision within transaction"))]
+    KeyCollision,
 }
 
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[derive(Doom, PartialEq, Eq)]
 pub enum SyncError {
-    #[snafu(display("malformed `Question`"))]
+    #[doom(description("Malformed `Question`"))]
     MalformedQuestion,
-    #[snafu(display("malformed `Answer`"))]
+    #[doom(description("Malformed `Answer`"))]
     MalformedAnswer,
 }

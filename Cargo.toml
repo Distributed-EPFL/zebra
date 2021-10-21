@@ -10,12 +10,12 @@ edition = "2018"
 debug = 2
 
 [dependencies]
-drop = { git = "https://github.com/Distributed-EPFL/drop", branch = "carbon" }
+talk = { git = "https://github.com/Distributed-EPFL/talk" }
 tokio = { version = "1", features = [ "rt" ] }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
 async-recursion = { version = "0.3.2" }
 oh-snap = { version = "0.0.2" }
-snafu = { version = "~0.6" }
+doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
 
 [dev-dependencies]

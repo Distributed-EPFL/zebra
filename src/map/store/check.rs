@@ -4,14 +4,16 @@ use crate::{
         tree::{Path, Prefix},
     },
     map::{
-        errors::{CompactnessViolation, PathViolation, TopologyError},
+        errors::TopologyError,
         store::{Internal, Leaf, Node},
     },
 };
 
+use doomstack::{here, Doom, ResultExt, Top};
+
 fn check_internal<Key, Value>(
     internal: &Internal<Key, Value>,
-) -> Result<(), TopologyError>
+) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,
@@ -19,7 +21,9 @@ where
     match (internal.left(), internal.right()) {
         (Node::Empty, Node::Empty)
         | (Node::Empty, Node::Leaf(..))
-        | (Node::Leaf(..), Node::Empty) => CompactnessViolation.fail(),
+        | (Node::Leaf(..), Node::Empty) => {
+            TopologyError::CompactnessViolation.fail().spot(here!())
+        }
         _ => Ok(()),
     }
 }
@@ -27,13 +31,13 @@ where
 fn check_leaf<Key, Value>(
     leaf: &Leaf<Key, Value>,
     location: Prefix,
-) -> Result<(), TopologyError>
+) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,
 {
     if !location.contains(&Path::from(leaf.key().digest())) {
-        PathViolation.fail()
+        TopologyError::PathViolation.fail().spot(here!())
     } else {
         Ok(())
     }
@@ -42,7 +46,7 @@ where
 fn recursion<Key, Value>(
     node: &Node<Key, Value>,
     location: Prefix,
-) -> Result<(), TopologyError>
+) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,
@@ -61,7 +65,7 @@ where
 
 pub(crate) fn check<Key, Value>(
     node: &Node<Key, Value>,
-) -> Result<(), TopologyError>
+) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,

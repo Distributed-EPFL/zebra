@@ -3,8 +3,10 @@ use crate::{
     database::{interact::Action, store::Wrap},
 };
 
-use drop::crypto::hash;
-use drop::crypto::hash::HashError;
+use doomstack::Top;
+
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HashError;
 
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
@@ -17,7 +19,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub fn get(key: &Key) -> Result<Self, HashError> {
+    pub fn get(key: &Key) -> Result<Self, Top<HashError>> {
         let hash: Bytes = hash::hash(key)?.into();
 
         Ok(Operation {
@@ -26,7 +28,7 @@ where
         })
     }
 
-    pub fn set(key: Key, value: Value) -> Result<Self, HashError> {
+    pub fn set(key: Key, value: Value) -> Result<Self, Top<HashError>> {
         let key = Wrap::new(key)?;
         let value = Wrap::new(value)?;
 
@@ -36,7 +38,7 @@ where
         })
     }
 
-    pub fn remove(key: &Key) -> Result<Self, HashError> {
+    pub fn remove(key: &Key) -> Result<Self, Top<HashError>> {
         let hash: Bytes = hash::hash(key)?.into();
 
         Ok(Operation {
@@ -80,7 +82,7 @@ mod tests {
         let set = set!(0u32, 8u32);
 
         assert!(prefix.contains(&set.path));
-        assert_eq!(set.path, Path::from(hash(&0u32).unwrap()));
+        assert_eq!(set.path, Path::from(hash::hash(&0u32).unwrap()));
 
         assert_eq!(set.action, Action::Set(wrap!(0u32), wrap!(8u32)));
 

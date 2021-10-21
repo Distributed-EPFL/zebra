@@ -6,20 +6,20 @@ use crate::{
         Commitment,
     },
     map::{
-        errors::{FlawedTopology, HashError, MapError},
+        errors::MapError,
         interact::{self, Query, Update},
         store::{self, Node},
     },
 };
 
-use drop::crypto::hash;
+use doomstack::{here, ResultExt, Top};
 
 use serde::de::Error as DeError;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use snafu::ResultExt;
-
 use std::borrow::{Borrow, BorrowMut};
+
+use talk::crypto::primitives::hash;
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
@@ -222,8 +222,8 @@ where
     /// assert_eq!(map.get(&1).unwrap(), Some(&"a"));
     /// assert_eq!(map.get(&2).unwrap(), None);
     /// ```
-    pub fn get(&self, key: &Key) -> Result<Option<&Value>, MapError> {
-        let query = Query::new(key).context(HashError)?;
+    pub fn get(&self, key: &Key) -> Result<Option<&Value>, Top<MapError>> {
+        let query = Query::new(key).pot(MapError::HashError, here!())?;
         interact::get(self.root.borrow(), query)
     }
 
@@ -258,8 +258,9 @@ where
         &mut self,
         key: Key,
         value: Value,
-    ) -> Result<Option<Value>, MapError> {
-        let update = Update::insert(key, value).context(HashError)?;
+    ) -> Result<Option<Value>, Top<MapError>> {
+        let update =
+            Update::insert(key, value).pot(MapError::HashError, here!())?;
         self.update(update)
     }
 
@@ -288,15 +289,18 @@ where
     /// assert_eq!(map.remove(&1).unwrap(), Some("a"));
     /// assert_eq!(map.remove(&1).unwrap(), None);
     /// ```
-    pub fn remove(&mut self, key: &Key) -> Result<Option<Value>, MapError> {
-        let update = Update::remove(key).context(HashError)?;
+    pub fn remove(
+        &mut self,
+        key: &Key,
+    ) -> Result<Option<Value>, Top<MapError>> {
+        let update = Update::remove(key).pot(MapError::HashError, here!())?;
         self.update(update)
     }
 
     fn update(
         &mut self,
         update: Update<Key, Value>,
-    ) -> Result<Option<Value>, MapError> {
+    ) -> Result<Option<Value>, Top<MapError>> {
         let root = self.root.take();
         let (root, result) = interact::apply(root, update);
         self.root.restore(root);
@@ -340,19 +344,22 @@ where
     /// assert_eq!(map.get(&2).unwrap(), Some(&"b"));
     /// assert_eq!(map.get(&3).unwrap(), Some(&"c"));
     /// ```
-    pub fn export<I, K>(&self, keys: I) -> Result<Map<Key, Value>, MapError>
+    pub fn export<I, K>(
+        &self,
+        keys: I,
+    ) -> Result<Map<Key, Value>, Top<MapError>>
     where
         Key: Clone,
         Value: Clone,
         I: IntoIterator<Item = K>,
         K: Borrow<Key>,
     {
-        let paths: Result<Vec<Path>, MapError> = keys
+        let paths: Result<Vec<Path>, Top<MapError>> = keys
             .into_iter()
             .map(|key| {
                 hash::hash(key.borrow())
                     .map(|digest| Path::from(Bytes::from(digest)))
-                    .context(HashError)
+                    .pot(MapError::HashError, here!())
             })
             .collect();
 
@@ -411,9 +418,8 @@ where
     pub fn import(
         &mut self,
         mut other: Map<Key, Value>,
-    ) -> Result<(), MapError> {
-        interact::import(self.root.borrow_mut(), other.root.take())?;
-        Ok(())
+    ) -> Result<(), Top<MapError>> {
+        interact::import(self.root.borrow_mut(), other.root.take())
     }
 }
 
@@ -442,7 +448,6 @@ where
         let root = Node::deserialize(deserializer)?; // Deserializes and computes node hashes
 
         store::check(&root) // Checks correctness of tree topology
-            .context(FlawedTopology)
             .map_err(|err| DeError::custom(err))?;
 
         Ok(Map {

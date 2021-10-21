@@ -1,30 +1,25 @@
-use drop::crypto::hash::HashError as DropHashError;
+use doomstack::Doom;
 
-use snafu::Snafu;
-
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[derive(Doom)]
 pub enum MapError {
-    #[snafu(display("failed to hash field: {}", source))]
-    HashError { source: DropHashError },
-    #[snafu(display("attempted to operate on an unknown branch"))]
+    #[doom(description("Failed to hash field"))]
+    HashError,
+    #[doom(description("Attempted to operate on an unknown branch"))]
     BranchUnknown,
-    #[snafu(display("attempted to import incompatible map"))]
+    #[doom(description("Attempted to import incompatible map"))]
     MapIncompatible,
 }
 
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[derive(Doom)]
 pub enum TopologyError {
-    #[snafu(display("children violate compactness"))]
+    #[doom(description("Children violate compactness"))]
     CompactnessViolation,
-    #[snafu(display("leaf outside of its key path"))]
+    #[doom(description("Leaf outside of its key path"))]
     PathViolation,
 }
 
-#[derive(Debug, Snafu)]
-#[snafu(visibility(pub(crate)))]
+#[derive(Doom)]
 pub enum DeserializeError {
-    #[snafu(display("flawed topology: {}", source))]
+    #[doom(description("Flawed topology: {}", source))]
     FlawedTopology { source: TopologyError },
 }

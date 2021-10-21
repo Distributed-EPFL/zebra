@@ -1,11 +1,11 @@
 use crate::common::data::Bytes;
 
-use drop::crypto::hash;
-use drop::crypto::hash::SIZE;
+use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::HASH_LENGTH;
 
 const INTERNAL_FLAG: u8 = 0;
 const LEAF_FLAG: u8 = 1;
-const EMPTY_HASH: Bytes = Bytes([0; SIZE]);
+const EMPTY_HASH: Bytes = Bytes([0; HASH_LENGTH]);
 
 pub(crate) fn empty() -> Bytes {
     EMPTY_HASH

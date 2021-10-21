@@ -1,13 +1,13 @@
 use crate::{
     common::{store::Field, tree::Path},
     database::{
-        errors::{HashError, KeyCollision, QueryError},
+        errors::QueryError,
         interact::{Batch, Operation},
         Query,
     },
 };
 
-use snafu::ResultExt;
+use doomstack::{here, Doom, ResultExt, Top};
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -36,8 +36,9 @@ where
         }
     }
 
-    pub fn get(&mut self, key: &Key) -> Result<Query, QueryError> {
-        let operation = Operation::<Key, Value>::get(key).context(HashError)?;
+    pub fn get(&mut self, key: &Key) -> Result<Query, Top<QueryError>> {
+        let operation = Operation::<Key, Value>::get(key)
+            .pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             let query = Query {
@@ -48,29 +49,35 @@ where
             self.operations.push(operation);
             Ok(query)
         } else {
-            KeyCollision.fail()
+            QueryError::KeyCollision.fail().spot(here!())
         }
     }
 
-    pub fn set(&mut self, key: Key, value: Value) -> Result<(), QueryError> {
-        let operation = Operation::set(key, value).context(HashError)?;
+    pub fn set(
+        &mut self,
+        key: Key,
+        value: Value,
+    ) -> Result<(), Top<QueryError>> {
+        let operation =
+            Operation::set(key, value).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             self.operations.push(operation);
             Ok(())
         } else {
-            KeyCollision.fail()
+            QueryError::KeyCollision.fail().spot(here!())
         }
     }
 
-    pub fn remove(&mut self, key: &Key) -> Result<(), QueryError> {
-        let operation = Operation::remove(key).context(HashError)?;
+    pub fn remove(&mut self, key: &Key) -> Result<(), Top<QueryError>> {
+        let operation =
+            Operation::remove(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             self.operations.push(operation);
             Ok(())
         } else {
-            KeyCollision.fail()
+            QueryError::KeyCollision.fail().spot(here!())
         }
     }
 
