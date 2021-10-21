@@ -4,7 +4,7 @@ use crate::{
 };
 
 #[derive(Clone)]
-pub struct Family<Item: Field>(Database<Item, ()>);
+pub struct Family<Item: Field>(pub(crate) Database<Item, ()>);
 
 impl<Item> Family<Item>
 where
@@ -15,6 +15,6 @@ where
     }
 
     pub fn empty_collection(&self) -> Collection<Item> {
-        Collection::from_table(self.0.empty_table())
+        Collection(self.0.empty_table())
     }
 }
