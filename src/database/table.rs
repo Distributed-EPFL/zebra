@@ -3,7 +3,7 @@ use crate::{
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
-        Response, Sender, Transaction,
+        DatabaseTransaction, Response, Sender,
     },
     map::Map,
 };
@@ -91,7 +91,7 @@ where
     /// ```
     pub async fn execute(
         &mut self,
-        transaction: Transaction<Key, Value>,
+        transaction: DatabaseTransaction<Key, Value>,
     ) -> Response<Key, Value> {
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch).await;
@@ -209,7 +209,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -230,7 +230,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -251,7 +251,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -271,7 +271,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }

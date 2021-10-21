@@ -2,7 +2,7 @@ use crate::{
     common::store::Field,
     database::{
         interact::{Action, Batch},
-        Query, Tid,
+        DatabaseQuery, Tid,
     },
 };
 
@@ -20,7 +20,7 @@ where
         Response { tid, batch }
     }
 
-    pub fn get(&self, query: &Query) -> Option<&Value> {
+    pub fn get(&self, query: &DatabaseQuery) -> Option<&Value> {
         assert_eq!(
             query.tid, self.tid,
             "called `Response::get` with a foreign `Query`"

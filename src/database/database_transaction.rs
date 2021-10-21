@@ -3,7 +3,7 @@ use crate::{
     database::{
         errors::QueryError,
         interact::{Batch, Operation},
-        Query,
+        DatabaseQuery,
     },
 };
 
@@ -17,31 +17,31 @@ pub(crate) type Tid = usize;
 
 static TID: AtomicUsize = AtomicUsize::new(0);
 
-pub struct Transaction<Key: Field, Value: Field> {
+pub struct DatabaseTransaction<Key: Field, Value: Field> {
     tid: Tid,
     operations: Vec<Operation<Key, Value>>,
     paths: HashSet<Path>,
 }
 
-impl<Key, Value> Transaction<Key, Value>
+impl<Key, Value> DatabaseTransaction<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
     pub fn new() -> Self {
-        Transaction {
+        DatabaseTransaction {
             tid: TID.fetch_add(1, Ordering::Relaxed),
             operations: Vec::new(),
             paths: HashSet::new(),
         }
     }
 
-    pub fn get(&mut self, key: &Key) -> Result<Query, Top<QueryError>> {
+    pub fn get(&mut self, key: &Key) -> Result<DatabaseQuery, Top<QueryError>> {
         let operation = Operation::<Key, Value>::get(key)
             .pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
-            let query = Query {
+            let query = DatabaseQuery {
                 tid: self.tid,
                 path: operation.path,
             };

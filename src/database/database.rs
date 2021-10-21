@@ -155,7 +155,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{store::Label, Transaction};
+    use crate::database::{store::Label, DatabaseTransaction};
 
     impl<Key, Value> Database<Key, Value>
     where
@@ -170,7 +170,7 @@ mod tests {
             I: IntoIterator<Item = (Key, Value)>,
         {
             let mut table = self.empty_table();
-            let mut transaction = Transaction::new();
+            let mut transaction = DatabaseTransaction::new();
 
             for (key, value) in records {
                 transaction.set(key, value).unwrap();
@@ -216,7 +216,7 @@ mod tests {
         let mut table =
             database.table_with_records((0..256).map(|i| (i, i))).await;
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
@@ -236,7 +236,7 @@ mod tests {
             database.table_with_records((0..256).map(|i| (i, i))).await;
         let table_clone = table.clone();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
@@ -262,7 +262,7 @@ mod tests {
         let table = database.table_with_records((0..256).map(|i| (i, i))).await;
         let mut table_clone = table.clone();
 
-        let mut transaction = Transaction::new();
+        let mut transaction = DatabaseTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }

@@ -9,7 +9,7 @@ use crate::common::tree::Path;
 /// [`Response`]: crate::database::Response
 /// [`Transaction`]: crate::database::Transaction
 
-pub struct Query {
+pub struct DatabaseQuery {
     pub(crate) tid: usize,
     pub(crate) path: Path,
 }
