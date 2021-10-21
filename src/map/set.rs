@@ -24,7 +24,7 @@ where
     }
 
     pub fn insert(&mut self, item: Item) -> Result<bool, Top<MapError>> {
-        Ok(self.0.insert(item, ())?.is_some())
+        Ok(self.0.insert(item, ())?.is_none())
     }
 
     pub fn remove(&mut self, item: &Item) -> Result<bool, Top<MapError>> {
