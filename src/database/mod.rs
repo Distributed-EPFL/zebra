@@ -7,6 +7,8 @@ mod sync;
 
 mod answer;
 mod collection;
+mod collection_query;
+mod collection_transaction;
 mod database;
 mod database_query;
 mod database_transaction;
@@ -23,6 +25,8 @@ pub mod errors;
 
 pub use answer::Answer;
 pub use collection::Collection;
+pub use collection_query::CollectionQuery;
+pub use collection_transaction::CollectionTransaction;
 pub use database::Database;
 pub use database_query::DatabaseQuery;
 pub use database_transaction::DatabaseTransaction;
