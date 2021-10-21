@@ -6,18 +6,18 @@ use crate::{
     },
 };
 
-pub struct Response<Key: Field, Value: Field> {
+pub struct DatabaseResponse<Key: Field, Value: Field> {
     tid: Tid,
     batch: Batch<Key, Value>,
 }
 
-impl<Key, Value> Response<Key, Value>
+impl<Key, Value> DatabaseResponse<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
     pub(crate) fn new(tid: Tid, batch: Batch<Key, Value>) -> Self {
-        Response { tid, batch }
+        DatabaseResponse { tid, batch }
     }
 
     pub fn get(&self, query: &DatabaseQuery) -> Option<&Value> {

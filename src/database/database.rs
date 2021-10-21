@@ -37,7 +37,7 @@ use crate::{
 ///
 /// ```rust
 ///
-/// use zebra::database::{Database, Table, Transaction, Response, Query};
+/// use zebra::database::{Database, Table, DatabaseTransaction, DatabaseResponse, DatabaseQuery};
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -46,27 +46,27 @@ use crate::{
 ///     let database = Database::new();
 ///
 ///     // We create a new transaction. See [`Transaction`] for more details.
-///     let mut modify = Transaction::new();
+///     let mut modify = DatabaseTransaction::new();
 ///     modify.set("Alice", 42).unwrap();
 ///
 ///     let mut table = database.empty_table();
 ///     let _ = table.execute(modify).await;
 ///
-///     let mut read = Transaction::new();
+///     let mut read = DatabaseTransaction::new();
 ///     let query_key = read.get(&"Alice").unwrap();
 ///     let response = table.execute(read).await;
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
 ///     // Let's remove "Alice" and set "Bob".
-///     let mut modify = Transaction::new();
+///     let mut modify = DatabaseTransaction::new();
 ///     modify.remove(&"Alice").unwrap();
 ///     modify.set(&"Bob", 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify).await;
 ///
-///     let mut read = Transaction::new();
+///     let mut read = DatabaseTransaction::new();
 ///     let query_key_alice = read.get(&"Alice").unwrap();
 ///     let query_key_bob = read.get(&"Bob").unwrap();
 ///     let response = table.execute(read).await;

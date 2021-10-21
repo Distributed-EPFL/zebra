@@ -3,7 +3,7 @@ use crate::{
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
-        DatabaseTransaction, Response, Sender,
+        DatabaseResponse, DatabaseTransaction, Sender,
     },
     map::Map,
 };
@@ -61,7 +61,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::{Database, Transaction};
+    /// use zebra::database::{Database, DatabaseTransaction};
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -69,7 +69,7 @@ where
     ///     let mut database = Database::new();
     ///
     ///     // Create a new transaction.
-    ///     let mut transaction = Transaction::new();
+    ///     let mut transaction = DatabaseTransaction::new();
     ///
     ///     // Set (key = 0, value = 0)
     ///     transaction.set(0, 0).unwrap();
@@ -92,10 +92,10 @@ where
     pub async fn execute(
         &mut self,
         transaction: DatabaseTransaction<Key, Value>,
-    ) -> Response<Key, Value> {
+    ) -> DatabaseResponse<Key, Value> {
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch).await;
-        Response::new(tid, batch)
+        DatabaseResponse::new(tid, batch)
     }
 
     pub async fn export<I, K>(
