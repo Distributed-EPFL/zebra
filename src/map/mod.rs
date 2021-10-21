@@ -3,9 +3,11 @@
 mod interact;
 
 mod map;
+mod set;
 
 pub(crate) mod store;
 
 pub mod errors;
 
 pub use map::Map;
+pub use set::Set;
