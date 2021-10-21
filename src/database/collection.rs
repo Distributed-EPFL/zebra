@@ -20,3 +20,12 @@ where
         CollectionResponse(self.0.execute(transaction.0).await)
     }
 }
+
+impl<Item> Clone for Collection<Item>
+where
+    Item: Field,
+{
+    fn clone(&self) -> Self {
+        Collection(self.0.clone())
+    }
+}
