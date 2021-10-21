@@ -1,6 +1,6 @@
 use crate::{
     common::{store::Field, Commitment},
-    database::Table,
+    database::{CollectionResponse, CollectionTransaction, Table},
 };
 
 pub struct Collection<Item: Field>(pub(crate) Table<Item, ()>);
@@ -11,5 +11,12 @@ where
 {
     pub fn commit(&self) -> Commitment {
         self.0.commit()
+    }
+
+    pub async fn execute(
+        &mut self,
+        transaction: CollectionTransaction<Item>,
+    ) -> CollectionResponse<Item> {
+        CollectionResponse(self.0.execute(transaction.0).await)
     }
 }
