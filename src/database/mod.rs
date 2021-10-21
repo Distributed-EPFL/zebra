@@ -6,7 +6,9 @@ mod store;
 mod sync;
 
 mod answer;
+mod collection;
 mod database;
+mod family;
 mod query;
 mod question;
 mod receiver;
@@ -20,7 +22,9 @@ use transaction::Tid;
 pub mod errors;
 
 pub use answer::Answer;
+pub use collection::Collection;
 pub use database::Database;
+pub use family::Family;
 pub use query::Query;
 pub use question::Question;
 pub use receiver::Receiver;
