@@ -13,6 +13,8 @@ use doomstack::{here, ResultExt, Top};
 use oh_snap::Snap;
 
 use std::borrow::Borrow;
+use std::collections::HashMap;
+use std::hash::Hash;
 
 use talk::crypto::primitives::hash;
 
@@ -124,6 +126,17 @@ where
 
         let root = self.0.export(paths).await;
         Ok(Map::raw(root))
+    }
+
+    pub async fn diff(
+        lho: &mut Table<Key, Value>,
+        rho: &mut Table<Key, Value>,
+    ) -> HashMap<Key, (Option<Value>, Option<Value>)>
+    where
+        Key: Clone + Eq + Hash,
+        Value: Clone + Eq,
+    {
+        Handle::diff(&mut lho.0, &mut rho.0).await
     }
 
     /// Transforms the table into a [`Sender`], preparing it for sending to
