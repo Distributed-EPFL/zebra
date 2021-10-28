@@ -1,13 +1,18 @@
 use crate::{
     common::{store::Field, tree::Path, Commitment},
     database::{
-        interact::{apply, drop, export, Batch},
+        interact::{apply, diff, drop, export, Batch},
         store::{Cell, Label},
     },
     map::store::Node as MapNode,
 };
 
 use oh_snap::Snap;
+
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::ptr;
 
 use tokio::task;
 
@@ -70,6 +75,64 @@ where
             let (store, root) = export::export(store, root, paths);
             cell.restore(store);
             root
+        })
+        .await
+        .unwrap()
+    }
+
+    pub async fn diff(
+        lho: &mut Handle<Key, Value>,
+        rho: &mut Handle<Key, Value>,
+    ) -> HashMap<Key, (Option<Value>, Option<Value>)>
+    where
+        Key: Clone + Eq + Hash,
+        Value: Clone + Eq,
+    {
+        if !ptr::eq(lho.cell.as_ref(), rho.cell.as_ref()) {
+            panic!("called `Handle::diff` on two `Handle`s for different `Store`s (most likely, `Table::diff` / `Collection::diff` was called on two objects belonging to different `Database`s / `Family`-es)");
+        }
+
+        let cell = lho.cell.clone();
+        let lho_root = lho.root;
+        let rho_root = rho.root;
+
+        task::spawn_blocking(move || {
+            let store = cell.take();
+
+            let (store, lho_candidates, rho_candidates) =
+                diff::diff(store, lho_root, rho_root);
+
+            cell.restore(store);
+
+            let mut diff: HashMap<Key, (Option<Value>, Option<Value>)> =
+                HashMap::new();
+
+            for (key, value) in lho_candidates {
+                let key = (**key.inner()).clone();
+                let value = (**value.inner()).clone();
+
+                diff.insert(key, (Some(value), None));
+            }
+
+            for (key, value) in rho_candidates {
+                let key = (**key.inner()).clone();
+                let value = (**value.inner()).clone();
+
+                match diff.entry(key) {
+                    Entry::Occupied(mut entry) => {
+                        if entry.get().0.as_ref().unwrap() == &value {
+                            entry.remove_entry();
+                        } else {
+                            entry.get_mut().1 = Some(value);
+                        }
+                    }
+                    Entry::Vacant(entry) => {
+                        entry.insert((None, Some(value)));
+                    }
+                }
+            }
+
+            diff
         })
         .await
         .unwrap()
