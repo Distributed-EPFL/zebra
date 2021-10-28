@@ -8,6 +8,7 @@ use chunk::Chunk;
 use task::Task;
 
 pub(crate) mod apply;
+pub(crate) mod diff;
 pub(crate) mod drop;
 pub(crate) mod export;
 
