@@ -2,7 +2,7 @@ use crate::{
     common::{data::AtomicLender, store::Field},
     database::{
         store::{Cell, Store},
-        Receiver, Table,
+        Table, TableReceiver,
     },
 };
 
@@ -28,7 +28,7 @@ use crate::{
 ///
 /// [`Field`]: crate::common::store::Field
 /// [`Table`]: crate::database::Table
-/// [`Transaction`]: crate::database::Transaction
+/// [`Transaction`]: crate::database::TableTransaction
 /// [`Serialize`]: serde::Serialize
 /// [`Send`]: Send
 /// [`Sync`]: Sync
@@ -37,7 +37,7 @@ use crate::{
 ///
 /// ```rust
 ///
-/// use zebra::database::{Database, Table, DatabaseTransaction, DatabaseResponse, DatabaseQuery};
+/// use zebra::database::{Database, Table, TableTransaction, TableResponse, Query};
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -46,27 +46,27 @@ use crate::{
 ///     let database = Database::new();
 ///
 ///     // We create a new transaction. See [`Transaction`] for more details.
-///     let mut modify = DatabaseTransaction::new();
+///     let mut modify = TableTransaction::new();
 ///     modify.set("Alice", 42).unwrap();
 ///
 ///     let mut table = database.empty_table();
 ///     let _ = table.execute(modify).await;
 ///
-///     let mut read = DatabaseTransaction::new();
+///     let mut read = TableTransaction::new();
 ///     let query_key = read.get(&"Alice").unwrap();
 ///     let response = table.execute(read).await;
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
 ///     // Let's remove "Alice" and set "Bob".
-///     let mut modify = DatabaseTransaction::new();
+///     let mut modify = TableTransaction::new();
 ///     modify.remove(&"Alice").unwrap();
 ///     modify.set(&"Bob", 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
 ///     let _ = table.execute(modify).await;
 ///
-///     let mut read = DatabaseTransaction::new();
+///     let mut read = TableTransaction::new();
 ///     let query_key_alice = read.get(&"Alice").unwrap();
 ///     let query_key_bob = read.get(&"Bob").unwrap();
 ///     let response = table.execute(read).await;
@@ -117,11 +117,11 @@ where
         Table::empty(self.store.clone())
     }
 
-    /// Creates a [`Receiver`] assigned to this `Database`. The
+    /// Creates a [`TableReceiver`] assigned to this `Database`. The
     /// receiver is used to efficiently receive a [`Table`]
     /// from other databases and add them this one.
     ///
-    /// See [`Receiver`] for more details on its operation.
+    /// See [`TableReceiver`] for more details on its operation.
     ///
     /// # Examples
     ///
@@ -134,8 +134,8 @@ where
     /// // Do things with receiver...
     ///
     /// ```
-    pub fn receive(&self) -> Receiver<Key, Value> {
-        Receiver::new(self.store.clone())
+    pub fn receive(&self) -> TableReceiver<Key, Value> {
+        TableReceiver::new(self.store.clone())
     }
 }
 
@@ -155,7 +155,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{store::Label, DatabaseTransaction};
+    use crate::database::{store::Label, TableTransaction};
 
     impl<Key, Value> Database<Key, Value>
     where
@@ -170,7 +170,7 @@ mod tests {
             I: IntoIterator<Item = (Key, Value)>,
         {
             let mut table = self.empty_table();
-            let mut transaction = DatabaseTransaction::new();
+            let mut transaction = TableTransaction::new();
 
             for (key, value) in records {
                 transaction.set(key, value).unwrap();
@@ -183,12 +183,12 @@ mod tests {
         pub(crate) fn check<'a, I, J>(&self, tables: I, receivers: J)
         where
             I: IntoIterator<Item = &'a Table<Key, Value>>,
-            J: IntoIterator<Item = &'a Receiver<Key, Value>>,
+            J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
         {
             let tables: Vec<&'a Table<Key, Value>> =
                 tables.into_iter().collect();
 
-            let receivers: Vec<&'a Receiver<Key, Value>> =
+            let receivers: Vec<&'a TableReceiver<Key, Value>> =
                 receivers.into_iter().collect();
 
             for table in &tables {
@@ -216,7 +216,7 @@ mod tests {
         let mut table =
             database.table_with_records((0..256).map(|i| (i, i))).await;
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
@@ -236,7 +236,7 @@ mod tests {
             database.table_with_records((0..256).map(|i| (i, i))).await;
         let table_clone = table.clone();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
@@ -262,7 +262,7 @@ mod tests {
         let table = database.table_with_records((0..256).map(|i| (i, i))).await;
         let mut table_clone = table.clone();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }

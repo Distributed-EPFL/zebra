@@ -2,25 +2,25 @@ use crate::{
     common::store::Field,
     database::{
         interact::{Action, Batch},
-        DatabaseQuery, Tid,
+        Query, Tid,
     },
 };
 
-pub struct DatabaseResponse<Key: Field, Value: Field> {
+pub struct TableResponse<Key: Field, Value: Field> {
     tid: Tid,
     batch: Batch<Key, Value>,
 }
 
-impl<Key, Value> DatabaseResponse<Key, Value>
+impl<Key, Value> TableResponse<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
     pub(crate) fn new(tid: Tid, batch: Batch<Key, Value>) -> Self {
-        DatabaseResponse { tid, batch }
+        TableResponse { tid, batch }
     }
 
-    pub fn get(&self, query: &DatabaseQuery) -> Option<&Value> {
+    pub fn get(&self, query: &Query) -> Option<&Value> {
         assert_eq!(
             query.tid, self.tid,
             "called `Response::get` with a foreign `Query`"

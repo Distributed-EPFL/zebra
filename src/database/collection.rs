@@ -1,6 +1,8 @@
 use crate::{
     common::{store::Field, Commitment},
-    database::{CollectionResponse, CollectionTransaction, Table},
+    database::{
+        CollectionResponse, CollectionSender, CollectionTransaction, Table,
+    },
 };
 
 pub struct Collection<Item: Field>(pub(crate) Table<Item, ()>);
@@ -18,6 +20,10 @@ where
         transaction: CollectionTransaction<Item>,
     ) -> CollectionResponse<Item> {
         CollectionResponse(self.0.execute(transaction.0).await)
+    }
+
+    pub fn send(self) -> CollectionSender<Item> {
+        self.0.send().into()
     }
 }
 

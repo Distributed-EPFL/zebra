@@ -1,17 +1,15 @@
 use crate::{
     common::store::Field,
-    database::{CollectionQuery, DatabaseResponse},
+    database::{Query, TableResponse},
 };
 
-pub struct CollectionResponse<Item: Field>(
-    pub(crate) DatabaseResponse<Item, ()>,
-);
+pub struct CollectionResponse<Item: Field>(pub(crate) TableResponse<Item, ()>);
 
 impl<Item> CollectionResponse<Item>
 where
     Item: Field,
 {
-    pub fn contains(&self, query: &CollectionQuery) -> bool {
-        self.0.get(&query.0).is_some()
+    pub fn contains(&self, query: &Query) -> bool {
+        self.0.get(&query).is_some()
     }
 }

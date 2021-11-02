@@ -3,7 +3,7 @@ use crate::{
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
-        DatabaseResponse, DatabaseTransaction, Sender,
+        TableResponse, TableSender, TableTransaction,
     },
     map::Map,
 };
@@ -20,7 +20,7 @@ use talk::crypto::primitives::hash;
 
 // Documentation links
 #[allow(unused_imports)]
-use crate::database::{Database, Receiver};
+use crate::database::{Database, TableReceiver};
 
 /// A map implemented using Merkle Patricia Trees.
 ///
@@ -33,9 +33,9 @@ use crate::database::{Database, Receiver};
 ///
 /// [`Database`]: crate::database::Database
 /// [`Table`]: crate::database::Table
-/// [`Transaction`]: crate::database::Transaction
-/// [`Sender`]: crate::database::Sender
-/// [`Receiver`]: crate::database::Receiver
+/// [`Transaction`]: crate::database::TableTransaction
+/// [`TableSender`]: crate::database::TableSender
+/// [`TableReceiver`]: crate::database::TableReceiver
 
 pub struct Table<Key: Field, Value: Field>(Handle<Key, Value>);
 
@@ -57,13 +57,13 @@ where
         self.0.commit()
     }
 
-    /// Executes a [`Transaction`] returning a [`Response`]
+    /// Executes a [`TableTransaction`] returning a [`TableResponse`]
     /// (see their respective documentations for more details).
     ///
     /// # Examples
     ///
     /// ```
-    /// use zebra::database::{Database, DatabaseTransaction};
+    /// use zebra::database::{Database, TableTransaction};
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -71,7 +71,7 @@ where
     ///     let mut database = Database::new();
     ///
     ///     // Create a new transaction.
-    ///     let mut transaction = DatabaseTransaction::new();
+    ///     let mut transaction = TableTransaction::new();
     ///
     ///     // Set (key = 0, value = 0)
     ///     transaction.set(0, 0).unwrap();
@@ -93,11 +93,11 @@ where
     /// ```
     pub async fn execute(
         &mut self,
-        transaction: DatabaseTransaction<Key, Value>,
-    ) -> DatabaseResponse<Key, Value> {
+        transaction: TableTransaction<Key, Value>,
+    ) -> TableResponse<Key, Value> {
         let (tid, batch) = transaction.finalize();
         let batch = self.0.apply(batch).await;
-        DatabaseResponse::new(tid, batch)
+        TableResponse::new(tid, batch)
     }
 
     pub async fn export<I, K>(
@@ -139,8 +139,8 @@ where
         Handle::diff(&mut lho.0, &mut rho.0).await
     }
 
-    /// Transforms the table into a [`Sender`], preparing it for sending to
-    /// to a [`Receiver`] of another [`Database`]. For details on how to use
+    /// Transforms the table into a [`TableSender`], preparing it for sending to
+    /// to a [`TableReceiver`] of another [`Database`]. For details on how to use
     /// Senders and Receivers check their respective documentation.
     /// ```
     /// use zebra::database::Database;
@@ -154,8 +154,8 @@ where
     ///
     /// // Use sender...
     /// ```
-    pub fn send(self) -> Sender<Key, Value> {
-        Sender::new(self.0)
+    pub fn send(self) -> TableSender<Key, Value> {
+        TableSender::new(self.0)
     }
 }
 
@@ -222,7 +222,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -243,7 +243,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -264,7 +264,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }
@@ -284,7 +284,7 @@ mod tests {
         let database: Database<u32, u32> = Database::new();
         let mut table = database.empty_table();
 
-        let mut transaction = DatabaseTransaction::new();
+        let mut transaction = TableTransaction::new();
         for (key, value) in (0..1024).map(|i| (i, i)) {
             transaction.set(key, value).unwrap();
         }

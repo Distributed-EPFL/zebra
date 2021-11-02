@@ -4,14 +4,14 @@ use std::vec::Vec;
 
 // Documentation links
 #[allow(unused_imports)]
-use crate::database::{Answer, Receiver, Sender};
+use crate::database::{TableAnswer, TableReceiver, TableSender};
 
-/// A [`Receiver`]'s query for a [`Sender`], to be replied to with an [`Answer`].
+/// A [`TableReceiver`]'s query for a [`TableSender`], to be replied to with an [`Answer`].
 ///
-/// See the [`Sender`] and [`Receiver`] documentation for more details.
+/// See the [`TableSender`] and [`TableReceiver`] documentation for more details.
 ///
-/// [`Sender`]: crate::database::Sender
-/// [`Receiver`]: crate::database::Receiver
+/// [`TableSender`]: crate::database::TableSender
+/// [`TableReceiver`]: crate::database::TableReceiver
 /// [`Answer`]: crate::database::Question
 
 #[derive(Debug, Eq, PartialEq)]

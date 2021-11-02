@@ -5,7 +5,7 @@ use crate::{
         interact::drop,
         store::{Cell, Label, MapId, Node, Store},
         sync::{locate, Severity},
-        Answer, Question, Table,
+        Question, Table, TableAnswer,
     },
 };
 
@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 
 const DEFAULT_WINDOW: usize = 128;
 
-pub struct Receiver<Key: Field, Value: Field> {
+pub struct TableReceiver<Key: Field, Value: Field> {
     cell: Cell<Key, Value>,
     root: Option<Label>,
     held: HashSet<Label>,
@@ -31,7 +31,7 @@ pub struct Settings {
 
 pub enum Status<Key: Field, Value: Field> {
     Complete(Table<Key, Value>),
-    Incomplete(Receiver<Key, Value>, Question),
+    Incomplete(TableReceiver<Key, Value>, Question),
 }
 
 struct Context {
@@ -39,13 +39,13 @@ struct Context {
     remote_label: Label,
 }
 
-impl<Key, Value> Receiver<Key, Value>
+impl<Key, Value> TableReceiver<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
     pub(crate) fn new(cell: Cell<Key, Value>) -> Self {
-        Receiver {
+        TableReceiver {
             cell,
             root: None,
             held: HashSet::new(),
@@ -59,7 +59,7 @@ where
 
     pub fn learn(
         mut self,
-        answer: Answer<Key, Value>,
+        answer: TableAnswer<Key, Value>,
     ) -> Result<Status<Key, Value>, Top<SyncError>> {
         let mut store = self.cell.take();
         let mut severity = Severity::ok();
@@ -241,7 +241,7 @@ where
     }
 }
 
-impl<Key, Value> Drop for Receiver<Key, Value>
+impl<Key, Value> Drop for TableReceiver<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -261,7 +261,7 @@ where
 mod tests {
     use super::*;
 
-    use crate::database::{sync::ANSWER_DEPTH, Database, Sender};
+    use crate::database::{sync::ANSWER_DEPTH, Database, TableSender};
 
     use std::array::IntoIter;
 
@@ -272,16 +272,16 @@ mod tests {
     {
         Complete(Table<Key, Value>),
         Incomplete(
-            &'a mut Sender<Key, Value>,
-            Receiver<Key, Value>,
-            Answer<Key, Value>,
+            &'a mut TableSender<Key, Value>,
+            TableReceiver<Key, Value>,
+            TableAnswer<Key, Value>,
         ),
     }
 
     fn run_for<Key, Value>(
-        mut receiver: Receiver<Key, Value>,
-        sender: &mut Sender<Key, Value>,
-        mut answer: Answer<Key, Value>,
+        mut receiver: TableReceiver<Key, Value>,
+        sender: &mut TableSender<Key, Value>,
+        mut answer: TableAnswer<Key, Value>,
         steps: usize,
     ) -> Transfer<Key, Value>
     where
@@ -305,7 +305,7 @@ mod tests {
         Transfer::Incomplete(sender, receiver, answer)
     }
 
-    impl<Key, Value> Receiver<Key, Value>
+    impl<Key, Value> TableReceiver<Key, Value>
     where
         Key: Field,
         Value: Field,
@@ -318,7 +318,8 @@ mod tests {
     fn run<'a, Key, Value, I, const N: usize>(
         database: &Database<Key, Value>,
         tables: I,
-        transfers: [(&mut Sender<Key, Value>, Receiver<Key, Value>); N],
+        transfers: [(&mut TableSender<Key, Value>, TableReceiver<Key, Value>);
+            N],
     ) -> ([Table<Key, Value>; N], usize)
     where
         Key: Field,
@@ -839,7 +840,7 @@ mod tests {
 
         let max_benign = (1 << (ANSWER_DEPTH + 1)) - 2;
 
-        answer = Answer(
+        answer = TableAnswer(
             (0..max_benign + 1)
                 .map(|_| answer.0[0].clone())
                 .collect::<Vec<Node<_, _>>>(),
@@ -870,7 +871,7 @@ mod tests {
 
         let max_benign = (1 << (ANSWER_DEPTH + 1)) - 2;
 
-        answer = Answer(
+        answer = TableAnswer(
             (0..max_benign + 2)
                 .map(|_| answer.0[0].clone())
                 .collect::<Vec<Node<_, _>>>(),

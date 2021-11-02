@@ -1,6 +1,6 @@
 use crate::{
     common::store::Field,
-    database::{Collection, Database},
+    database::{Collection, CollectionReceiver, Database},
 };
 
 #[derive(Clone)]
@@ -16,5 +16,9 @@ where
 
     pub fn empty_collection(&self) -> Collection<Item> {
         Collection(self.0.empty_table())
+    }
+
+    pub fn receive(&self) -> CollectionReceiver<Item> {
+        self.0.receive().into()
     }
 }

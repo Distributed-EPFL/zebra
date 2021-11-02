@@ -4,7 +4,7 @@ use crate::{
         errors::SyncError,
         store::{Handle, Label, Node, Store},
         sync::ANSWER_DEPTH,
-        Answer, Question,
+        Question, TableAnswer,
     },
 };
 
@@ -12,39 +12,42 @@ use doomstack::{here, Doom, ResultExt, Top};
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-pub struct Sender<Key: Field, Value: Field>(Handle<Key, Value>);
+pub struct TableSender<Key: Field, Value: Field>(Handle<Key, Value>);
 
-impl<Key, Value> Sender<Key, Value>
+impl<Key, Value> TableSender<Key, Value>
 where
     Key: Field,
     Value: Field,
 {
     pub(crate) fn new(handle: Handle<Key, Value>) -> Self {
-        Sender(handle)
+        TableSender(handle)
     }
 
-    pub fn hello(&mut self) -> Answer<Key, Value> {
+    pub fn hello(&mut self) -> TableAnswer<Key, Value> {
         self.answer(&Question(vec![self.0.root])).unwrap()
     }
 
     pub fn answer(
         &mut self,
         question: &Question,
-    ) -> Result<Answer<Key, Value>, Top<SyncError>> {
+    ) -> Result<TableAnswer<Key, Value>, Top<SyncError>> {
         let mut collector: Vec<Node<Key, Value>> = Vec::new();
         let mut store = self.0.cell.take();
 
         for label in &question.0 {
-            if let Err(e) =
-                Sender::grab(&mut store, &mut collector, *label, ANSWER_DEPTH)
-            {
+            if let Err(e) = TableSender::grab(
+                &mut store,
+                &mut collector,
+                *label,
+                ANSWER_DEPTH,
+            ) {
                 self.0.cell.restore(store);
                 return Err(e);
             }
         }
 
         self.0.cell.restore(store);
-        Ok(Answer(collector))
+        Ok(TableAnswer(collector))
     }
 
     fn grab(
@@ -70,8 +73,8 @@ where
             collector.push(node);
 
             if let Some((left, right)) = recur {
-                Sender::grab(store, collector, left, ttl - 1)?;
-                Sender::grab(store, collector, right, ttl - 1)?;
+                TableSender::grab(store, collector, left, ttl - 1)?;
+                TableSender::grab(store, collector, right, ttl - 1)?;
             }
 
             Ok(())
@@ -98,7 +101,7 @@ mod tests {
 
         let answer = send.answer(&Question(vec![Label::Empty])).unwrap();
 
-        assert_eq!(answer, Answer(vec!()));
+        assert_eq!(answer, TableAnswer(vec!()));
     }
 
     #[tokio::test]
@@ -138,7 +141,7 @@ mod tests {
 
         let answer = send.answer(&Question(vec![label])).unwrap();
 
-        assert_eq!(answer, Answer(vec!(node)));
+        assert_eq!(answer, TableAnswer(vec!(node)));
     }
 
     #[tokio::test]
@@ -174,6 +177,6 @@ mod tests {
 
         let answer = send.answer(&Question(vec![label0])).unwrap();
 
-        assert_eq!(answer, Answer(vec!(n0, n1, n2)));
+        assert_eq!(answer, TableAnswer(vec!(n0, n1, n2)));
     }
 }

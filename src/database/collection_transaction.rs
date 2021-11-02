@@ -1,12 +1,12 @@
 use crate::{
     common::store::Field,
-    database::{errors::QueryError, CollectionQuery, DatabaseTransaction},
+    database::{errors::QueryError, Query, TableTransaction},
 };
 
 use doomstack::Top;
 
 pub struct CollectionTransaction<Item: Field>(
-    pub(crate) DatabaseTransaction<Item, ()>,
+    pub(crate) TableTransaction<Item, ()>,
 );
 
 impl<Item> CollectionTransaction<Item>
@@ -14,14 +14,11 @@ where
     Item: Field,
 {
     pub fn new() -> Self {
-        CollectionTransaction(DatabaseTransaction::new())
+        CollectionTransaction(TableTransaction::new())
     }
 
-    pub fn contains(
-        &mut self,
-        item: &Item,
-    ) -> Result<CollectionQuery, Top<QueryError>> {
-        Ok(CollectionQuery(self.0.get(item)?))
+    pub fn contains(&mut self, item: &Item) -> Result<Query, Top<QueryError>> {
+        self.0.get(item)
     }
 
     pub fn insert(&mut self, item: Item) -> Result<(), Top<QueryError>> {

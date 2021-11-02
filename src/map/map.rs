@@ -41,7 +41,7 @@ use talk::crypto::primitives::hash;
 ///
 /// [`Field`]: crate::common::store::Field
 /// [`Table`]: crate::database::Table
-/// [`Transaction`]: crate::database::Transaction
+/// [`Transaction`]: crate::database::TableTransaction
 /// [`Serialize`]: serde::Serialize
 /// [`Send`]: Send
 /// [`Sync`]: Sync
