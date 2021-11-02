@@ -29,7 +29,7 @@ pub struct Settings {
     pub window: usize,
 }
 
-pub enum Status<Key: Field, Value: Field> {
+pub enum TableStatus<Key: Field, Value: Field> {
     Complete(Table<Key, Value>),
     Incomplete(TableReceiver<Key, Value>, Question),
 }
@@ -60,7 +60,7 @@ where
     pub fn learn(
         mut self,
         answer: TableAnswer<Key, Value>,
-    ) -> Result<Status<Key, Value>, Top<SyncError>> {
+    ) -> Result<TableStatus<Key, Value>, Top<SyncError>> {
         let mut store = self.cell.take();
         let mut severity = Severity::ok();
 
@@ -84,7 +84,7 @@ where
                         self.flush(&mut store, root);
                         self.cell.restore(store);
 
-                        Ok(Status::Complete(Table::new(
+                        Ok(TableStatus::Complete(Table::new(
                             self.cell.clone(),
                             root,
                         )))
@@ -92,7 +92,7 @@ where
                     None => {
                         // No node received: the new table's `root` should be `Empty`
                         self.cell.restore(store);
-                        Ok(Status::Complete(Table::new(
+                        Ok(TableStatus::Complete(Table::new(
                             self.cell.clone(),
                             Label::Empty,
                         )))
@@ -103,7 +103,7 @@ where
                 self.cell.restore(store);
                 let question = self.ask();
 
-                Ok(Status::Incomplete(self, question))
+                Ok(TableStatus::Incomplete(self, question))
             }
         } else {
             self.cell.restore(store);
@@ -292,10 +292,10 @@ mod tests {
             let status = receiver.learn(answer).unwrap();
 
             match status {
-                Status::Complete(table) => {
+                TableStatus::Complete(table) => {
                     return Transfer::Complete(table);
                 }
-                Status::Incomplete(receiver_t, question) => {
+                TableStatus::Incomplete(receiver_t, question) => {
                     answer = sender.answer(&question).unwrap();
                     receiver = receiver_t;
                 }
