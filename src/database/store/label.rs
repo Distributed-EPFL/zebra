@@ -3,9 +3,9 @@ use crate::{
     database::store::MapId,
 };
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Hash, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) enum Label {
     Internal(MapId, Bytes),
     Leaf(MapId, Bytes),

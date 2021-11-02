@@ -6,7 +6,9 @@ use crate::{
     database::store::{Label, Wrap},
 };
 
-#[derive(Debug)]
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Label, Label),

@@ -2,12 +2,14 @@ use crate::common::{data::Bytes, store::Field};
 
 use doomstack::Top;
 
+use serde::{Deserialize, Serialize};
+
 use talk::crypto::primitives::hash;
 use talk::crypto::primitives::hash::HashError;
 
 use std::sync::Arc;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub(crate) struct Wrap<Inner: Field> {
     digest: Bytes,
     inner: Arc<Inner>,

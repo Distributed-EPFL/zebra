@@ -6,11 +6,11 @@ use crate::{
     database::store::DEPTH,
 };
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use std::fmt::{Debug, Error, Formatter, LowerHex};
 
-#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct MapId(u8);
 
 impl MapId {
