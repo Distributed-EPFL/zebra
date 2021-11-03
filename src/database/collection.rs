@@ -5,6 +5,9 @@ use crate::{
     },
 };
 
+use std::collections::HashSet;
+use std::hash::Hash;
+
 pub struct Collection<Item: Field>(pub(crate) Table<Item, ()>);
 
 impl<Item> Collection<Item>
@@ -24,6 +27,14 @@ where
 
     pub fn send(self) -> CollectionSender<Item> {
         self.0.send().into()
+    }
+
+    pub async fn diff(
+        lho: &mut Collection<Item>,
+        rho: &mut Collection<Item>,
+    ) -> HashSet<Item>
+    where Item: Clone + Eq + Hash {
+        Table::diff(&mut lho.0, &mut rho.0).await.into_iter().map(|(key,_)| key).collect()
     }
 }
 
