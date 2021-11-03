@@ -33,7 +33,9 @@ where
         lho: &mut Collection<Item>,
         rho: &mut Collection<Item>,
     ) -> (HashSet<Item>, HashSet<Item>)
-    where Item: Clone + Eq + Hash {
+    where
+        Item: Clone + Eq + Hash,
+    {
         let mut lho_minus_rho = HashSet::new();
         let mut rho_minus_lho = HashSet::new();
 
