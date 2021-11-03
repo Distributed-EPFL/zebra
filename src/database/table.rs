@@ -173,6 +173,8 @@ where
 mod tests {
     use super::*;
 
+    use rand::seq::IteratorRandom;
+
     use std::fmt::Debug;
     use std::hash::Hash;
 
@@ -297,5 +299,320 @@ mod tests {
 
         table.check_tree();
         table.assert_records((0..1024).map(|i| (i, i)));
+    }
+
+    #[tokio::test]
+    async fn diff_empty_empty() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        assert_eq!(Table::diff(&mut lho, &mut rho).await, HashMap::new());
+    }
+
+    #[tokio::test]
+    async fn diff_identity_empty() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            assert_eq!(diff[&key], (Some(key), None));
+        }
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            assert_eq!(diff[&key], (None, Some(key)));
+        }
+    }
+
+    #[tokio::test]
+    async fn diff_identity_match() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        rho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+        assert_eq!(diff, HashMap::new());
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+        assert_eq!(diff, HashMap::new());
+    }
+
+    #[tokio::test]
+    async fn diff_identity_successor() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i + 1)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        rho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            assert_eq!(diff[&key], (Some(key), Some(key + 1)));
+        }
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            assert_eq!(diff[&key], (Some(key + 1), Some(key)));
+        }
+    }
+
+    #[tokio::test]
+    async fn diff_first_identity_match_rest_successor() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let mut transaction = TableTransaction::new();
+        transaction.set(0, 0).unwrap();
+
+        for (key, value) in (1..1024).map(|i| (i, i + 1)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        rho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            if key == 0 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (Some(key), Some(key + 1)));
+            }
+        }
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            if key == 0 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (Some(key + 1), Some(key)));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn diff_half_identity_match_half_successor() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let mut transaction = TableTransaction::new();
+
+        for (key, value) in (0..512).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        for (key, value) in (512..1024).map(|i| (i, i + 1)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        rho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            if key < 512 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (Some(key), Some(key + 1)));
+            }
+        }
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1024 {
+            if key < 512 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (Some(key + 1), Some(key)));
+            }
+        }
+    }
+
+    #[tokio::test]
+    async fn diff_identity_overlap() {
+        let database: Database<u32, u32> = Database::new();
+
+        let mut lho = database.empty_table();
+        let mut rho = database.empty_table();
+
+        let mut transaction = TableTransaction::new();
+        for (key, value) in (0..1024).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        lho.execute(transaction).await;
+
+        let mut transaction = TableTransaction::new();
+
+        for (key, value) in (512..1536).map(|i| (i, i)) {
+            transaction.set(key, value).unwrap();
+        }
+
+        rho.execute(transaction).await;
+
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1536 {
+            if key < 512 {
+                assert_eq!(diff[&key], (Some(key), None));
+            } else if key < 1024 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (None, Some(key)));
+            }
+        }
+
+        let (mut lho, mut rho) = (rho, lho);
+        let diff = Table::diff(&mut lho, &mut rho).await;
+
+        for key in 0..1536 {
+            if key < 512 {
+                assert_eq!(diff[&key], (None, Some(key)));
+            } else if key < 1024 {
+                assert_eq!(diff.get(&key), None);
+            } else {
+                assert_eq!(diff[&key], (Some(key), None));
+            }
+        }
+    }
+
+    #[tokio::test]
+    #[ignore]
+    async fn diff_stress() {
+        enum Set {
+            Identity,
+            Successor,
+            Empty,
+        }
+
+        const SETS: &[Set] = &[Set::Identity, Set::Successor, Set::Empty];
+
+        let database: Database<u32, u32> = Database::new();
+        let mut rng = rand::thread_rng();
+
+        for _ in 0..512 {
+            let mut lho = database.empty_table();
+            let mut rho = database.empty_table();
+            let mut diff_reference = HashMap::new();
+
+            let mut lho_transaction = TableTransaction::new();
+            let mut rho_transaction = TableTransaction::new();
+
+            for key in 0..512 {
+                let lho_set = SETS.iter().choose(&mut rng).unwrap();
+                let rho_set = SETS.iter().choose(&mut rng).unwrap();
+
+                match lho_set {
+                    Set::Identity => lho_transaction.set(key, key).unwrap(),
+                    Set::Successor => {
+                        lho_transaction.set(key, key + 1).unwrap()
+                    }
+                    Set::Empty => (),
+                }
+
+                match rho_set {
+                    Set::Identity => rho_transaction.set(key, key).unwrap(),
+                    Set::Successor => {
+                        rho_transaction.set(key, key + 1).unwrap()
+                    }
+                    Set::Empty => (),
+                }
+
+                match (lho_set, rho_set) {
+                    (Set::Identity, Set::Successor) => {
+                        diff_reference.insert(key, (Some(key), Some(key + 1)));
+                    }
+                    (Set::Identity, Set::Empty) => {
+                        diff_reference.insert(key, (Some(key), None));
+                    }
+                    (Set::Successor, Set::Identity) => {
+                        diff_reference.insert(key, (Some(key + 1), Some(key)));
+                    }
+                    (Set::Successor, Set::Empty) => {
+                        diff_reference.insert(key, (Some(key + 1), None));
+                    }
+                    (Set::Empty, Set::Identity) => {
+                        diff_reference.insert(key, (None, Some(key)));
+                    }
+                    (Set::Empty, Set::Successor) => {
+                        diff_reference.insert(key, (None, Some(key + 1)));
+                    }
+                    _ => {}
+                }
+            }
+
+            lho.execute(lho_transaction).await;
+            rho.execute(rho_transaction).await;
+
+            assert_eq!(Table::diff(&mut lho, &mut rho).await, diff_reference);
+        }
     }
 }
