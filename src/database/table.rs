@@ -52,6 +52,10 @@ where
         Table(Handle::new(cell, root))
     }
 
+    pub(crate) fn from_handle(handle: Handle<Key, Value>) -> Self {
+        Table(handle)
+    }
+
     /// Returns a cryptographic commitment to the contents of the `Table`.
     pub fn commit(&self) -> Commitment {
         self.0.commit()
@@ -155,7 +159,7 @@ where
     /// // Use sender...
     /// ```
     pub fn send(self) -> TableSender<Key, Value> {
-        TableSender::new(self.0)
+        TableSender::from_handle(self.0)
     }
 }
 

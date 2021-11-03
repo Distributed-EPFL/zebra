@@ -4,7 +4,7 @@ use crate::{
         errors::SyncError,
         store::{Handle, Label, Node, Store},
         sync::ANSWER_DEPTH,
-        Question, TableAnswer,
+        Question, Table, TableAnswer,
     },
 };
 
@@ -19,7 +19,7 @@ where
     Key: Field,
     Value: Field,
 {
-    pub(crate) fn new(handle: Handle<Key, Value>) -> Self {
+    pub(crate) fn from_handle(handle: Handle<Key, Value>) -> Self {
         TableSender(handle)
     }
 
@@ -48,6 +48,10 @@ where
 
         self.0.cell.restore(store);
         Ok(TableAnswer(collector))
+    }
+
+    pub fn end(self) -> Table<Key, Value> {
+        Table::from_handle(self.0)
     }
 
     fn grab(
