@@ -26,7 +26,7 @@ where
     }
 
     pub fn send(self) -> CollectionSender<Item> {
-        self.0.send().into()
+        CollectionSender(self.0.send())
     }
 
     pub async fn diff(
