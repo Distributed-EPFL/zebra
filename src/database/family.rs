@@ -19,6 +19,6 @@ where
     }
 
     pub fn receive(&self) -> CollectionReceiver<Item> {
-        self.0.receive().into()
+        CollectionReceiver(self.0.receive())
     }
 }

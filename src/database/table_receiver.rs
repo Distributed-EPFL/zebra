@@ -5,7 +5,7 @@ use crate::{
         interact::drop,
         store::{Cell, Label, MapId, Node, Store},
         sync::{locate, Severity},
-        Question, Table, TableAnswer,
+        Question, Table, TableAnswer, TableStatus,
     },
 };
 
@@ -27,11 +27,6 @@ pub struct TableReceiver<Key: Field, Value: Field> {
 
 pub struct Settings {
     pub window: usize,
-}
-
-pub enum TableStatus<Key: Field, Value: Field> {
-    Complete(Table<Key, Value>),
-    Incomplete(TableReceiver<Key, Value>, Question),
 }
 
 struct Context {
