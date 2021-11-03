@@ -32,9 +32,20 @@ where
     pub async fn diff(
         lho: &mut Collection<Item>,
         rho: &mut Collection<Item>,
-    ) -> HashSet<Item>
+    ) -> (HashSet<Item>, HashSet<Item>)
     where Item: Clone + Eq + Hash {
-        Table::diff(&mut lho.0, &mut rho.0).await.into_iter().map(|(key,_)| key).collect()
+        let mut lho_minus_rho = HashSet::new();
+        let mut rho_minus_lho = HashSet::new();
+
+        for (key, (in_lho, _)) in Table::diff(&mut lho.0, &mut rho.0).await {
+            if in_lho.is_some() {
+                lho_minus_rho.insert(key);
+            } else {
+                rho_minus_lho.insert(key);
+            }
+        }
+
+        (lho_minus_rho, rho_minus_lho)
     }
 }
 
