@@ -39,8 +39,7 @@ use crate::{
 ///
 /// use zebra::database::{Database, Table, TableTransaction, TableResponse, Query};
 ///
-/// #[tokio::main]
-/// async fn main() {
+/// fn main() {
 ///     // Type inference lets us omit an explicit type signature (which
 ///     // would be `Database<&str, integer>` in this example).
 ///     let database = Database::new();
@@ -50,11 +49,11 @@ use crate::{
 ///     modify.set("Alice", 42).unwrap();
 ///
 ///     let mut table = database.empty_table();
-///     let _ = table.execute(modify).await;
+///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
 ///     let query_key = read.get(&"Alice").unwrap();
-///     let response = table.execute(read).await;
+///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key), Some(&42));
 ///
@@ -64,12 +63,12 @@ use crate::{
 ///     modify.set(&"Bob", 23).unwrap();
 ///
 ///     // Ignore the response (modify only)
-///     let _ = table.execute(modify).await;
+///     let _ = table.execute(modify);
 ///
 ///     let mut read = TableTransaction::new();
 ///     let query_key_alice = read.get(&"Alice").unwrap();
 ///     let query_key_bob = read.get(&"Bob").unwrap();
-///     let response = table.execute(read).await;
+///     let response = table.execute(read);
 ///
 ///     assert_eq!(response.get(&query_key_alice), None);
 ///     assert_eq!(response.get(&query_key_bob), Some(&23));
@@ -162,7 +161,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub(crate) async fn table_with_records<I>(
+        pub(crate) fn table_with_records<I>(
             &self,
             records: I,
         ) -> Table<Key, Value>
@@ -176,7 +175,7 @@ mod tests {
                 transaction.set(key, value).unwrap();
             }
 
-            table.execute(transaction).await;
+            table.execute(transaction);
             table
         }
 
@@ -209,18 +208,17 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn modify_basic() {
+    #[test]
+    fn modify_basic() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut table =
-            database.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut table = database.table_with_records((0..256).map(|i| (i, i)));
 
         let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
-        let _ = table.execute(transaction).await;
+        let _ = table.execute(transaction);
         table.assert_records(
             (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
         );
@@ -228,19 +226,18 @@ mod tests {
         database.check([&table], []);
     }
 
-    #[tokio::test]
-    async fn clone_modify_original() {
+    #[test]
+    fn clone_modify_original() {
         let database: Database<u32, u32> = Database::new();
 
-        let mut table =
-            database.table_with_records((0..256).map(|i| (i, i))).await;
+        let mut table = database.table_with_records((0..256).map(|i| (i, i)));
         let table_clone = table.clone();
 
         let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
-        let _response = table.execute(transaction).await;
+        let _response = table.execute(transaction);
         table.assert_records(
             (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
         );
@@ -255,18 +252,18 @@ mod tests {
         database.check([&table], []);
     }
 
-    #[tokio::test]
-    async fn clone_modify_drop() {
+    #[test]
+    fn clone_modify_drop() {
         let database: Database<u32, u32> = Database::new();
 
-        let table = database.table_with_records((0..256).map(|i| (i, i))).await;
+        let table = database.table_with_records((0..256).map(|i| (i, i)));
         let mut table_clone = table.clone();
 
         let mut transaction = TableTransaction::new();
         for i in 128..256 {
             transaction.set(i, i + 1).unwrap();
         }
-        let _response = table_clone.execute(transaction).await;
+        let _response = table_clone.execute(transaction);
         table_clone.assert_records(
             (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
         );

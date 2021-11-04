@@ -330,8 +330,8 @@ mod tests {
 
     use std::collections::HashMap;
 
-    #[tokio::test]
-    async fn single_static_tree() {
+    #[test]
+    fn single_static_tree() {
         let mut store = Store::<u32, u32>::new();
         store.check_leaks([Label::Empty]);
 
@@ -387,8 +387,8 @@ mod tests {
         assert_eq!(store.fetch_node(lllrllrr), leaf!(0, 0));
     }
 
-    #[tokio::test]
-    async fn single_dynamic_tree() {
+    #[test]
+    fn single_dynamic_tree() {
         let store = Store::<u32, u32>::new();
 
         // {0: 1}
@@ -450,8 +450,8 @@ mod tests {
         assert_eq!(root, Label::Empty);
     }
 
-    #[tokio::test]
-    async fn single_insert() {
+    #[test]
+    fn single_insert() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -462,8 +462,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_insert_read_all() {
+    #[test]
+    fn single_insert_read_all() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -475,8 +475,8 @@ mod tests {
         batch.assert_gets((0..128).map(|i| (i, Some(i))));
     }
 
-    #[tokio::test]
-    async fn single_insert_read_half() {
+    #[test]
+    fn single_insert_read_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -488,8 +488,8 @@ mod tests {
         batch.assert_gets((0..64).map(|i| (i, Some(i))));
     }
 
-    #[tokio::test]
-    async fn single_insert_read_missing() {
+    #[test]
+    fn single_insert_read_missing() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -501,8 +501,8 @@ mod tests {
         batch.assert_gets((128..256).map(|i| (i, None)));
     }
 
-    #[tokio::test]
-    async fn single_insert_read_overlap() {
+    #[test]
+    fn single_insert_read_overlap() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -516,8 +516,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn single_modify() {
+    #[test]
+    fn single_modify() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -531,8 +531,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_modify_read_overlap() {
+    #[test]
+    fn single_modify_read_overlap() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -549,8 +549,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn single_modify_overlap_same_value() {
+    #[test]
+    fn single_modify_overlap_same_value() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -565,8 +565,8 @@ mod tests {
         batch.assert_gets((0..192).map(|i| (i, Some(i))));
     }
 
-    #[tokio::test]
-    async fn single_insert_hybrid_read_set() {
+    #[test]
+    fn single_insert_hybrid_read_set() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..192).map(|i| set!(i, i)).collect());
@@ -593,8 +593,8 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn single_remove_all() {
+    #[test]
+    fn single_remove_all() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -607,8 +607,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_remove_half() {
+    #[test]
+    fn single_remove_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -622,8 +622,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_remove_all_but_one() {
+    #[test]
+    fn single_remove_all_but_one() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -637,8 +637,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_remove_half_insert_half() {
+    #[test]
+    fn single_remove_half_insert_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
@@ -656,8 +656,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_remove_half_modify_half() {
+    #[test]
+    fn single_remove_half_modify_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -675,8 +675,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_remove_quarter_modify_quarter_insert_half() {
+    #[test]
+    fn single_remove_quarter_modify_quarter_insert_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..64).map(|i| set!(i, i)).collect());
@@ -694,8 +694,8 @@ mod tests {
         store.check_leaks([root]);
     }
 
-    #[tokio::test]
-    async fn single_stress() {
+    #[test]
+    fn single_stress() {
         let mut record_reference = HashMap::new();
 
         let mut store = Store::<u32, u32>::new();
@@ -743,8 +743,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn multiple_distinct() {
+    #[test]
+    fn multiple_distinct() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -762,8 +762,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_insert_then_match() {
+    #[test]
+    fn multiple_insert_then_match() {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -779,8 +779,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_insert_then_overflow_by_one() {
+    #[test]
+    fn multiple_insert_then_overflow_by_one() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -798,8 +798,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_insert_then_double() {
+    #[test]
+    fn multiple_insert_then_double() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -817,8 +817,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_match_then_empty() {
+    #[test]
+    fn multiple_match_then_empty() {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -837,8 +837,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_match_then_leave_one() {
+    #[test]
+    fn multiple_match_then_leave_one() {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -857,8 +857,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_match_then_leave_half() {
+    #[test]
+    fn multiple_match_then_leave_half() {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -877,8 +877,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_match_then_split() {
+    #[test]
+    fn multiple_match_then_split() {
         let store = Store::<u32, u32>::new();
 
         let batch = || Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -900,8 +900,8 @@ mod tests {
         store.check_leaks([first_root, second_root]);
     }
 
-    #[tokio::test]
-    async fn multiple_stress() {
+    #[test]
+    fn multiple_stress() {
         let mut first_record_reference = HashMap::new();
         let mut second_record_reference = HashMap::new();
 

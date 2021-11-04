@@ -26,8 +26,8 @@ mod tests {
     use rand::seq::IteratorRandom;
     use rand::Rng;
 
-    #[tokio::test]
-    async fn single() {
+    #[test]
+    fn single() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -38,8 +38,8 @@ mod tests {
         store.check_leaks([]);
     }
 
-    #[tokio::test]
-    async fn double_independent() {
+    #[test]
+    fn double_independent() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -59,8 +59,8 @@ mod tests {
         store.check_leaks([]);
     }
 
-    #[tokio::test]
-    async fn double_same() {
+    #[test]
+    fn double_same() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -80,8 +80,8 @@ mod tests {
         store.check_leaks([]);
     }
 
-    #[tokio::test]
-    async fn double_overlap() {
+    #[test]
+    fn double_overlap() {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
@@ -101,8 +101,8 @@ mod tests {
         store.check_leaks([]);
     }
 
-    #[tokio::test]
-    async fn stress() {
+    #[test]
+    fn stress() {
         let mut rng = rand::thread_rng();
         let mut roots: Vec<Label> = Vec::new();
 

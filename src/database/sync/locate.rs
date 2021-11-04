@@ -79,8 +79,8 @@ mod tests {
         database::interact::{apply, Batch},
     };
 
-    #[tokio::test]
-    async fn tree() {
+    #[test]
+    fn tree() {
         use Direction::{Left as L, Right as R};
 
         let store = Store::<u32, u32>::new();
@@ -111,8 +111,8 @@ mod tests {
         assert_eq!(locate(&mut store, lll), Prefix::from_directions([L, L, R]));
     }
 
-    #[tokio::test]
-    async fn full() {
+    #[test]
+    fn full() {
         fn recursion(
             store: &mut Store<u32, u32>,
             prefix: Prefix,

@@ -11,15 +11,12 @@ debug = 2
 
 [dependencies]
 talk = { git = "https://github.com/Distributed-EPFL/talk" }
-tokio = { version = "1", features = [ "rt" ] }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
-async-recursion = { version = "0.3.2" }
 oh-snap = { version = "0.0.2" }
 doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
 rayon = { version = "1.5.1" }
 
 [dev-dependencies]
-tokio = { version = "1", features = [ "macros", "rt-multi-thread" ] }
 ptree = { version = "0.3.2" }
 rand = { version = "0.8.4" }
 array-init = {version = "2.0.0"}

@@ -96,8 +96,8 @@ mod tests {
 
     use std::collections::hash_map::Entry::Occupied;
 
-    #[tokio::test]
-    async fn answer_empty() {
+    #[test]
+    fn answer_empty() {
         let database: Database<u32, u32> = Database::new();
         let table = database.empty_table();
 
@@ -108,8 +108,8 @@ mod tests {
         assert_eq!(answer, TableAnswer(vec!()));
     }
 
-    #[tokio::test]
-    async fn answer_non_existant() {
+    #[test]
+    fn answer_non_existant() {
         let database: Database<u32, u32> = Database::new();
         let table = database.empty_table();
 
@@ -128,10 +128,10 @@ mod tests {
         };
     }
 
-    #[tokio::test]
-    async fn grab_one() {
+    #[test]
+    fn grab_one() {
         let database: Database<u32, u32> = Database::new();
-        let table = database.table_with_records([(0u32, 0u32)]).await;
+        let table = database.table_with_records([(0u32, 0u32)]);
 
         let mut send = table.send();
         let label = send.0.root;
@@ -148,12 +148,10 @@ mod tests {
         assert_eq!(answer, TableAnswer(vec!(node)));
     }
 
-    #[tokio::test]
-    async fn grab_three() {
+    #[test]
+    fn grab_three() {
         let database: Database<u32, u32> = Database::new();
-        let table = database
-            .table_with_records([(0u32, 0u32), (4u32, 4u32)])
-            .await;
+        let table = database.table_with_records([(0u32, 0u32), (4u32, 4u32)]);
 
         let mut send = table.send();
         let label0 = send.0.root;
