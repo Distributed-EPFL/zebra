@@ -15,6 +15,12 @@ impl From<Hash> for Bytes {
     }
 }
 
+impl Into<Hash> for Bytes {
+    fn into(self) -> Hash {
+        Hash::from_bytes(self.0)
+    }
+}
+
 impl LowerHex for Bytes {
     fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
         for byte in &self.0 {

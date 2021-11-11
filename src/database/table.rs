@@ -1,5 +1,5 @@
 use crate::{
-    common::{data::Bytes, store::Field, tree::Path, Commitment},
+    common::{data::Bytes, store::Field, tree::Path},
     database::{
         errors::QueryError,
         store::{Cell, Handle, Label},
@@ -14,9 +14,10 @@ use oh_snap::Snap;
 
 use std::borrow::Borrow;
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::Hash as StdHash;
 
 use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::Hash;
 
 // Documentation links
 #[allow(unused_imports)]
@@ -57,7 +58,7 @@ where
     }
 
     /// Returns a cryptographic commitment to the contents of the `Table`.
-    pub fn commit(&self) -> Commitment {
+    pub fn commit(&self) -> Hash {
         self.0.commit()
     }
 
@@ -136,7 +137,7 @@ where
         rho: &mut Table<Key, Value>,
     ) -> HashMap<Key, (Option<Value>, Option<Value>)>
     where
-        Key: Clone + Eq + Hash,
+        Key: Clone + Eq + StdHash,
         Value: Clone + Eq,
     {
         Handle::diff(&mut lho.0, &mut rho.0)

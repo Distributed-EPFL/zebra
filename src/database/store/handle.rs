@@ -1,5 +1,5 @@
 use crate::{
-    common::{store::Field, tree::Path, Commitment},
+    common::{store::Field, tree::Path},
     database::{
         interact::{apply, diff, drop, export, Batch},
         store::{Cell, Label},
@@ -11,8 +11,10 @@ use oh_snap::Snap;
 
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
-use std::hash::Hash;
+use std::hash::Hash as StdHash;
 use std::ptr;
+
+use talk::crypto::primitives::hash::Hash;
 
 pub(crate) struct Handle<Key: Field, Value: Field> {
     pub cell: Cell<Key, Value>,
@@ -35,7 +37,7 @@ where
         Handle { cell, root }
     }
 
-    pub fn commit(&self) -> Commitment {
+    pub fn commit(&self) -> Hash {
         self.root.hash().into()
     }
 
@@ -68,7 +70,7 @@ where
         rho: &mut Handle<Key, Value>,
     ) -> HashMap<Key, (Option<Value>, Option<Value>)>
     where
-        Key: Clone + Eq + Hash,
+        Key: Clone + Eq + StdHash,
         Value: Clone + Eq,
     {
         if !ptr::eq(lho.cell.as_ref(), rho.cell.as_ref()) {

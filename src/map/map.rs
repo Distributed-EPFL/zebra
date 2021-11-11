@@ -3,7 +3,6 @@ use crate::{
         data::{Bytes, Lender},
         store::Field,
         tree::Path,
-        Commitment,
     },
     map::{
         errors::MapError,
@@ -20,6 +19,7 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::borrow::{Borrow, BorrowMut};
 
 use talk::crypto::primitives::hash;
+use talk::crypto::primitives::hash::Hash;
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
@@ -195,7 +195,7 @@ where
     /// let export = map.export(["alice"]).unwrap();
     /// assert_eq!(map.commit(), export.commit());
     /// ```
-    pub fn commit(&self) -> Commitment {
+    pub fn commit(&self) -> Hash {
         let root: &Node<Key, Value> = self.root.borrow();
         root.hash().into()
     }

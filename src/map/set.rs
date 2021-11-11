@@ -1,9 +1,11 @@
 use crate::{
-    common::{store::Field, Commitment},
+    common::store::Field,
     map::{errors::MapError, Map},
 };
 
 use doomstack::Top;
+
+use talk::crypto::primitives::hash::Hash;
 
 pub struct Set<Item: Field>(Map<Item, ()>);
 
@@ -15,7 +17,7 @@ where
         Set(Map::new())
     }
 
-    pub fn commit(&self) -> Commitment {
+    pub fn commit(&self) -> Hash {
         self.0.commit()
     }
 
