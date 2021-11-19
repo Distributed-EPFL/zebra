@@ -465,4 +465,43 @@ mod tests {
         assert_eq!(vector.layers[3][6], hash::hash(&[6]).unwrap());
         assert_eq!(vector.layers[3][7], hash::hash(&[7]).unwrap());
     }
+
+    #[test]
+    fn stress() {
+        for len in 1..256 {
+            let vector = Vector::new((0..len).collect());
+
+            let mut log2 = 0;
+
+            while (1 << log2) < len {
+                log2 += 1;
+            }
+
+            assert_eq!(vector.layers.len(), log2 + 1);
+
+            for l in 0..(vector.layers.len() - 1) {
+                assert_eq!(
+                    vector.layers[l].len(),
+                    (vector.layers[l + 1].len() + 1) / 2
+                );
+
+                for i in 0..(vector.layers[l].len() - 1) {
+                    assert_eq!(
+                        vector.layers[l][i],
+                        hash::hash(
+                            &if 2 * i + 1 < vector.layers[l + 1].len() {
+                                Children::Siblings(
+                                    vector.layers[l + 1][2 * i],
+                                    vector.layers[l + 1][2 * i + 1],
+                                )
+                            } else {
+                                Children::Only(vector.layers[l + 1][2 * i])
+                            }
+                        )
+                        .unwrap()
+                    )
+                }
+            }
+        }
+    }
 }
