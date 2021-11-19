@@ -1,4 +1,4 @@
-use crate::vector::{errors::VectorError, Children};
+use crate::vector::{errors::VectorError, Children, Proof};
 
 use doomstack::{here, ResultExt, Top};
 
@@ -56,6 +56,31 @@ where
 
     pub fn items(&self) -> &[Item] {
         &self.items
+    }
+
+    pub fn prove(&self, index: usize) -> Proof<Item> {
+        let index = index as u64;
+        let width = (self.items.len() - 1).leading_zeros() as u8;
+
+        let branch = (0..(self.layers.len() - 1))
+            .map(|depth| {
+                let shift = (64 - width) - (depth as u8);
+                let parent = index >> shift;
+
+                if (parent * 2 + 1) as usize >= self.layers[depth + 1].len() {
+                    Children::Only(
+                        self.layers[depth + 1][(parent * 2) as usize],
+                    )
+                } else {
+                    Children::Siblings(
+                        self.layers[depth + 1][(parent * 2) as usize],
+                        self.layers[depth + 1][(parent * 2 + 1) as usize],
+                    )
+                }
+            })
+            .collect();
+
+        Proof::new(width, index, branch)
     }
 }
 
@@ -613,7 +638,7 @@ mod tests {
     }
 
     #[test]
-    fn stress() {
+    fn build_stress() {
         for len in 1..256 {
             let vector = Vector::new((0u32..len).collect()).unwrap();
 
@@ -656,6 +681,18 @@ mod tests {
                     vector.layers.last().unwrap()[i],
                     hash::hash(&Children::Item(i as u32)).unwrap()
                 );
+            }
+        }
+    }
+
+    #[test]
+    fn proof_stress() {
+        for len in 1..128 {
+            let vector = Vector::new((0..len).collect()).unwrap();
+
+            for item in 0..len {
+                let proof = vector.prove(item);
+                proof.verify(vector.root(), &item).unwrap();
             }
         }
     }
