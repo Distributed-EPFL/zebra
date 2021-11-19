@@ -1,4 +1,6 @@
-use crate::vector::Children;
+use crate::vector::{errors::VectorError, Children};
+
+use doomstack::{here, ResultExt, Top};
 
 use serde::Serialize;
 
@@ -14,7 +16,7 @@ impl<Item> Vector<Item>
 where
     Item: Serialize,
 {
-    pub fn new(items: Vec<Item>) -> Self {
+    pub fn new(items: Vec<Item>) -> Result<Self, Top<VectorError>> {
         if items.is_empty() {
             panic!("called `Vector::new` with an empty `items`");
         }
@@ -23,8 +25,11 @@ where
 
         let mut layer = items
             .iter()
-            .map(|element| hash::hash(&Children::Item(element)).unwrap())
-            .collect::<Vec<_>>();
+            .map(|element| {
+                hash::hash(&Children::Item(element))
+                    .pot(VectorError::HashError, here!())
+            })
+            .collect::<Result<Vec<Hash>, Top<VectorError>>>()?;
 
         while layer.len() > 1 {
             layer = {
@@ -42,7 +47,7 @@ where
         layers.push(layer);
         layers.reverse();
 
-        Vector { layers, items }
+        Ok(Vector { layers, items })
     }
 
     pub fn root(&self) -> Hash {
@@ -61,12 +66,12 @@ mod tests {
     #[test]
     #[should_panic]
     fn empty() {
-        Vector::<()>::new(vec![]);
+        Vector::<()>::new(vec![]).unwrap();
     }
 
     #[test]
     fn one_item() {
-        let vector = Vector::new(vec![0u32]);
+        let vector = Vector::new(vec![0u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 1);
         assert_eq!(vector.layers[0].len(), 1);
@@ -79,7 +84,7 @@ mod tests {
 
     #[test]
     fn two_items() {
-        let vector = Vector::new(vec![0u32, 1u32]);
+        let vector = Vector::new(vec![0u32, 1u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 2);
         assert_eq!(vector.layers[0].len(), 1);
@@ -107,7 +112,7 @@ mod tests {
 
     #[test]
     fn three_items() {
-        let vector = Vector::new(vec![0u32, 1u32, 2u32]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 3);
         assert_eq!(vector.layers[0].len(), 1);
@@ -155,7 +160,7 @@ mod tests {
 
     #[test]
     fn four_items() {
-        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 3);
         assert_eq!(vector.layers[0].len(), 1);
@@ -212,7 +217,7 @@ mod tests {
 
     #[test]
     fn five_items() {
-        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -294,7 +299,8 @@ mod tests {
 
     #[test]
     fn six_items() {
-        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32]);
+        let vector =
+            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32]).unwrap();
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -386,7 +392,8 @@ mod tests {
     #[test]
     fn seven_items() {
         let vector =
-            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32]);
+            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32])
+                .unwrap();
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -492,7 +499,8 @@ mod tests {
     #[test]
     fn eight_items() {
         let vector =
-            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32]);
+            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32])
+                .unwrap();
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -607,7 +615,7 @@ mod tests {
     #[test]
     fn stress() {
         for len in 1..256 {
-            let vector = Vector::new((0u32..len).collect());
+            let vector = Vector::new((0u32..len).collect()).unwrap();
 
             let mut log2 = 0;
 
