@@ -1,4 +1,4 @@
-use crate::vector::{errors::ProofError, Children};
+use crate::vector::{errors::ProofError, Children, Node};
 
 use doomstack::{here, Doom, ResultExt, Top};
 
@@ -8,20 +8,17 @@ use talk::crypto::primitives::hash;
 use talk::crypto::primitives::hash::Hash;
 
 #[derive(Serialize, Deserialize)]
-pub struct Proof<Item: Serialize> {
+pub struct Proof {
     width: u8,
     index: u64,
-    branch: Vec<Children<Item>>,
+    branch: Vec<Children>,
 }
 
-impl<Item> Proof<Item>
-where
-    Item: Serialize,
-{
+impl Proof {
     pub(in crate::vector) fn new(
         width: u8,
         index: u64,
-        branch: Vec<Children<Item>>,
+        branch: Vec<Children>,
     ) -> Self {
         Proof {
             width,
@@ -30,20 +27,30 @@ where
         }
     }
 
-    pub fn verify(
+    pub fn verify<Item>(
         &self,
         root: Hash,
         item: &Item,
-    ) -> Result<(), Top<ProofError>> {
+    ) -> Result<(), Top<ProofError>>
+    where
+        Item: Serialize,
+    {
         if self.branch.len() > 0 {
-            if root != hash::hash(&self.branch[0]).unwrap() {
+            if root
+                != hash::hash(&Node::Internal::<Item>(&self.branch[0])).unwrap()
+            {
                 return ProofError::RootMismatch.fail().spot(here!());
             }
 
             for depth in 0..(self.branch.len() - 1) {
                 let label = self.label(depth)?;
 
-                if label != hash::hash(&self.branch[depth + 1]).unwrap() {
+                if label
+                    != hash::hash(&Node::Internal::<Item>(
+                        &self.branch[depth + 1],
+                    ))
+                    .unwrap()
+                {
                     return ProofError::Mislabled.fail().spot(here!());
                 }
             }
@@ -51,13 +58,13 @@ where
             let label = self.label(self.branch.len() - 1)?;
 
             if label
-                != hash::hash(&Children::Item(item))
+                != hash::hash(&Node::Item(item))
                     .pot(ProofError::HashError, here!())?
             {
                 return ProofError::ItemMismatch.fail().spot(here!());
             }
         } else {
-            if root != hash::hash(&Children::Item(item)).unwrap() {
+            if root != hash::hash(&Node::Item(item)).unwrap() {
                 return ProofError::ItemMismatch.fail().spot(here!());
             }
         }
