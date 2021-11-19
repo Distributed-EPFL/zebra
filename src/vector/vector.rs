@@ -1,3 +1,5 @@
+use crate::vector::Children;
+
 use serde::Serialize;
 
 use talk::crypto::primitives::hash;
@@ -28,7 +30,8 @@ where
             layer = {
                 let next = layer
                     .chunks(2)
-                    .map(|chunk| hash::hash(&chunk).unwrap())
+                    .map(Into::<Children>::into)
+                    .map(|children| hash::hash(&children).unwrap())
                     .collect::<Vec<_>>();
 
                 layers.push(layer);
@@ -81,8 +84,11 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(vector.layers[1][0], hash::hash(&[0]).unwrap());
@@ -100,19 +106,25 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2]][..]).unwrap()
+            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
         );
 
         assert_eq!(vector.layers[2][0], hash::hash(&[0]).unwrap());
@@ -131,20 +143,29 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2], vector.layers[2][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][2],
+                vector.layers[2][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(vector.layers[2][0], hash::hash(&[0]).unwrap());
@@ -165,36 +186,48 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2]][..]).unwrap()
+            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&&[vector.layers[3][0], vector.layers[3][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][0],
+                vector.layers[3][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&&[vector.layers[3][2], vector.layers[3][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][2],
+                vector.layers[3][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&&[vector.layers[3][4]][..]).unwrap()
+            hash::hash(&Children::Only(vector.layers[3][4])).unwrap()
         );
 
         assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
@@ -216,37 +249,52 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2]][..]).unwrap()
+            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&&[vector.layers[3][0], vector.layers[3][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][0],
+                vector.layers[3][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&&[vector.layers[3][2], vector.layers[3][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][2],
+                vector.layers[3][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&&[vector.layers[3][4], vector.layers[3][5]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][4],
+                vector.layers[3][5]
+            ))
+            .unwrap()
         );
 
         assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
@@ -269,43 +317,61 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2], vector.layers[2][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][2],
+                vector.layers[2][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&&[vector.layers[3][0], vector.layers[3][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][0],
+                vector.layers[3][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&&[vector.layers[3][2], vector.layers[3][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][2],
+                vector.layers[3][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&&[vector.layers[3][4], vector.layers[3][5]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][4],
+                vector.layers[3][5]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][3],
-            hash::hash(&&[vector.layers[3][6]][..]).unwrap()
+            hash::hash(&Children::Only(vector.layers[3][6])).unwrap()
         );
 
         assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
@@ -329,44 +395,65 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&&[vector.layers[1][0], vector.layers[1][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[1][0],
+                vector.layers[1][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&&[vector.layers[2][0], vector.layers[2][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][0],
+                vector.layers[2][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&&[vector.layers[2][2], vector.layers[2][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[2][2],
+                vector.layers[2][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&&[vector.layers[3][0], vector.layers[3][1]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][0],
+                vector.layers[3][1]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&&[vector.layers[3][2], vector.layers[3][3]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][2],
+                vector.layers[3][3]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&&[vector.layers[3][4], vector.layers[3][5]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][4],
+                vector.layers[3][5]
+            ))
+            .unwrap()
         );
 
         assert_eq!(
             vector.layers[2][3],
-            hash::hash(&&[vector.layers[3][6], vector.layers[3][7]][..])
-                .unwrap()
+            hash::hash(&Children::Siblings(
+                vector.layers[3][6],
+                vector.layers[3][7]
+            ))
+            .unwrap()
         );
 
         assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
