@@ -23,14 +23,14 @@ where
 
         let mut layer = items
             .iter()
-            .map(|element| hash::hash(&element).unwrap())
+            .map(|element| hash::hash(&Children::Item(element)).unwrap())
             .collect::<Vec<_>>();
 
         while layer.len() > 1 {
             layer = {
                 let next = layer
                     .chunks(2)
-                    .map(Into::<Children>::into)
+                    .map(Into::<Children<Item>>::into)
                     .map(|children| hash::hash(&children).unwrap())
                     .collect::<Vec<_>>();
 
@@ -66,17 +66,20 @@ mod tests {
 
     #[test]
     fn one_item() {
-        let vector = Vector::new(vec![0]);
+        let vector = Vector::new(vec![0u32]);
 
         assert_eq!(vector.layers.len(), 1);
         assert_eq!(vector.layers[0].len(), 1);
 
-        assert_eq!(vector.layers[0][0], hash::hash(&[0]).unwrap());
+        assert_eq!(
+            vector.layers[0][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
     }
 
     #[test]
     fn two_items() {
-        let vector = Vector::new(vec![0, 1]);
+        let vector = Vector::new(vec![0u32, 1u32]);
 
         assert_eq!(vector.layers.len(), 2);
         assert_eq!(vector.layers[0].len(), 1);
@@ -84,20 +87,26 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
             .unwrap()
         );
 
-        assert_eq!(vector.layers[1][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[1][1], hash::hash(&[1]).unwrap());
+        assert_eq!(
+            vector.layers[1][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[1][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
     }
 
     #[test]
     fn three_items() {
-        let vector = Vector::new(vec![0, 1, 2]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32]);
 
         assert_eq!(vector.layers.len(), 3);
         assert_eq!(vector.layers[0].len(), 1);
@@ -106,7 +115,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -115,7 +124,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -124,17 +133,26 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
+            hash::hash(&Children::Only::<u32>(vector.layers[2][2])).unwrap()
         );
 
-        assert_eq!(vector.layers[2][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[2][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[2][2], hash::hash(&[2]).unwrap());
+        assert_eq!(
+            vector.layers[2][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[2][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[2][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
     }
 
     #[test]
     fn four_items() {
-        let vector = Vector::new(vec![0, 1, 2, 3]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32]);
 
         assert_eq!(vector.layers.len(), 3);
         assert_eq!(vector.layers[0].len(), 1);
@@ -143,7 +161,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -152,7 +170,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -161,22 +179,34 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][2],
                 vector.layers[2][3]
             ))
             .unwrap()
         );
 
-        assert_eq!(vector.layers[2][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[2][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[2][2], hash::hash(&[2]).unwrap());
-        assert_eq!(vector.layers[2][3], hash::hash(&[3]).unwrap());
+        assert_eq!(
+            vector.layers[2][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[2][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[2][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[2][3],
+            hash::hash(&[Children::Item(3u32)]).unwrap()
+        );
     }
 
     #[test]
     fn five_items() {
-        let vector = Vector::new(vec![0, 1, 2, 3, 4]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32]);
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -186,7 +216,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -195,7 +225,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -204,12 +234,12 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
+            hash::hash(&Children::Only::<u32>(vector.layers[2][2])).unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][0],
                 vector.layers[3][1]
             ))
@@ -218,7 +248,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][2],
                 vector.layers[3][3]
             ))
@@ -227,19 +257,34 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&Children::Only(vector.layers[3][4])).unwrap()
+            hash::hash(&Children::Only::<u32>(vector.layers[3][4])).unwrap()
         );
 
-        assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[3][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[3][2], hash::hash(&[2]).unwrap());
-        assert_eq!(vector.layers[3][3], hash::hash(&[3]).unwrap());
-        assert_eq!(vector.layers[3][4], hash::hash(&[4]).unwrap());
+        assert_eq!(
+            vector.layers[3][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][3],
+            hash::hash(&[Children::Item(3u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][4],
+            hash::hash(&[Children::Item(4u32)]).unwrap()
+        );
     }
 
     #[test]
     fn six_items() {
-        let vector = Vector::new(vec![0, 1, 2, 3, 4, 5]);
+        let vector = Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32]);
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -249,7 +294,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -258,7 +303,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -267,12 +312,12 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Only(vector.layers[2][2])).unwrap()
+            hash::hash(&Children::Only::<u32>(vector.layers[2][2])).unwrap()
         );
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][0],
                 vector.layers[3][1]
             ))
@@ -281,7 +326,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][2],
                 vector.layers[3][3]
             ))
@@ -290,24 +335,43 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][4],
                 vector.layers[3][5]
             ))
             .unwrap()
         );
 
-        assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[3][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[3][2], hash::hash(&[2]).unwrap());
-        assert_eq!(vector.layers[3][3], hash::hash(&[3]).unwrap());
-        assert_eq!(vector.layers[3][4], hash::hash(&[4]).unwrap());
-        assert_eq!(vector.layers[3][5], hash::hash(&[5]).unwrap());
+        assert_eq!(
+            vector.layers[3][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][3],
+            hash::hash(&[Children::Item(3u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][4],
+            hash::hash(&[Children::Item(4u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][5],
+            hash::hash(&[Children::Item(5u32)]).unwrap()
+        );
     }
 
     #[test]
     fn seven_items() {
-        let vector = Vector::new(vec![0, 1, 2, 3, 4, 5, 6]);
+        let vector =
+            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32]);
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -317,7 +381,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -326,7 +390,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -335,7 +399,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][2],
                 vector.layers[2][3]
             ))
@@ -344,7 +408,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][0],
                 vector.layers[3][1]
             ))
@@ -353,7 +417,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][2],
                 vector.layers[3][3]
             ))
@@ -362,7 +426,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][4],
                 vector.layers[3][5]
             ))
@@ -371,21 +435,43 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][3],
-            hash::hash(&Children::Only(vector.layers[3][6])).unwrap()
+            hash::hash(&Children::Only::<u32>(vector.layers[3][6])).unwrap()
         );
 
-        assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[3][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[3][2], hash::hash(&[2]).unwrap());
-        assert_eq!(vector.layers[3][3], hash::hash(&[3]).unwrap());
-        assert_eq!(vector.layers[3][4], hash::hash(&[4]).unwrap());
-        assert_eq!(vector.layers[3][5], hash::hash(&[5]).unwrap());
-        assert_eq!(vector.layers[3][6], hash::hash(&[6]).unwrap());
+        assert_eq!(
+            vector.layers[3][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][3],
+            hash::hash(&[Children::Item(3u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][4],
+            hash::hash(&[Children::Item(4u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][5],
+            hash::hash(&[Children::Item(5u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][6],
+            hash::hash(&[Children::Item(6u32)]).unwrap()
+        );
     }
 
     #[test]
     fn eight_items() {
-        let vector = Vector::new(vec![0, 1, 2, 3, 4, 5, 6, 7]);
+        let vector =
+            Vector::new(vec![0u32, 1u32, 2u32, 3u32, 4u32, 5u32, 6u32, 7u32]);
 
         assert_eq!(vector.layers.len(), 4);
         assert_eq!(vector.layers[0].len(), 1);
@@ -395,7 +481,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[1][0],
                 vector.layers[1][1]
             ))
@@ -404,7 +490,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][0],
                 vector.layers[2][1]
             ))
@@ -413,7 +499,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[2][2],
                 vector.layers[2][3]
             ))
@@ -422,7 +508,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][0],
                 vector.layers[3][1]
             ))
@@ -431,7 +517,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][2],
                 vector.layers[3][3]
             ))
@@ -440,7 +526,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][4],
                 vector.layers[3][5]
             ))
@@ -449,27 +535,51 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][3],
-            hash::hash(&Children::Siblings(
+            hash::hash(&Children::Siblings::<u32>(
                 vector.layers[3][6],
                 vector.layers[3][7]
             ))
             .unwrap()
         );
 
-        assert_eq!(vector.layers[3][0], hash::hash(&[0]).unwrap());
-        assert_eq!(vector.layers[3][1], hash::hash(&[1]).unwrap());
-        assert_eq!(vector.layers[3][2], hash::hash(&[2]).unwrap());
-        assert_eq!(vector.layers[3][3], hash::hash(&[3]).unwrap());
-        assert_eq!(vector.layers[3][4], hash::hash(&[4]).unwrap());
-        assert_eq!(vector.layers[3][5], hash::hash(&[5]).unwrap());
-        assert_eq!(vector.layers[3][6], hash::hash(&[6]).unwrap());
-        assert_eq!(vector.layers[3][7], hash::hash(&[7]).unwrap());
+        assert_eq!(
+            vector.layers[3][0],
+            hash::hash(&[Children::Item(0u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][1],
+            hash::hash(&[Children::Item(1u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][2],
+            hash::hash(&[Children::Item(2u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][3],
+            hash::hash(&[Children::Item(3u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][4],
+            hash::hash(&[Children::Item(4u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][5],
+            hash::hash(&[Children::Item(5u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][6],
+            hash::hash(&[Children::Item(6u32)]).unwrap()
+        );
+        assert_eq!(
+            vector.layers[3][7],
+            hash::hash(&[Children::Item(7u32)]).unwrap()
+        );
     }
 
     #[test]
     fn stress() {
         for len in 1..256 {
-            let vector = Vector::new((0..len).collect());
+            let vector = Vector::new((0u32..len).collect());
 
             let mut log2 = 0;
 
@@ -490,12 +600,14 @@ mod tests {
                         vector.layers[l][i],
                         hash::hash(
                             &if 2 * i + 1 < vector.layers[l + 1].len() {
-                                Children::Siblings(
+                                Children::Siblings::<u32>(
                                     vector.layers[l + 1][2 * i],
                                     vector.layers[l + 1][2 * i + 1],
                                 )
                             } else {
-                                Children::Only(vector.layers[l + 1][2 * i])
+                                Children::Only::<u32>(
+                                    vector.layers[l + 1][2 * i],
+                                )
                             }
                         )
                         .unwrap()
