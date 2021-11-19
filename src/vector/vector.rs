@@ -73,7 +73,7 @@ mod tests {
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
     }
 
@@ -96,11 +96,12 @@ mod tests {
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
     }
 
@@ -138,15 +139,17 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
     }
 
@@ -188,19 +191,22 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[2][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[2][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[2][3],
-            hash::hash(&[Children::Item(3u32)]).unwrap()
+            hash::hash(&Children::Item(3u32)).unwrap()
         );
     }
 
@@ -262,23 +268,27 @@ mod tests {
 
         assert_eq!(
             vector.layers[3][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][3],
-            hash::hash(&[Children::Item(3u32)]).unwrap()
+            hash::hash(&Children::Item(3u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][4],
-            hash::hash(&[Children::Item(4u32)]).unwrap()
+            hash::hash(&Children::Item(4u32)).unwrap()
         );
     }
 
@@ -344,27 +354,32 @@ mod tests {
 
         assert_eq!(
             vector.layers[3][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][3],
-            hash::hash(&[Children::Item(3u32)]).unwrap()
+            hash::hash(&Children::Item(3u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][4],
-            hash::hash(&[Children::Item(4u32)]).unwrap()
+            hash::hash(&Children::Item(4u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][5],
-            hash::hash(&[Children::Item(5u32)]).unwrap()
+            hash::hash(&Children::Item(5u32)).unwrap()
         );
     }
 
@@ -440,31 +455,37 @@ mod tests {
 
         assert_eq!(
             vector.layers[3][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][3],
-            hash::hash(&[Children::Item(3u32)]).unwrap()
+            hash::hash(&Children::Item(3u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][4],
-            hash::hash(&[Children::Item(4u32)]).unwrap()
+            hash::hash(&Children::Item(4u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][5],
-            hash::hash(&[Children::Item(5u32)]).unwrap()
+            hash::hash(&Children::Item(5u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][6],
-            hash::hash(&[Children::Item(6u32)]).unwrap()
+            hash::hash(&Children::Item(6u32)).unwrap()
         );
     }
 
@@ -544,35 +565,42 @@ mod tests {
 
         assert_eq!(
             vector.layers[3][0],
-            hash::hash(&[Children::Item(0u32)]).unwrap()
+            hash::hash(&Children::Item(0u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][1],
-            hash::hash(&[Children::Item(1u32)]).unwrap()
+            hash::hash(&Children::Item(1u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][2],
-            hash::hash(&[Children::Item(2u32)]).unwrap()
+            hash::hash(&Children::Item(2u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][3],
-            hash::hash(&[Children::Item(3u32)]).unwrap()
+            hash::hash(&Children::Item(3u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][4],
-            hash::hash(&[Children::Item(4u32)]).unwrap()
+            hash::hash(&Children::Item(4u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][5],
-            hash::hash(&[Children::Item(5u32)]).unwrap()
+            hash::hash(&Children::Item(5u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][6],
-            hash::hash(&[Children::Item(6u32)]).unwrap()
+            hash::hash(&Children::Item(6u32)).unwrap()
         );
+
         assert_eq!(
             vector.layers[3][7],
-            hash::hash(&[Children::Item(7u32)]).unwrap()
+            hash::hash(&Children::Item(7u32)).unwrap()
         );
     }
 
@@ -599,20 +627,27 @@ mod tests {
                     assert_eq!(
                         vector.layers[l][i],
                         hash::hash(
-                            &if 2 * i + 1 < vector.layers[l + 1].len() {
+                            &if 2 * i + 1 >= vector.layers[l + 1].len() {
+                                Children::Only::<u32>(
+                                    vector.layers[l + 1][2 * i],
+                                )
+                            } else {
                                 Children::Siblings::<u32>(
                                     vector.layers[l + 1][2 * i],
                                     vector.layers[l + 1][2 * i + 1],
-                                )
-                            } else {
-                                Children::Only::<u32>(
-                                    vector.layers[l + 1][2 * i],
                                 )
                             }
                         )
                         .unwrap()
                     )
                 }
+            }
+
+            for i in 0..(vector.layers.last().unwrap().len()) {
+                assert_eq!(
+                    vector.layers.last().unwrap()[i],
+                    hash::hash(&Children::Item(i as u32)).unwrap()
+                );
             }
         }
     }
