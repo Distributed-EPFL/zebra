@@ -1,9 +1,8 @@
-use crate::vector::Children;
-
 use serde::Serialize;
+use talk::crypto::primitives::hash::Hash;
 
 #[derive(Serialize)]
-pub(in crate::vector) enum Node<'n, Item> {
-    Internal(&'n Children),
-    Item(&'n Item),
+pub(in crate::vector) enum Node {
+    Internal(Hash, Hash),
+    Item(Hash),
 }
