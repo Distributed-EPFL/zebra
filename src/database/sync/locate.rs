@@ -13,10 +13,7 @@ enum Recursion {
     Stop(Label, Label),
 }
 
-fn get_siblings<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-) -> (u8, (Label, Label))
+fn get_siblings<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> (u8, (Label, Label))
 where
     Key: Field,
     Value: Field,
@@ -56,17 +53,13 @@ where
     }
 }
 
-pub(crate) fn locate<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-) -> Prefix
+pub(crate) fn locate<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Prefix
 where
     Key: Field,
     Value: Field,
 {
     let (dive, (left, right)) = get_siblings(store, label);
-    let common =
-        Prefix::common(leaf_path(store, left), leaf_path(store, right));
+    let common = Prefix::common(leaf_path(store, left), leaf_path(store, right));
     common.ancestor(dive)
 }
 
@@ -106,18 +99,13 @@ mod tests {
         let rr = store.fetch_label_at(root, Prefix::from_directions([R, R]));
         assert_eq!(locate(&mut store, rr), Prefix::from_directions([R, R]));
 
-        let lll =
-            store.fetch_label_at(root, Prefix::from_directions([L, L, R]));
+        let lll = store.fetch_label_at(root, Prefix::from_directions([L, L, R]));
         assert_eq!(locate(&mut store, lll), Prefix::from_directions([L, L, R]));
     }
 
     #[test]
     fn full() {
-        fn recursion(
-            store: &mut Store<u32, u32>,
-            prefix: Prefix,
-            label: Label,
-        ) {
+        fn recursion(store: &mut Store<u32, u32>, prefix: Prefix, label: Label) {
             if !label.is_empty() {
                 match store.fetch_node(label) {
                     Node::Internal(left, right) => {

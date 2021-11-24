@@ -5,10 +5,8 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-fn recur<Key, Value>(
-    destination: &mut Node<Key, Value>,
-    source: Node<Key, Value>,
-) where
+fn recur<Key, Value>(destination: &mut Node<Key, Value>, source: Node<Key, Value>)
+where
     Key: Field,
     Value: Field,
 {

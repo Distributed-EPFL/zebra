@@ -9,10 +9,11 @@ use crate::{
 
 use oh_snap::Snap;
 
-use std::collections::hash_map::Entry;
-use std::collections::HashMap;
-use std::hash::Hash as StdHash;
-use std::ptr;
+use std::{
+    collections::{hash_map::Entry, HashMap},
+    hash::Hash as StdHash,
+    ptr,
+};
 
 use talk::crypto::primitives::hash::Hash;
 
@@ -79,13 +80,11 @@ where
 
         let store = lho.cell.take();
 
-        let (store, lho_candidates, rho_candidates) =
-            diff::diff(store, lho.root, rho.root);
+        let (store, lho_candidates, rho_candidates) = diff::diff(store, lho.root, rho.root);
 
         lho.cell.restore(store);
 
-        let mut diff: HashMap<Key, (Option<Value>, Option<Value>)> =
-            HashMap::new();
+        let mut diff: HashMap<Key, (Option<Value>, Option<Value>)> = HashMap::new();
 
         for (key, value) in lho_candidates {
             let key = (**key.inner()).clone();

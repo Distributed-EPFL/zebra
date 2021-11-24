@@ -13,13 +13,11 @@ use crate::{
 
 use doomstack::{here, ResultExt, Top};
 
-use serde::de::Error as DeError;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 
 use std::borrow::{Borrow, BorrowMut};
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::Hash;
+use talk::crypto::primitives::{hash, hash::Hash};
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
@@ -254,13 +252,8 @@ where
     /// assert_eq!(map.insert("Alice", 3).unwrap(), Some(2));
     /// assert_eq!(map.get(&"Alice").unwrap(), Some(&3));
     /// ```
-    pub fn insert(
-        &mut self,
-        key: Key,
-        value: Value,
-    ) -> Result<Option<Value>, Top<MapError>> {
-        let update =
-            Update::insert(key, value).pot(MapError::HashError, here!())?;
+    pub fn insert(&mut self, key: Key, value: Value) -> Result<Option<Value>, Top<MapError>> {
+        let update = Update::insert(key, value).pot(MapError::HashError, here!())?;
         self.update(update)
     }
 
@@ -289,18 +282,12 @@ where
     /// assert_eq!(map.remove(&1).unwrap(), Some("a"));
     /// assert_eq!(map.remove(&1).unwrap(), None);
     /// ```
-    pub fn remove(
-        &mut self,
-        key: &Key,
-    ) -> Result<Option<Value>, Top<MapError>> {
+    pub fn remove(&mut self, key: &Key) -> Result<Option<Value>, Top<MapError>> {
         let update = Update::remove(key).pot(MapError::HashError, here!())?;
         self.update(update)
     }
 
-    fn update(
-        &mut self,
-        update: Update<Key, Value>,
-    ) -> Result<Option<Value>, Top<MapError>> {
+    fn update(&mut self, update: Update<Key, Value>) -> Result<Option<Value>, Top<MapError>> {
         let root = self.root.take();
         let (root, result) = interact::apply(root, update);
         self.root.restore(root);
@@ -344,10 +331,7 @@ where
     /// assert_eq!(map.get(&2).unwrap(), Some(&"b"));
     /// assert_eq!(map.get(&3).unwrap(), Some(&"c"));
     /// ```
-    pub fn export<I, K>(
-        &self,
-        keys: I,
-    ) -> Result<Map<Key, Value>, Top<MapError>>
+    pub fn export<I, K>(&self, keys: I) -> Result<Map<Key, Value>, Top<MapError>>
     where
         Key: Clone,
         Value: Clone,
@@ -415,10 +399,7 @@ where
     /// // MapError::MapIncompatible
     /// assert!(first_submap.import(incompatible_map).is_err())
     /// ```
-    pub fn import(
-        &mut self,
-        mut other: Map<Key, Value>,
-    ) -> Result<(), Top<MapError>> {
+    pub fn import(&mut self, mut other: Map<Key, Value>) -> Result<(), Top<MapError>> {
         interact::import(self.root.borrow_mut(), other.root.take())
     }
 }
@@ -465,10 +446,11 @@ mod tests {
         map::store::{self, Internal},
     };
 
-    use std::collections::HashMap;
-    use std::collections::HashSet;
-    use std::fmt::Debug;
-    use std::hash::Hash;
+    use std::{
+        collections::{HashMap, HashSet},
+        fmt::Debug,
+        hash::Hash,
+    };
 
     impl<Key, Value> Map<Key, Value>
     where
@@ -484,10 +466,8 @@ mod tests {
             Key: Field + Clone + Eq + Hash,
             Value: Field + Clone,
         {
-            fn recursion<Key, Value>(
-                node: &Node<Key, Value>,
-                collector: &mut HashMap<Key, Value>,
-            ) where
+            fn recursion<Key, Value>(node: &Node<Key, Value>, collector: &mut HashMap<Key, Value>)
+            where
                 Key: Field + Clone + Eq + Hash,
                 Value: Field + Clone,
             {
@@ -497,10 +477,7 @@ mod tests {
                         recursion(internal.right(), collector);
                     }
                     Node::Leaf(leaf) => {
-                        collector.insert(
-                            leaf.key().inner().clone(),
-                            leaf.value().inner().clone(),
-                        );
+                        collector.insert(leaf.key().inner().clone(), leaf.value().inner().clone());
                     }
                     Node::Empty | Node::Stub(_) => {}
                 }
@@ -517,11 +494,9 @@ mod tests {
             Value: Field + Debug + Clone + Eq + Hash,
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let actual: HashSet<(Key, Value)> =
-                self.collect_records().into_iter().collect();
+            let actual: HashSet<(Key, Value)> = self.collect_records().into_iter().collect();
 
-            let reference: HashSet<(Key, Value)> =
-                reference.into_iter().collect();
+            let reference: HashSet<(Key, Value)> = reference.into_iter().collect();
 
             let differences: HashSet<(Key, Value)> = reference
                 .symmetric_difference(&actual)
@@ -626,13 +601,7 @@ mod tests {
             assert_eq!(map.insert(key, value).unwrap(), Some(key));
 
             map.check_tree();
-            map.assert_records((0..512).map(|i| {
-                if i <= key {
-                    (i, i + 1)
-                } else {
-                    (i, i)
-                }
-            }));
+            map.assert_records((0..512).map(|i| if i <= key { (i, i + 1) } else { (i, i) }));
         }
     }
 
@@ -976,8 +945,7 @@ mod tests {
         let original: Map<u32, u32> = Map::new();
         let serialized = bincode::serialize(&original).unwrap();
 
-        let deserialized: Map<u32, u32> =
-            bincode::deserialize(&serialized).unwrap();
+        let deserialized: Map<u32, u32> = bincode::deserialize(&serialized).unwrap();
 
         assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
@@ -993,8 +961,7 @@ mod tests {
         }
 
         let serialized = bincode::serialize(&original).unwrap();
-        let deserialized: Map<u32, u32> =
-            bincode::deserialize(&serialized).unwrap();
+        let deserialized: Map<u32, u32> = bincode::deserialize(&serialized).unwrap();
 
         assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
@@ -1011,8 +978,7 @@ mod tests {
 
         let export = original.export(0..512).unwrap();
         let serialized = bincode::serialize(&export).unwrap();
-        let deserialized: Map<u32, u32> =
-            bincode::deserialize(&serialized).unwrap();
+        let deserialized: Map<u32, u32> = bincode::deserialize(&serialized).unwrap();
 
         assert_eq!(original.commit(), deserialized.commit());
         deserialized.check_tree();
@@ -1039,8 +1005,7 @@ mod tests {
         original.root.restore(root);
 
         let serialized = bincode::serialize(&original).unwrap();
-        let deserialized: Map<u32, u32> =
-            bincode::deserialize(&serialized).unwrap();
+        let deserialized: Map<u32, u32> = bincode::deserialize(&serialized).unwrap();
 
         assert_eq!(original_commitment, deserialized.commit());
         deserialized.check_tree();
@@ -1112,11 +1077,7 @@ mod tests {
                                 let left = match left {
                                     Node::Internal(internal) => {
                                         let (left, right) = internal.children();
-                                        Node::Internal(Internal::raw(
-                                            hash::empty(),
-                                            left,
-                                            right,
-                                        ))
+                                        Node::Internal(Internal::raw(hash::empty(), left, right))
                                     }
                                     _ => unreachable!(),
                                 };
@@ -1136,8 +1097,7 @@ mod tests {
         original.root.restore(root);
 
         let serialized = bincode::serialize(&original).unwrap();
-        let deserialized =
-            bincode::deserialize::<Map<u32, u32>>(&serialized).unwrap();
+        let deserialized = bincode::deserialize::<Map<u32, u32>>(&serialized).unwrap();
 
         assert_eq!(original_commitment, deserialized.commit());
         deserialized.check_tree();
@@ -1208,9 +1168,7 @@ mod tests {
                                     Node::Internal(internal) => {
                                         let hash = internal.hash();
                                         let (left, right) = internal.children();
-                                        Node::Internal(Internal::raw(
-                                            hash, right, left,
-                                        ))
+                                        Node::Internal(Internal::raw(hash, right, left))
                                     }
                                     _ => unreachable!(),
                                 };

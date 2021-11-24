@@ -1,7 +1,6 @@
 use crate::common::tree::{Direction, Path, PathIterator};
 
-use std::iter::Take;
-use std::ops::Index;
+use std::{iter::Take, ops::Index};
 
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct Prefix {
@@ -79,8 +78,7 @@ impl Index<u8> for Prefix {
 
 impl PartialEq for Prefix {
     fn eq(&self, rho: &Self) -> bool {
-        self.depth == rho.depth
-            && Path::deepeq(&self.path, &rho.path, self.depth)
+        self.depth == rho.depth && Path::deepeq(&self.path, &rho.path, self.depth)
     }
 }
 
@@ -151,13 +149,9 @@ mod tests {
         assert!(Prefix::root().left().contains(&path));
         assert!(!Prefix::root().right().contains(&path));
 
-        assert!(
-            Prefix::from_directions(vec![L, L, L, R, L, L, R]).contains(&path)
-        );
+        assert!(Prefix::from_directions(vec![L, L, L, R, L, L, R]).contains(&path));
 
-        assert!(
-            !Prefix::from_directions(vec![L, L, L, R, L, L, L]).contains(&path)
-        );
+        assert!(!Prefix::from_directions(vec![L, L, L, R, L, L, L]).contains(&path));
 
         assert!(Prefix::new(path, reference.len() as u8).contains(&path));
 
@@ -228,10 +222,7 @@ mod tests {
         use Direction::{Left as L, Right as R};
 
         assert_eq!(
-            Prefix::common(
-                Path::from_directions(vec![]),
-                Path::from_directions(vec![])
-            ),
+            Prefix::common(Path::from_directions(vec![]), Path::from_directions(vec![])),
             Prefix::from_directions(vec![])
         );
 

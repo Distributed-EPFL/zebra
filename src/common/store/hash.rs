@@ -1,7 +1,6 @@
 use crate::common::data::Bytes;
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::HASH_LENGTH;
+use talk::crypto::primitives::{hash, hash::HASH_LENGTH};
 
 const INTERNAL_FLAG: u8 = 0;
 const LEAF_FLAG: u8 = 1;

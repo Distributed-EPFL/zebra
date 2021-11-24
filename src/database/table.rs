@@ -12,12 +12,9 @@ use doomstack::{here, ResultExt, Top};
 
 use oh_snap::Snap;
 
-use std::borrow::Borrow;
-use std::collections::HashMap;
-use std::hash::Hash as StdHash;
+use std::{borrow::Borrow, collections::HashMap, hash::Hash as StdHash};
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::Hash;
+use talk::crypto::primitives::{hash, hash::Hash};
 
 // Documentation links
 #[allow(unused_imports)]
@@ -104,10 +101,7 @@ where
         TableResponse::new(tid, batch)
     }
 
-    pub fn export<I, K>(
-        &mut self,
-        keys: I,
-    ) -> Result<Map<Key, Value>, Top<QueryError>>
+    pub fn export<I, K>(&mut self, keys: I) -> Result<Map<Key, Value>, Top<QueryError>>
     // TODO: Decide if a `QueryError` is appropriate here
     where
         Key: Clone,
@@ -179,8 +173,7 @@ mod tests {
 
     use rand::seq::IteratorRandom;
 
-    use std::fmt::Debug;
-    use std::hash::Hash;
+    use std::{fmt::Debug, hash::Hash};
 
     impl<Key, Value> Table<Key, Value>
     where
@@ -576,17 +569,13 @@ mod tests {
 
                 match lho_set {
                     Set::Identity => lho_transaction.set(key, key).unwrap(),
-                    Set::Successor => {
-                        lho_transaction.set(key, key + 1).unwrap()
-                    }
+                    Set::Successor => lho_transaction.set(key, key + 1).unwrap(),
                     Set::Empty => (),
                 }
 
                 match rho_set {
                     Set::Identity => rho_transaction.set(key, key).unwrap(),
-                    Set::Successor => {
-                        rho_transaction.set(key, key + 1).unwrap()
-                    }
+                    Set::Successor => rho_transaction.set(key, key + 1).unwrap(),
                     Set::Empty => (),
                 }
 

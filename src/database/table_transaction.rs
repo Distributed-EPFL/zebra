@@ -9,9 +9,11 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-use std::collections::HashSet;
-use std::sync::atomic::{AtomicUsize, Ordering};
-use std::vec::Vec;
+use std::{
+    collections::HashSet,
+    sync::atomic::{AtomicUsize, Ordering},
+    vec::Vec,
+};
 
 pub(crate) type Tid = usize;
 
@@ -37,8 +39,7 @@ where
     }
 
     pub fn get(&mut self, key: &Key) -> Result<Query, Top<QueryError>> {
-        let operation = Operation::<Key, Value>::get(key)
-            .pot(QueryError::HashError, here!())?;
+        let operation = Operation::<Key, Value>::get(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             let query = Query {
@@ -53,13 +54,8 @@ where
         }
     }
 
-    pub fn set(
-        &mut self,
-        key: Key,
-        value: Value,
-    ) -> Result<(), Top<QueryError>> {
-        let operation =
-            Operation::set(key, value).pot(QueryError::HashError, here!())?;
+    pub fn set(&mut self, key: Key, value: Value) -> Result<(), Top<QueryError>> {
+        let operation = Operation::set(key, value).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             self.operations.push(operation);
@@ -70,8 +66,7 @@ where
     }
 
     pub fn remove(&mut self, key: &Key) -> Result<(), Top<QueryError>> {
-        let operation =
-            Operation::remove(key).pot(QueryError::HashError, here!())?;
+        let operation = Operation::remove(key).pot(QueryError::HashError, here!())?;
 
         if self.paths.insert(operation.path) {
             self.operations.push(operation);

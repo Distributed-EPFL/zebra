@@ -115,11 +115,7 @@ where
         Internal { hash, children }
     }
 
-    pub(crate) fn raw(
-        hash: Bytes,
-        left: Node<Key, Value>,
-        right: Node<Key, Value>,
-    ) -> Self {
+    pub(crate) fn raw(hash: Bytes, left: Node<Key, Value>, right: Node<Key, Value>) -> Self {
         Internal {
             hash,
             children: Children {

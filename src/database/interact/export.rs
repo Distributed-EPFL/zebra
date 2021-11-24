@@ -4,20 +4,14 @@ use crate::{
         tree::{Direction, Path},
     },
     database::store::{Label, Node, Split, Store},
-    map::store::{
-        Internal as MapInternal, Leaf as MapLeaf, Node as MapNode,
-        Wrap as MapWrap,
-    },
+    map::store::{Internal as MapInternal, Leaf as MapLeaf, Node as MapNode, Wrap as MapWrap},
 };
 
 use oh_snap::Snap;
 
 use std::collections::hash_map::Entry::{Occupied, Vacant};
 
-fn get<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-) -> Node<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -36,8 +30,7 @@ where
 }
 
 fn split(paths: Snap<Path>, depth: u8) -> (Snap<Path>, Snap<Path>) {
-    let partition =
-        paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
+    let partition = paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
 
     let (right, left) = paths.snap(partition);
     (left, right)

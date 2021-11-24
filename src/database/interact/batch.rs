@@ -51,9 +51,11 @@ mod tests {
         database::interact::Action,
     };
 
-    use std::collections::{HashMap, HashSet};
-    use std::fmt::Debug;
-    use std::hash::Hash;
+    use std::{
+        collections::{HashMap, HashSet},
+        fmt::Debug,
+        hash::Hash,
+    };
 
     use talk::crypto::primitives::hash;
 
@@ -81,8 +83,7 @@ mod tests {
             Value: Debug + Clone + Eq + Hash,
             I: IntoIterator<Item = (Key, Option<Value>)>,
         {
-            let reference: HashMap<Key, Option<Value>> =
-                reference.into_iter().collect();
+            let reference: HashMap<Key, Option<Value>> = reference.into_iter().collect();
 
             let preimage: HashMap<Bytes, Key> = reference
                 .iter()
@@ -123,8 +124,7 @@ mod tests {
 
     #[test]
     fn snap_merge() {
-        let operations: Vec<Operation<u32, u32>> =
-            (0..128).map(|i| set!(i, i)).collect();
+        let operations: Vec<Operation<u32, u32>> = (0..128).map(|i| set!(i, i)).collect();
 
         let batch = Batch::new(operations);
 

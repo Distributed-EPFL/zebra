@@ -2,8 +2,7 @@ use crate::common::{data::Bytes, store::Field, tree::Path};
 
 use doomstack::Top;
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::HashError;
+use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug)]
 pub(crate) struct Query {

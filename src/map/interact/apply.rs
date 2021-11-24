@@ -86,9 +86,7 @@ where
                 path,
                 action: Action::Remove,
             },
-        ) if path.reaches(leaf.key().digest()) => {
-            (Node::Empty, Ok(Some(leaf.fields().1.take())))
-        }
+        ) if path.reaches(leaf.key().digest()) => (Node::Empty, Ok(Some(leaf.fields().1.take()))),
         (
             Node::Leaf(leaf),
             Update {

@@ -4,9 +4,7 @@ use std::fmt::{Debug, Error, Formatter, LowerHex};
 
 use talk::crypto::primitives::hash::{Hash, HASH_LENGTH};
 
-#[derive(
-    Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize,
-)]
+#[derive(Clone, Copy, Hash, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct Bytes(pub [u8; HASH_LENGTH]);
 
 impl From<Hash> for Bytes {

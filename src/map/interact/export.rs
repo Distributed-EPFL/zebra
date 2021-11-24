@@ -12,8 +12,7 @@ use crate::{
 use doomstack::{here, Doom, ResultExt, Top};
 
 fn split(paths: &[Path], depth: u8) -> (&[Path], &[Path]) {
-    let partition =
-        paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
+    let partition = paths.partition_point(|path| path[depth] == Direction::Right); // This is because `Direction::Right < Direction::Left`
 
     let right = &paths[..partition];
     let left = &paths[partition..];
@@ -46,9 +45,7 @@ where
             leaf.key().clone(),
             leaf.value().clone(),
         ))),
-        Node::Stub(_) if !paths.is_empty() => {
-            MapError::BranchUnknown.fail().spot(here!())
-        }
+        Node::Stub(_) if !paths.is_empty() => MapError::BranchUnknown.fail().spot(here!()),
 
         Node::Empty => Ok(Node::Empty), // `Node::Empty` is cheaper to clone than `Node::Stub`
 

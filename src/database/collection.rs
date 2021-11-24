@@ -1,12 +1,9 @@
 use crate::{
     common::store::Field,
-    database::{
-        CollectionResponse, CollectionSender, CollectionTransaction, Table,
-    },
+    database::{CollectionResponse, CollectionSender, CollectionTransaction, Table},
 };
 
-use std::collections::HashSet;
-use std::hash::Hash as StdHash;
+use std::{collections::HashSet, hash::Hash as StdHash};
 
 use talk::crypto::primitives::hash::Hash;
 

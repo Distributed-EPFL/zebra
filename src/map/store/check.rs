@@ -11,9 +11,7 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-fn check_internal<Key, Value>(
-    internal: &Internal<Key, Value>,
-) -> Result<(), Top<TopologyError>>
+fn check_internal<Key, Value>(internal: &Internal<Key, Value>) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,
@@ -21,9 +19,7 @@ where
     match (internal.left(), internal.right()) {
         (Node::Empty, Node::Empty)
         | (Node::Empty, Node::Leaf(..))
-        | (Node::Leaf(..), Node::Empty) => {
-            TopologyError::CompactnessViolation.fail().spot(here!())
-        }
+        | (Node::Leaf(..), Node::Empty) => TopologyError::CompactnessViolation.fail().spot(here!()),
         _ => Ok(()),
     }
 }
@@ -63,9 +59,7 @@ where
     }
 }
 
-pub(crate) fn check<Key, Value>(
-    node: &Node<Key, Value>,
-) -> Result<(), Top<TopologyError>>
+pub(crate) fn check<Key, Value>(node: &Node<Key, Value>) -> Result<(), Top<TopologyError>>
 where
     Key: Field,
     Value: Field,

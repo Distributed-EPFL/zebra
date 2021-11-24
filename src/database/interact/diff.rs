@@ -3,13 +3,12 @@ use crate::{
     database::store::{Label, Node, Split, Store, Wrap},
 };
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::LinkedList;
+use std::collections::{
+    hash_map::Entry::{Occupied, Vacant},
+    LinkedList,
+};
 
-fn get<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-) -> Node<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Node<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -121,25 +120,23 @@ where
         let mut lho_collector = LinkedList::new();
         let mut rho_collector = LinkedList::new();
 
-        let lho_recursion =
-            lho_node.and_then(|node| match get(&mut store, node) {
-                Node::Internal(left, right) => Some((left, right)),
-                Node::Leaf(key, value) => {
-                    lho_collector.push_back((key, value));
-                    None
-                }
-                Node::Empty => None,
-            });
+        let lho_recursion = lho_node.and_then(|node| match get(&mut store, node) {
+            Node::Internal(left, right) => Some((left, right)),
+            Node::Leaf(key, value) => {
+                lho_collector.push_back((key, value));
+                None
+            }
+            Node::Empty => None,
+        });
 
-        let rho_recursion =
-            rho_node.and_then(|node| match get(&mut store, node) {
-                Node::Internal(left, right) => Some((left, right)),
-                Node::Leaf(key, value) => {
-                    rho_collector.push_back((key, value));
-                    None
-                }
-                Node::Empty => None,
-            });
+        let rho_recursion = rho_node.and_then(|node| match get(&mut store, node) {
+            Node::Internal(left, right) => Some((left, right)),
+            Node::Leaf(key, value) => {
+                rho_collector.push_back((key, value));
+                None
+            }
+            Node::Empty => None,
+        });
 
         let store = if lho_recursion.is_some() || rho_recursion.is_some() {
             let (store, mut lho_candidates, mut rho_candidates) =

@@ -5,9 +5,7 @@ use crate::{
 
 use doomstack::Top;
 
-pub struct CollectionTransaction<Item: Field>(
-    pub(crate) TableTransaction<Item, ()>,
-);
+pub struct CollectionTransaction<Item: Field>(pub(crate) TableTransaction<Item, ()>);
 
 impl<Item> CollectionTransaction<Item>
 where

@@ -11,8 +11,10 @@ use crate::{
 
 use doomstack::{here, Doom, ResultExt, Top};
 
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::{HashMap, HashSet};
+use std::collections::{
+    hash_map::Entry::{Occupied, Vacant},
+    HashMap, HashSet,
+};
 
 const DEFAULT_WINDOW: usize = 128;
 
@@ -79,10 +81,7 @@ where
                         self.flush(&mut store, root);
                         self.cell.restore(store);
 
-                        Ok(TableStatus::Complete(Table::new(
-                            self.cell.clone(),
-                            root,
-                        )))
+                        Ok(TableStatus::Complete(Table::new(self.cell.clone(), root)))
                     }
                     None => {
                         // No node received: the new table's `root` should be `Empty`
@@ -313,21 +312,19 @@ mod tests {
     fn run<'a, Key, Value, I, const N: usize>(
         database: &Database<Key, Value>,
         tables: I,
-        transfers: [(&mut TableSender<Key, Value>, TableReceiver<Key, Value>);
-            N],
+        transfers: [(&mut TableSender<Key, Value>, TableReceiver<Key, Value>); N],
     ) -> ([Table<Key, Value>; N], usize)
     where
         Key: Field,
         Value: Field,
         I: IntoIterator<Item = &'a Table<Key, Value>>,
     {
-        let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
-            IntoIter::new(transfers).map(|(sender, receiver)| {
+        let mut transfers: [Transfer<Key, Value>; N] =
+            array_init::from_iter(IntoIter::new(transfers).map(|(sender, receiver)| {
                 let hello = sender.hello();
                 Transfer::Incomplete(sender, receiver, hello)
-            }),
-        )
-        .unwrap();
+            }))
+            .unwrap();
 
         let tables: Vec<&Table<Key, Value>> = tables.into_iter().collect();
 
@@ -336,27 +333,24 @@ mod tests {
         loop {
             steps += 1;
 
-            transfers = array_init::from_iter(IntoIter::new(transfers).map(
-                |transfer| match transfer {
+            transfers =
+                array_init::from_iter(IntoIter::new(transfers).map(|transfer| match transfer {
                     Transfer::Incomplete(sender, receiver, answer) => {
                         run_for(receiver, sender, answer, 1)
                     }
                     complete => complete,
-                },
-            ))
-            .unwrap();
+                }))
+                .unwrap();
 
-            let receivers =
-                transfers.iter().filter_map(|transfer| match transfer {
-                    Transfer::Complete(..) => None,
-                    Transfer::Incomplete(_, receiver, _) => Some(receiver),
-                });
+            let receivers = transfers.iter().filter_map(|transfer| match transfer {
+                Transfer::Complete(..) => None,
+                Transfer::Incomplete(_, receiver, _) => Some(receiver),
+            });
 
-            let received =
-                transfers.iter().filter_map(|transfer| match transfer {
-                    Transfer::Complete(table) => Some(table),
-                    Transfer::Incomplete(..) => None,
-                });
+            let received = transfers.iter().filter_map(|transfer| match transfer {
+                Transfer::Complete(table) => Some(table),
+                Transfer::Incomplete(..) => None,
+            });
 
             let tables = tables.clone().into_iter().chain(received);
 
@@ -374,11 +368,9 @@ mod tests {
         }
 
         let received: [Table<Key, Value>; N] =
-            array_init::from_iter(IntoIter::new(transfers).map(|transfer| {
-                match transfer {
-                    Transfer::Complete(table) => table,
-                    Transfer::Incomplete(..) => unreachable!(),
-                }
+            array_init::from_iter(IntoIter::new(transfers).map(|transfer| match transfer {
+                Transfer::Complete(table) => table,
+                Transfer::Incomplete(..) => unreachable!(),
             }))
             .unwrap();
 
@@ -569,8 +561,7 @@ mod tests {
         let mut sender = original.send();
 
         let receiver = bob.receive();
-        let ([second], second_steps) =
-            run(&bob, [&first], [(&mut sender, receiver)]);
+        let ([second], second_steps) = run(&bob, [&first], [(&mut sender, receiver)]);
 
         second.assert_records((0..128).map(|i| (i, i)));
         assert!(second_steps < first_steps);
@@ -645,8 +636,7 @@ mod tests {
         let mut sender = original.send();
 
         let receiver = bob.receive();
-        let ([third], _) =
-            run(&bob, [&first, &second], [(&mut sender, receiver)]);
+        let ([third], _) = run(&bob, [&first, &second], [(&mut sender, receiver)]);
 
         third.assert_records((128..384).map(|i| (i, i)));
     }
@@ -659,8 +649,7 @@ mod tests {
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
 
-        let second_original =
-            alice.table_with_records((256..512).map(|i| (i, i)));
+        let second_original = alice.table_with_records((256..512).map(|i| (i, i)));
         let mut second_sender = second_original.send();
 
         let first_receiver = bob.receive();
@@ -687,8 +676,7 @@ mod tests {
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
 
-        let second_original =
-            alice.table_with_records((0..256).map(|i| (i, i)));
+        let second_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut second_sender = second_original.send();
 
         let first_receiver = bob.receive();
@@ -715,8 +703,7 @@ mod tests {
         let first_original = alice.table_with_records((0..256).map(|i| (i, i)));
         let mut first_sender = first_original.send();
 
-        let second_original =
-            alice.table_with_records((128..384).map(|i| (i, i)));
+        let second_original = alice.table_with_records((128..384).map(|i| (i, i)));
         let mut second_sender = second_original.send();
 
         let first_receiver = bob.receive();
@@ -748,12 +735,10 @@ mod tests {
 
         received.assert_records((0..256).map(|i| (i, i)));
 
-        let first_original =
-            alice.table_with_records((128..384).map(|i| (i, i)));
+        let first_original = alice.table_with_records((128..384).map(|i| (i, i)));
         let mut first_sender = first_original.send();
 
-        let second_original =
-            alice.table_with_records((128..384).map(|i| (i, i)));
+        let second_original = alice.table_with_records((128..384).map(|i| (i, i)));
         let mut second_sender = second_original.send();
 
         let first_receiver = bob.receive();
@@ -785,30 +770,27 @@ mod tests {
 
         received.assert_records((0..256).map(|i| (i, i)));
 
-        let first_original =
-            alice.table_with_records((128..384).map(|i| (i, i)));
+        let first_original = alice.table_with_records((128..384).map(|i| (i, i)));
         let mut first_sender = first_original.send();
 
         let first_receiver = bob.receive();
         let answer = first_sender.hello();
 
-        let (first_receiver, answer) =
-            match run_for(first_receiver, &mut sender, answer, 2) {
-                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
-                Transfer::Complete(_) => {
-                    panic!("Should take longer than 2 steps")
-                }
-            };
+        let (first_receiver, answer) = match run_for(first_receiver, &mut sender, answer, 2) {
+            Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+            Transfer::Complete(_) => {
+                panic!("Should take longer than 2 steps")
+            }
+        };
 
         drop(received);
 
-        let first =
-            match run_for(first_receiver, &mut first_sender, answer, 100) {
-                Transfer::Incomplete(..) => {
-                    panic!("Transfer does not complete")
-                }
-                Transfer::Complete(table) => table,
-            };
+        let first = match run_for(first_receiver, &mut first_sender, answer, 100) {
+            Transfer::Incomplete(..) => {
+                panic!("Transfer does not complete")
+            }
+            Transfer::Complete(table) => table,
+        };
 
         bob.check([&first], []);
         first.assert_records((128..384).map(|i| (i, i)));
@@ -890,15 +872,10 @@ mod tests {
         let fake_leaf = Node::Leaf(wrap!(u32::MAX), wrap!(u32::MAX - 4));
         let fake_internal = Node::Internal(
             Label::Empty,
-            Label::Leaf(
-                MapId::leaf(&wrap!(u32::MAX).digest()),
-                fake_leaf.hash(),
-            ),
+            Label::Leaf(MapId::leaf(&wrap!(u32::MAX).digest()), fake_leaf.hash()),
         );
-        let fake_internal_label = Label::Internal(
-            MapId::internal(Prefix::root().left()),
-            fake_internal.hash(),
-        );
+        let fake_internal_label =
+            Label::Internal(MapId::internal(Prefix::root().left()), fake_internal.hash());
         if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
             answer.0[0] = Node::Internal(fake_internal_label, r);
         }
@@ -928,16 +905,11 @@ mod tests {
         // Malicious tampering of Internal node's right child label ((leaf, empty) -> bad topology)
         let fake_leaf = Node::Leaf(wrap!(u32::MAX), wrap!(u32::MAX - 10));
         let fake_internal = Node::Internal(
-            Label::Leaf(
-                MapId::leaf(&wrap!(u32::MAX).digest()),
-                fake_leaf.hash(),
-            ),
+            Label::Leaf(MapId::leaf(&wrap!(u32::MAX).digest()), fake_leaf.hash()),
             Label::Empty,
         );
-        let fake_internal_label = Label::Internal(
-            MapId::internal(Prefix::root().left()),
-            fake_internal.hash(),
-        );
+        let fake_internal_label =
+            Label::Internal(MapId::internal(Prefix::root().left()), fake_internal.hash());
         if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
             answer.0[0] = Node::Internal(fake_internal_label, r);
         }
@@ -966,10 +938,8 @@ mod tests {
 
         // Malicious tampering of Internal node's right child label ((empty, empty) -> bad topology)
         let fake_internal = Node::Internal(Label::Empty, Label::Empty);
-        let fake_internal_label = Label::Internal(
-            MapId::internal(Prefix::root().left()),
-            fake_internal.hash(),
-        );
+        let fake_internal_label =
+            Label::Internal(MapId::internal(Prefix::root().left()), fake_internal.hash());
         if let Node::<_, _>::Internal(_, r) = answer.0[0].clone() {
             answer.0[0] = Node::Internal(fake_internal_label, r);
         }
@@ -996,20 +966,18 @@ mod tests {
 
         let answer = sender.hello();
 
-        let (receiver, mut answer) =
-            match run_for(receiver, &mut sender, answer, 1) {
-                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
-                Transfer::Complete(_) => {
-                    panic!("Should take longer than 1 step to complete")
-                }
-            };
+        let (receiver, mut answer) = match run_for(receiver, &mut sender, answer, 1) {
+            Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+            Transfer::Complete(_) => {
+                panic!("Should take longer than 1 step to complete")
+            }
+        };
 
         // Malicious tampering of Internal node's right child map_id
         for (i, v) in answer.0.clone().iter().enumerate() {
             if let Node::<_, _>::Internal(l, Label::Internal(_, bytes)) = v {
                 let fake_map_id = MapId::internal(Prefix::root());
-                let n =
-                    Node::Internal(*l, Label::Internal(fake_map_id, *bytes));
+                let n = Node::Internal(*l, Label::Internal(fake_map_id, *bytes));
                 answer.0[i] = n;
                 break;
             }
@@ -1038,13 +1006,12 @@ mod tests {
 
         let answer = sender.hello();
 
-        let (receiver, mut answer) =
-            match run_for(receiver, &mut sender, answer, 2) {
-                Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
-                Transfer::Complete(_) => {
-                    panic!("Should take longer than 2 steps to complete")
-                }
-            };
+        let (receiver, mut answer) = match run_for(receiver, &mut sender, answer, 2) {
+            Transfer::Incomplete(_, receiver, answer) => (receiver, answer),
+            Transfer::Complete(_) => {
+                panic!("Should take longer than 2 steps to complete")
+            }
+        };
 
         // Malicious tampering of Leaf node's key
         for (i, v) in answer.0.clone().iter().enumerate() {
@@ -1126,8 +1093,7 @@ mod tests {
             Node::Internal(_, r) => r,
             _ => unreachable!(),
         };
-        let right =
-            sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
+        let right = sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
 
         let first = match run_for(receiver, &mut sender, answer, 100) {
             Transfer::Incomplete(..) => {
@@ -1172,15 +1138,11 @@ mod tests {
             Node::Internal(_, r) => r,
             _ => unreachable!(),
         };
-        let right_label =
-            match sender.answer(&Question(vec![right_label])).unwrap().0[0]
-                .clone()
-            {
-                Node::Internal(_, r) => r,
-                _ => unreachable!(),
-            };
-        let right =
-            sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
+        let right_label = match sender.answer(&Question(vec![right_label])).unwrap().0[0].clone() {
+            Node::Internal(_, r) => r,
+            _ => unreachable!(),
+        };
+        let right = sender.answer(&Question(vec![right_label])).unwrap().0[0].clone();
 
         let first = match run_for(receiver, &mut sender, answer, 100) {
             Transfer::Incomplete(..) => {

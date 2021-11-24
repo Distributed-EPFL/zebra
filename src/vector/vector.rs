@@ -1,12 +1,13 @@
-use crate::common::tree::Direction;
-use crate::vector::{errors::VectorError, Node, Proof};
+use crate::{
+    common::tree::Direction,
+    vector::{errors::VectorError, Node, Proof},
+};
 
 use doomstack::{here, ResultExt, Top};
 
 use serde::Serialize;
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::Hash;
+use talk::crypto::primitives::{hash, hash::Hash};
 
 #[derive(Debug)]
 pub struct Vector<Item: Serialize> {
@@ -28,10 +29,8 @@ where
         let mut nodes = items
             .iter()
             .map(|element| {
-                let hash = hash::hash(&element)
-                    .pot(VectorError::HashError, here!())?;
-                hash::hash(&Node::Item(hash))
-                    .pot(VectorError::HashError, here!())
+                let hash = hash::hash(&element).pot(VectorError::HashError, here!())?;
+                hash::hash(&Node::Item(hash)).pot(VectorError::HashError, here!())
             })
             .collect::<Result<Vec<Hash>, Top<VectorError>>>()?;
 
@@ -43,7 +42,7 @@ where
                 .unwrap_or(usize::MAX)
                 / 2,
         );
-        
+
         let last_layer = std::cmp::max(1, 2 * (items.len() - pow));
 
         let mut layer = if items.len() - last_layer > 0 {
@@ -51,9 +50,7 @@ where
 
             let mut penultimate_layer: Vec<Hash> = nodes
                 .chunks(2)
-                .map(|pair| {
-                    hash::hash(&Node::Internal(pair[0], pair[1])).unwrap()
-                })
+                .map(|pair| hash::hash(&Node::Internal(pair[0], pair[1])).unwrap())
                 .collect();
 
             layers.push(nodes);
@@ -69,9 +66,7 @@ where
             layer = {
                 let next = layer
                     .chunks(2)
-                    .map(|pair| {
-                        hash::hash(&Node::Internal(pair[0], pair[1])).unwrap()
-                    })
+                    .map(|pair| hash::hash(&Node::Internal(pair[0], pair[1])).unwrap())
                     .collect::<Vec<_>>();
 
                 layers.push(layer);
@@ -188,10 +183,8 @@ mod tests {
             vector.layers[2][0],
             hash::hash(&Node::Internal(
                 hash::hash(&Node::Internal(
-                    hash::hash(&Node::Item(hash::hash(&0u32).unwrap()))
-                        .unwrap(),
-                    hash::hash(&Node::Item(hash::hash(&1u32).unwrap()))
-                        .unwrap()
+                    hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
+                    hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap()
                 ))
                 .unwrap(),
                 hash::hash(&Node::Item(hash::hash(&2u32).unwrap())).unwrap()

@@ -1,7 +1,9 @@
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use std::borrow::{Borrow, BorrowMut};
-use std::mem;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    mem,
+};
 
 pub(crate) struct Lender<Inner> {
     state: State<Inner>,
@@ -25,7 +27,9 @@ impl<Inner> Lender<Inner> {
 
         match state {
             State::Available(inner) => inner,
-            State::Lent => panic!("attempted to `Lender::take` more than once without `Lender::restore`")
+            State::Lent => {
+                panic!("attempted to `Lender::take` more than once without `Lender::restore`")
+            }
         }
     }
 
@@ -42,9 +46,7 @@ impl<Inner> Borrow<Inner> for Lender<Inner> {
     fn borrow(&self) -> &Inner {
         match &self.state {
             State::Available(inner) => &inner,
-            State::Lent => panic!(
-                "attempted to `borrow` `Lender` without `Lender::restore`"
-            ),
+            State::Lent => panic!("attempted to `borrow` `Lender` without `Lender::restore`"),
         }
     }
 }
@@ -53,9 +55,7 @@ impl<Inner> BorrowMut<Inner> for Lender<Inner> {
     fn borrow_mut(&mut self) -> &mut Inner {
         match &mut self.state {
             State::Available(inner) => inner,
-            State::Lent => panic!(
-                "attempted to `borrow_mut `Lender` without `Lender::restore`"
-            ),
+            State::Lent => panic!("attempted to `borrow_mut `Lender` without `Lender::restore`"),
         }
     }
 }
@@ -96,8 +96,7 @@ mod tests {
     fn serialize_available() {
         let lender: Lender<u32> = Lender::new(3);
         let serialized = bincode::serialize(&lender).unwrap();
-        let mut lender: Lender<u32> =
-            bincode::deserialize(&serialized).unwrap();
+        let mut lender: Lender<u32> = bincode::deserialize(&serialized).unwrap();
 
         let value = lender.take();
         assert_eq!(value, 3);

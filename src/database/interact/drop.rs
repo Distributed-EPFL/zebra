@@ -23,8 +23,7 @@ mod tests {
 
     use crate::database::interact::{apply, Batch};
 
-    use rand::seq::IteratorRandom;
-    use rand::Rng;
+    use rand::{seq::IteratorRandom, Rng};
 
     #[test]
     fn single() {
@@ -43,13 +42,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((128..256).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -64,13 +61,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -85,13 +80,11 @@ mod tests {
         let store = Store::<u32, u32>::new();
 
         let batch = Batch::new((0..128).map(|i| set!(i, i)).collect());
-        let (mut store, first_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, first_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root]);
 
         let batch = Batch::new((64..192).map(|i| set!(i, i)).collect());
-        let (mut store, second_root, _) =
-            apply::apply(store, Label::Empty, batch);
+        let (mut store, second_root, _) = apply::apply(store, Label::Empty, batch);
         store.check_leaks([first_root, second_root]);
 
         drop(&mut store, first_root);
@@ -111,8 +104,7 @@ mod tests {
         for _ in 0..32 {
             if rng.gen::<bool>() {
                 let keys = (0..1024).choose_multiple(&mut rng, 128);
-                let batch =
-                    Batch::new(keys.iter().map(|&i| set!(i, i)).collect());
+                let batch = Batch::new(keys.iter().map(|&i| set!(i, i)).collect());
 
                 let result = apply::apply(store, Label::Empty, batch);
                 store = result.0;

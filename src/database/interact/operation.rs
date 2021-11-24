@@ -5,8 +5,7 @@ use crate::{
 
 use doomstack::Top;
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::HashError;
+use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug)]
 pub(crate) struct Operation<Key: Field, Value: Field> {
@@ -75,9 +74,7 @@ mod tests {
     fn operation() {
         use Direction::{Left as L, Right as R};
 
-        let prefix = Prefix::from_directions(vec![
-            L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L,
-        ]);
+        let prefix = Prefix::from_directions(vec![L, L, L, R, L, L, R, R, R, R, L, R, L, R, L, L]);
 
         let set = set!(0u32, 8u32);
 

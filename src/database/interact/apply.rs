@@ -46,10 +46,7 @@ where
     }
 }
 
-fn get<Key, Value>(
-    store: &mut Store<Key, Value>,
-    label: Label,
-) -> Entry<Key, Value>
+fn get<Key, Value>(store: &mut Store<Key, Value>, label: Label) -> Entry<Key, Value>
 where
     Key: Field,
     Value: Field,
@@ -94,34 +91,31 @@ where
 
     let (mut store, batch, new_left, new_right) = match store.split() {
         Split::Split(left_store, right_store) => {
-            let (left_batch, left_chunk, right_batch, right_chunk) =
-                chunk.snap(batch);
+            let (left_batch, left_chunk, right_batch, right_chunk) = chunk.snap(batch);
 
-            let (
-                (left_store, left_batch, left_label),
-                (right_store, right_batch, right_label),
-            ) = rayon::join(
-                move || {
-                    recur(
-                        left_store,
-                        left,
-                        preserve_branches,
-                        depth + 1,
-                        left_batch,
-                        left_chunk,
-                    )
-                },
-                move || {
-                    recur(
-                        right_store,
-                        right,
-                        preserve_branches,
-                        depth + 1,
-                        right_batch,
-                        right_chunk,
-                    )
-                },
-            );
+            let ((left_store, left_batch, left_label), (right_store, right_batch, right_label)) =
+                rayon::join(
+                    move || {
+                        recur(
+                            left_store,
+                            left,
+                            preserve_branches,
+                            depth + 1,
+                            left_batch,
+                            left_chunk,
+                        )
+                    },
+                    move || {
+                        recur(
+                            right_store,
+                            right,
+                            preserve_branches,
+                            depth + 1,
+                            right_batch,
+                            right_chunk,
+                        )
+                    },
+                );
 
             let store = Store::merge(left_store, right_store);
             let batch = Batch::merge(left_batch, right_batch);
@@ -131,14 +125,8 @@ where
         Split::Unsplittable(store) => {
             let (left_chunk, right_chunk) = chunk.split(&batch);
 
-            let (store, batch, left_label) = recur(
-                store,
-                left,
-                preserve_branches,
-                depth + 1,
-                batch,
-                left_chunk,
-            );
+            let (store, batch, left_label) =
+                recur(store, left, preserve_branches, depth + 1, batch, left_chunk);
 
             let (store, batch, right_label) = recur(
                 store,
@@ -155,8 +143,7 @@ where
 
     let (new_label, adopt) = match (new_left, new_right) {
         (Label::Empty, Label::Empty) => (Label::Empty, false),
-        (Label::Empty, Label::Leaf(map, hash))
-        | (Label::Leaf(map, hash), Label::Empty) => {
+        (Label::Empty, Label::Leaf(map, hash)) | (Label::Leaf(map, hash), Label::Empty) => {
             (Label::Leaf(map, hash), false)
         }
         (new_left, new_right) => {
@@ -267,12 +254,11 @@ where
             }),
         ) => (store, batch, target.label),
         (Node::Leaf(key, _), _) => {
-            let (left, right) =
-                if Path::from(key.digest())[depth] == Direction::Left {
-                    (target, Entry::empty())
-                } else {
-                    (Entry::empty(), target)
-                };
+            let (left, right) = if Path::from(key.digest())[depth] == Direction::Left {
+                (target, Entry::empty())
+            } else {
+                (Entry::empty(), target)
+            };
 
             branch(store, None, preserve, depth, batch, chunk, left, right)
         }
@@ -307,8 +293,7 @@ where
     let root_node = get(&mut store, root);
     let root_chunk = Chunk::root(&batch);
 
-    let (mut store, batch, new_root) =
-        recur(store, root_node, false, 0, batch, root_chunk);
+    let (mut store, batch, new_root) = recur(store, root_node, false, 0, batch, root_chunk);
 
     let old_root = root;
     if new_root != old_root {
@@ -325,8 +310,7 @@ mod tests {
 
     use crate::database::interact::Operation;
 
-    use rand::seq::IteratorRandom;
-    use rand::Rng;
+    use rand::{seq::IteratorRandom, Rng};
 
     use std::collections::HashMap;
 
@@ -511,9 +495,7 @@ mod tests {
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch);
 
-        batch.assert_gets(
-            (64..192).map(|i| (i, if i < 128 { Some(i) } else { None })),
-        );
+        batch.assert_gets((64..192).map(|i| (i, if i < 128 { Some(i) } else { None })));
     }
 
     #[test]
@@ -544,9 +526,7 @@ mod tests {
         let batch = Batch::new((64..192).map(|i| get!(i)).collect());
         let (_, _, batch) = apply(store, root, batch);
 
-        batch.assert_gets(
-            (64..192).map(|i| (i, if i < 128 { Some(i + 1) } else { None })),
-        );
+        batch.assert_gets((64..192).map(|i| (i, if i < 128 { Some(i + 1) } else { None })));
     }
 
     #[test]
@@ -582,15 +562,10 @@ mod tests {
         let (mut store, root, batch) = apply(store, root, batch);
 
         store.check_tree(root);
-        store.assert_records(
-            root,
-            (0..192).map(|i| (i, if i < 128 { i + 1 } else { i })),
-        );
+        store.assert_records(root, (0..192).map(|i| (i, if i < 128 { i + 1 } else { i })));
         store.check_leaks([root]);
 
-        batch.assert_gets(
-            (128..256).map(|i| (i, if i < 192 { Some(i) } else { None })),
-        );
+        batch.assert_gets((128..256).map(|i| (i, if i < 192 { Some(i) } else { None })));
     }
 
     #[test]
@@ -719,10 +694,7 @@ mod tests {
                             remove!(key)
                         }
                     } else {
-                        get_reference.insert(
-                            key,
-                            record_reference.get(&key).map(|value| *value),
-                        );
+                        get_reference.insert(key, record_reference.get(&key).map(|value| *value));
                         get!(key)
                     }
                 })
@@ -932,10 +904,8 @@ mod tests {
                                 remove!(key)
                             }
                         } else {
-                            get_reference.insert(
-                                key,
-                                record_reference.get(&key).map(|value| *value),
-                            );
+                            get_reference
+                                .insert(key, record_reference.get(&key).map(|value| *value));
                             get!(key)
                         }
                     })

@@ -161,10 +161,7 @@ mod tests {
         Key: Field,
         Value: Field,
     {
-        pub(crate) fn table_with_records<I>(
-            &self,
-            records: I,
-        ) -> Table<Key, Value>
+        pub(crate) fn table_with_records<I>(&self, records: I) -> Table<Key, Value>
         where
             I: IntoIterator<Item = (Key, Value)>,
         {
@@ -184,11 +181,9 @@ mod tests {
             I: IntoIterator<Item = &'a Table<Key, Value>>,
             J: IntoIterator<Item = &'a TableReceiver<Key, Value>>,
         {
-            let tables: Vec<&'a Table<Key, Value>> =
-                tables.into_iter().collect();
+            let tables: Vec<&'a Table<Key, Value>> = tables.into_iter().collect();
 
-            let receivers: Vec<&'a TableReceiver<Key, Value>> =
-                receivers.into_iter().collect();
+            let receivers: Vec<&'a TableReceiver<Key, Value>> = receivers.into_iter().collect();
 
             for table in &tables {
                 table.check_tree();
@@ -196,8 +191,7 @@ mod tests {
 
             let table_held = tables.iter().map(|table| table.root());
 
-            let receiver_held =
-                receivers.iter().map(|receiver| receiver.held()).flatten();
+            let receiver_held = receivers.iter().map(|receiver| receiver.held()).flatten();
 
             let held: Vec<Label> = table_held.chain(receiver_held).collect();
 
@@ -219,9 +213,7 @@ mod tests {
             transaction.set(i, i + 1).unwrap();
         }
         let _ = table.execute(transaction);
-        table.assert_records(
-            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
-        );
+        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
 
         database.check([&table], []);
     }
@@ -238,17 +230,13 @@ mod tests {
             transaction.set(i, i + 1).unwrap();
         }
         let _response = table.execute(transaction);
-        table.assert_records(
-            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
-        );
+        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         table_clone.assert_records((0..256).map(|i| (i, i)));
 
         database.check([&table, &table_clone], []);
         drop(table_clone);
 
-        table.assert_records(
-            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
-        );
+        table.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         database.check([&table], []);
     }
 
@@ -264,9 +252,7 @@ mod tests {
             transaction.set(i, i + 1).unwrap();
         }
         let _response = table_clone.execute(transaction);
-        table_clone.assert_records(
-            (0..256).map(|i| (i, if i < 128 { i } else { i + 1 })),
-        );
+        table_clone.assert_records((0..256).map(|i| (i, if i < 128 { i } else { i + 1 })));
         table.assert_records((0..256).map(|i| (i, i)));
 
         database.check([&table, &table_clone], []);

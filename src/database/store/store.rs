@@ -5,14 +5,19 @@ use crate::{
 
 use oh_snap::Snap;
 
-use std::collections::hash_map::Entry as HashMapEntry;
-use std::collections::hash_map::Entry::{Occupied, Vacant};
-use std::collections::HashMap;
-use std::iter;
+use std::{
+    collections::{
+        hash_map::{
+            Entry as HashMapEntry,
+            Entry::{Occupied, Vacant},
+        },
+        HashMap,
+    },
+    iter,
+};
 
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
-pub(crate) type EntryMapEntry<'a, Key, Value> =
-    HashMapEntry<'a, Bytes, Entry<Key, Value>>;
+pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
 pub(crate) const DEPTH: u8 = 8;
 
@@ -131,11 +136,7 @@ where
         }
     }
 
-    pub fn decref(
-        &mut self,
-        label: Label,
-        preserve: bool,
-    ) -> Option<Node<Key, Value>>
+    pub fn decref(&mut self, label: Label, preserve: bool) -> Option<Node<Key, Value>>
     where
         Key: Field,
         Value: Field,
@@ -170,9 +171,7 @@ mod tests {
         database::store::{Entry, Node, Wrap},
     };
 
-    use std::collections::HashSet;
-    use std::fmt::Debug;
-    use std::hash::Hash;
+    use std::{collections::HashSet, fmt::Debug, hash::Hash};
 
     impl<Key, Value> Store<Key, Value>
     where
@@ -234,11 +233,7 @@ mod tests {
             }
         }
 
-        pub fn fetch_label_at(
-            &mut self,
-            root: Label,
-            location: Prefix,
-        ) -> Label {
+        pub fn fetch_label_at(&mut self, root: Label, location: Prefix) -> Label {
             let mut next = root;
 
             for direction in location {
@@ -281,11 +276,8 @@ mod tests {
         }
 
         pub fn check_tree(&mut self, root: Label) {
-            fn recursion<Key, Value>(
-                store: &mut Store<Key, Value>,
-                label: Label,
-                location: Prefix,
-            ) where
+            fn recursion<Key, Value>(store: &mut Store<Key, Value>, label: Label, location: Prefix)
+            where
                 Key: Field,
                 Value: Field,
             {
@@ -380,8 +372,7 @@ mod tests {
                 }
             }
 
-            let mut references: HashMap<Label, HashSet<Reference>> =
-                HashMap::new();
+            let mut references: HashMap<Label, HashSet<Reference>> = HashMap::new();
 
             for (id, held) in held.into_iter().enumerate() {
                 references
@@ -396,10 +387,7 @@ mod tests {
                 if !label.is_empty() {
                     match self.entry(label) {
                         Occupied(entry) => {
-                            assert_eq!(
-                                entry.get().references,
-                                references.len()
-                            );
+                            assert_eq!(entry.get().references, references.len());
                         }
                         Vacant(..) => unreachable!(),
                     }
@@ -428,10 +416,7 @@ mod tests {
                     }
                     Label::Leaf(..) => {
                         let (key, value) = store.fetch_leaf(label);
-                        collector.insert(
-                            (**key.inner()).clone(),
-                            (**value.inner()).clone(),
-                        );
+                        collector.insert((**key.inner()).clone(), (**value.inner()).clone());
                     }
                     Label::Empty => {}
                 }
@@ -448,11 +433,9 @@ mod tests {
             Value: Debug + Clone + Eq + Hash,
             I: IntoIterator<Item = (Key, Value)>,
         {
-            let actual: HashSet<(Key, Value)> =
-                self.collect_records(root).into_iter().collect();
+            let actual: HashSet<(Key, Value)> = self.collect_records(root).into_iter().collect();
 
-            let reference: HashSet<(Key, Value)> =
-                reference.into_iter().collect();
+            let reference: HashSet<(Key, Value)> = reference.into_iter().collect();
 
             let differences: HashSet<(Key, Value)> = reference
                 .symmetric_difference(&actual)

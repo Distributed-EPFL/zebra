@@ -23,9 +23,7 @@ where
     pub fn hash(&self) -> Bytes {
         match self {
             Node::Empty => hash::empty(),
-            Node::Internal(left, right) => {
-                hash::internal(left.hash(), right.hash())
-            }
+            Node::Internal(left, right) => hash::internal(left.hash(), right.hash()),
             Node::Leaf(key, value) => hash::leaf(key.digest(), value.digest()),
         }
     }
@@ -53,14 +51,12 @@ where
     fn eq(&self, rho: &Node<Key, Value>) -> bool {
         match (self, rho) {
             (Node::Empty, Node::Empty) => true,
-            (
-                Node::Internal(self_left, self_right),
-                Node::Internal(rho_left, rho_right),
-            ) => (self_left == rho_left) && (self_right == rho_right),
-            (
-                Node::Leaf(self_key, self_value),
-                Node::Leaf(rho_key, rho_value),
-            ) => (self_key == rho_key) && (self_value == rho_value),
+            (Node::Internal(self_left, self_right), Node::Internal(rho_left, rho_right)) => {
+                (self_left == rho_left) && (self_right == rho_right)
+            }
+            (Node::Leaf(self_key, self_value), Node::Leaf(rho_key, rho_value)) => {
+                (self_key == rho_key) && (self_value == rho_value)
+            }
             _ => false,
         }
     }

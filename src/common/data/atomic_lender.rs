@@ -1,6 +1,8 @@
-use std::mem;
-use std::ops::DerefMut;
-use std::sync::{Arc, Condvar, Mutex};
+use std::{
+    mem,
+    ops::DerefMut,
+    sync::{Arc, Condvar, Mutex},
+};
 
 pub(crate) struct AtomicLender<Inner> {
     state: Mutex<State<Inner>>,
@@ -44,7 +46,9 @@ impl<Inner> AtomicLender<Inner> {
         if let State::Lent = *guard {
             *guard = State::Available(inner);
         } else {
-            panic!("attempted to `AtomicLender::restore` more than once without `AtomicLender::take`");
+            panic!(
+                "attempted to `AtomicLender::restore` more than once without `AtomicLender::take`"
+            );
         }
 
         self.condvar.notify_one();
@@ -55,9 +59,7 @@ impl<Inner> AtomicLender<Inner> {
 mod tests {
     use super::*;
 
-    use std::thread;
-    use std::thread::JoinHandle;
-    use std::time::Duration;
+    use std::{thread, thread::JoinHandle, time::Duration};
 
     #[test]
     fn stress() {

@@ -1,8 +1,6 @@
 use crate::{
     common::store::Field,
-    database::{
-        errors::SyncError, Collection, CollectionAnswer, Question, TableSender,
-    },
+    database::{errors::SyncError, Collection, CollectionAnswer, Question, TableSender},
 };
 
 use doomstack::Top;

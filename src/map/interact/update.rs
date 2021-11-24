@@ -5,8 +5,7 @@ use crate::{
 
 use doomstack::Top;
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::HashError;
+use talk::crypto::primitives::{hash, hash::HashError};
 
 #[derive(Debug)]
 pub(crate) struct Update<Key: Field, Value: Field> {

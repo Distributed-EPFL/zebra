@@ -4,8 +4,7 @@ use doomstack::Top;
 
 use serde::{Deserialize, Serialize};
 
-use talk::crypto::primitives::hash;
-use talk::crypto::primitives::hash::HashError;
+use talk::crypto::primitives::{hash, hash::HashError};
 
 use std::sync::Arc;
 
