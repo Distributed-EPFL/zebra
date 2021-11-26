@@ -1,10 +1,12 @@
 use crate::{
-    common::{data::AtomicLender, store::Field},
+    common::store::Field,
     database::{
         store::{Cell, Store},
         Table, TableReceiver,
     },
 };
+
+use talk::sync::lenders::AtomicLender;
 
 /// A datastrucure for memory-efficient storage and transfer of maps with a
 /// large degree of similarity (% of key-pairs in common).

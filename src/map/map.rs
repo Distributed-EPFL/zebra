@@ -1,9 +1,5 @@
 use crate::{
-    common::{
-        data::{Bytes, Lender},
-        store::Field,
-        tree::Path,
-    },
+    common::{data::Bytes, store::Field, tree::Path},
     map::{
         errors::MapError,
         interact::{self, Query, Update},
@@ -17,7 +13,10 @@ use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializ
 
 use std::borrow::{Borrow, BorrowMut};
 
-use talk::crypto::primitives::{hash, hash::Hash};
+use talk::{
+    crypto::primitives::{hash, hash::Hash},
+    sync::lenders::Lender,
+};
 
 /// A map based on Merkle-prefix trees supporting both existence and deniability proofs.
 ///
