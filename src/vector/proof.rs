@@ -1,3 +1,5 @@
+use bit_vec::BitVec;
+
 use crate::{
     common::tree::Direction,
     vector::{errors::ProofError, Node},
@@ -9,14 +11,22 @@ use serde::{Deserialize, Serialize};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Proof {
-    path: Vec<Direction>,
+    path: BitVec,
     proof: Vec<Hash>,
 }
 
 impl Proof {
-    pub(in crate::vector) fn new(path: Vec<Direction>, proof: Vec<Hash>) -> Self {
+    pub(in crate::vector) fn new<I>(path: I, proof: Vec<Hash>) -> Self
+    where
+        I: IntoIterator<Item = Direction>,
+    {
+        let path = path
+            .into_iter()
+            .map(|direction| direction == Direction::Left)
+            .collect::<BitVec>();
+
         Proof { path, proof }
     }
 
@@ -29,8 +39,8 @@ impl Proof {
 
         for (direction, sibling_hash) in self.path.iter().zip(self.proof.iter().cloned()) {
             let parent = match direction {
-                Direction::Left => Node::Internal(hash, sibling_hash),
-                Direction::Right => Node::Internal(sibling_hash, hash),
+                true => Node::Internal(hash, sibling_hash),
+                false => Node::Internal(sibling_hash, hash),
             };
 
             hash = hash::hash(&parent).unwrap();
