@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Vector<Item: Serialize> {
     layers: Vec<Vec<Hash>>,
     items: Vec<Item>,
@@ -77,6 +77,10 @@ where
         layers.push(layer);
 
         Ok(Vector { layers, items })
+    }
+
+    pub fn len(&self) -> usize {
+        self.items.len()
     }
 
     pub fn root(&self) -> Hash {
