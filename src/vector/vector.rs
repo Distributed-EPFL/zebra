@@ -5,7 +5,7 @@ use crate::{
 
 use doomstack::{here, ResultExt, Top};
 
-use serde::Serialize;
+use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 
 use talk::crypto::primitives::{hash, hash::Hash};
 
@@ -123,6 +123,31 @@ where
     }
 }
 
+impl<Item> Serialize for Vector<Item>
+where
+    Item: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        self.items.serialize(serializer)
+    }
+}
+
+impl<'de, Item> Deserialize<'de> for Vector<Item>
+where
+    Item: Serialize + Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let items = Vec::<Item>::deserialize(deserializer)?;
+        Ok(Vector::new(items).map_err(|err| DeError::custom(err))?)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -231,5 +256,14 @@ mod tests {
                 proof.verify(vector.root(), &item).unwrap();
             }
         }
+    }
+
+    #[test]
+    fn serde() {
+        let original = Vector::new((0..128).collect()).unwrap();
+        let serialized = bincode::serialize(&original).unwrap();
+        let deserialized = bincode::deserialize::<Vector<u32>>(&serialized).unwrap();
+
+        assert_eq!(original.items(), deserialized.items())
     }
 }
