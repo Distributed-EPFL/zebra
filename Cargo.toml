@@ -10,7 +10,7 @@ edition = "2018"
 debug = 2
 
 [dependencies]
-talk = { git = "https://github.com/Distributed-EPFL/talk" }
+talk = { git = "https://github.com/Distributed-EPFL/talk", branch="benchmark" }
 serde = { version = "~1.0", features = [ "derive", "rc" ] }
 oh-snap = { version = "0.0.2" }
 doomstack = { git = "https://github.com/Distributed-EPFL/doomstack" }
