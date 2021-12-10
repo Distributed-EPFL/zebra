@@ -7,7 +7,10 @@ use doomstack::Top;
 
 use serde::{Deserialize, Serialize};
 
-use std::borrow::Borrow;
+use std::{
+    borrow::Borrow,
+    fmt::{Debug, Error, Formatter},
+};
 
 use talk::crypto::primitives::hash::Hash;
 
@@ -53,5 +56,14 @@ where
 
     pub fn import(&mut self, other: Set<Item>) -> Result<(), Top<MapError>> {
         self.0.import(other.0)
+    }
+}
+
+impl<Item> Debug for Set<Item>
+where
+    Item: Field,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "Set(commitment: {:?})", self.commit())
     }
 }
