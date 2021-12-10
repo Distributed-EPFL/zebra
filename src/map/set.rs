@@ -19,6 +19,10 @@ where
         Set(Map::new())
     }
 
+    pub fn root_stub(commitment: Hash) -> Self {
+        Set(Map::root_stub(commitment))
+    }
+
     pub fn commit(&self) -> Hash {
         self.0.commit()
     }

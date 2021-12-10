@@ -169,6 +169,12 @@ where
         }
     }
 
+    pub fn root_stub(commitment: Hash) -> Self {
+        Map {
+            root: Lender::new(Node::stub(commitment.into())),
+        }
+    }
+
     pub(crate) fn raw(root: Node<Key, Value>) -> Self {
         Map {
             root: Lender::new(root),
