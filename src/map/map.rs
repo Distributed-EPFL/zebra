@@ -409,6 +409,17 @@ where
     }
 }
 
+impl<Key, Value> Clone for Map<Key, Value>
+where
+    Key: Field + Clone,
+    Value: Field + Clone,
+{
+    fn clone(&self) -> Self {
+        let root: &Node<Key, Value> = self.root.borrow();
+        Map::raw(root.clone())
+    }
+}
+
 impl<Key, Value> Serialize for Map<Key, Value>
 where
     Key: Field,

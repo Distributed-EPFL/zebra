@@ -8,7 +8,7 @@ use crate::{
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) enum Node<Key: Field, Value: Field> {
     Empty,
     Internal(Internal<Key, Value>),
@@ -16,29 +16,31 @@ pub(crate) enum Node<Key: Field, Value: Field> {
     Stub(Stub),
 }
 
+#[derive(Clone)]
 pub(crate) struct Internal<Key: Field, Value: Field> {
     hash: Bytes,
     children: Children<Key, Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Children<Key: Field, Value: Field> {
     left: Box<Node<Key, Value>>,
     right: Box<Node<Key, Value>>,
 }
 
+#[derive(Clone)]
 pub(crate) struct Leaf<Key: Field, Value: Field> {
     hash: Bytes,
     fields: Fields<Key, Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 struct Fields<Key: Field, Value: Field> {
     key: Wrap<Key>,
     value: Wrap<Value>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct Stub {
     hash: Bytes,
 }

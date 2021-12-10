@@ -11,7 +11,7 @@ use std::borrow::Borrow;
 
 use talk::crypto::primitives::hash::Hash;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Set<Item: Field>(Map<Item, ()>);
 
 impl<Item> Set<Item>
