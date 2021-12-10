@@ -5,6 +5,8 @@ use crate::{
 
 use doomstack::Top;
 
+use std::borrow::Borrow;
+
 use talk::crypto::primitives::hash::Hash;
 
 pub struct Set<Item: Field>(Map<Item, ()>);
@@ -31,5 +33,18 @@ where
 
     pub fn remove(&mut self, item: &Item) -> Result<bool, Top<MapError>> {
         Ok(self.0.remove(item)?.is_some())
+    }
+
+    pub fn export<I, K>(&self, keys: I) -> Result<Set<Item>, Top<MapError>>
+    where
+        Item: Clone,
+        I: IntoIterator<Item = K>,
+        K: Borrow<Item>,
+    {
+        Ok(Set(self.0.export(keys)?))
+    }
+
+    pub fn import(&mut self, other: Set<Item>) -> Result<(), Top<MapError>> {
+        self.0.import(other.0)
     }
 }
