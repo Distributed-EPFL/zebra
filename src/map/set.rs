@@ -5,10 +5,13 @@ use crate::{
 
 use doomstack::Top;
 
+use serde::{Deserialize, Serialize};
+
 use std::borrow::Borrow;
 
 use talk::crypto::primitives::hash::Hash;
 
+#[derive(Serialize, Deserialize)]
 pub struct Set<Item: Field>(Map<Item, ()>);
 
 impl<Item> Set<Item>
