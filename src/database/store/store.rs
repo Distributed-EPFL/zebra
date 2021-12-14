@@ -19,7 +19,7 @@ use std::{
 pub(crate) type EntryMap<Key, Value> = HashMap<Bytes, Entry<Key, Value>>;
 pub(crate) type EntryMapEntry<'a, Key, Value> = HashMapEntry<'a, Bytes, Entry<Key, Value>>;
 
-pub(crate) const DEPTH: u8 = 8;
+pub(crate) const DEPTH: u8 = 0;
 
 pub(crate) struct Store<Key: Field, Value: Field> {
     maps: Snap<EntryMap<Key, Value>>,

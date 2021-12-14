@@ -31,11 +31,7 @@ impl MapId {
     }
 
     pub fn id(&self) -> usize {
-        if DEPTH > 0 {
-            (self.0 >> (8 - DEPTH)) as usize
-        } else {
-            0
-        }
+        0
     }
 }
 
