@@ -11,7 +11,10 @@ use doomstack::{here, ResultExt, Top};
 
 use serde::{de::Error as DeError, Deserialize, Deserializer, Serialize, Serializer};
 
-use std::borrow::{Borrow, BorrowMut};
+use std::{
+    borrow::{Borrow, BorrowMut},
+    fmt::{Debug, Error, Formatter},
+};
 
 use talk::{
     crypto::primitives::{hash, hash::Hash},
@@ -166,6 +169,12 @@ where
     pub fn new() -> Self {
         Map {
             root: Lender::new(Node::Empty),
+        }
+    }
+
+    pub fn root_stub(commitment: Hash) -> Self {
+        Map {
+            root: Lender::new(Node::stub(commitment.into())),
         }
     }
 
@@ -400,6 +409,27 @@ where
     /// ```
     pub fn import(&mut self, mut other: Map<Key, Value>) -> Result<(), Top<MapError>> {
         interact::import(self.root.borrow_mut(), other.root.take())
+    }
+}
+
+impl<Key, Value> Debug for Map<Key, Value>
+where
+    Key: Field,
+    Value: Field,
+{
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), Error> {
+        write!(f, "Map(commitment: {:?})", self.commit())
+    }
+}
+
+impl<Key, Value> Clone for Map<Key, Value>
+where
+    Key: Field + Clone,
+    Value: Field + Clone,
+{
+    fn clone(&self) -> Self {
+        let root: &Node<Key, Value> = self.root.borrow();
+        Map::raw(root.clone())
     }
 }
 
