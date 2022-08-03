@@ -34,13 +34,12 @@ impl Proof {
     where
         Item: Serialize,
     {
-        let hash = hash::hash(&item).pot(ProofError::HashError, here!())?;
-        let mut hash = hash::hash(&Node::Item(hash)).pot(ProofError::HashError, here!())?;
+        let mut hash = hash::hash(&Node::Item(item)).pot(ProofError::HashError, here!())?;
 
         for (direction, sibling_hash) in self.path.iter().zip(self.proof.iter().cloned()) {
             let parent = match direction {
-                true => Node::Internal(hash, sibling_hash),
-                false => Node::Internal(sibling_hash, hash),
+                true => Node::<Item>::Internal(hash, sibling_hash),
+                false => Node::<Item>::Internal(sibling_hash, hash),
             };
 
             hash = hash::hash(&parent).unwrap();

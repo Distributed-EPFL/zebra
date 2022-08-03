@@ -29,8 +29,7 @@ where
         let mut nodes = items
             .iter()
             .map(|element| {
-                let hash = hash::hash(&element).pot(VectorError::HashError, here!())?;
-                hash::hash(&Node::Item(hash)).pot(VectorError::HashError, here!())
+                hash::hash(&Node::Item(element)).pot(VectorError::HashError, here!())
             })
             .collect::<Result<Vec<Hash>, Top<VectorError>>>()?;
 
@@ -50,7 +49,7 @@ where
 
             let mut penultimate_layer: Vec<Hash> = nodes
                 .chunks(2)
-                .map(|pair| hash::hash(&Node::Internal(pair[0], pair[1])).unwrap())
+                .map(|pair| hash::hash(&Node::<Item>::Internal(pair[0], pair[1])).unwrap())
                 .collect();
 
             layers.push(nodes);
@@ -66,7 +65,7 @@ where
             layer = {
                 let next = layer
                     .chunks(2)
-                    .map(|pair| hash::hash(&Node::Internal(pair[0], pair[1])).unwrap())
+                    .map(|pair| hash::hash(&Node::<Item>::Internal(pair[0], pair[1])).unwrap())
                     .collect::<Vec<_>>();
 
                 layers.push(layer);
@@ -167,7 +166,7 @@ mod tests {
 
         assert_eq!(
             vector.layers.last().unwrap()[0],
-            hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap()
+            hash::hash(&Node::Item(0u32)).unwrap()
         );
     }
 
@@ -181,21 +180,21 @@ mod tests {
 
         assert_eq!(
             vector.layers.last().unwrap()[0],
-            hash::hash(&Node::Internal(
-                hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
-                hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap()
+            hash::hash(&Node::<u32>::Internal(
+                hash::hash(&Node::Item(0u32)).unwrap(),
+                hash::hash(&Node::Item(1u32)).unwrap()
             ))
             .unwrap()
         );
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
+            hash::hash(&Node::Item(0u32)).unwrap(),
         );
 
         assert_eq!(
             vector.layers[0][1],
-            hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap(),
+            hash::hash(&Node::Item(1u32)).unwrap(),
         );
     }
 
@@ -210,39 +209,39 @@ mod tests {
 
         assert_eq!(
             vector.layers[2][0],
-            hash::hash(&Node::Internal(
-                hash::hash(&Node::Internal(
-                    hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
-                    hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap()
+            hash::hash(&Node::<u32>::Internal(
+                hash::hash(&Node::<u32>::Internal(
+                    hash::hash(&Node::Item(0u32)).unwrap(),
+                    hash::hash(&Node::Item(1u32)).unwrap()
                 ))
                 .unwrap(),
-                hash::hash(&Node::Item(hash::hash(&2u32).unwrap())).unwrap()
+                hash::hash(&Node::Item(2u32)).unwrap()
             ))
             .unwrap()
         );
 
         assert_eq!(
             vector.layers[1][0],
-            hash::hash(&Node::Internal(
-                hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
-                hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap()
+            hash::hash(&Node::<u32>::Internal(
+                hash::hash(&Node::Item(0u32)).unwrap(),
+                hash::hash(&Node::Item(1u32)).unwrap()
             ))
             .unwrap(),
         );
 
         assert_eq!(
             vector.layers[1][1],
-            hash::hash(&Node::Item(hash::hash(&2u32).unwrap())).unwrap(),
+            hash::hash(&Node::Item(2u32)).unwrap(),
         );
 
         assert_eq!(
             vector.layers[0][0],
-            hash::hash(&Node::Item(hash::hash(&0u32).unwrap())).unwrap(),
+            hash::hash(&Node::Item(0u32)).unwrap(),
         );
 
         assert_eq!(
             vector.layers[0][1],
-            hash::hash(&Node::Item(hash::hash(&1u32).unwrap())).unwrap(),
+            hash::hash(&Node::Item(1u32)).unwrap(),
         );
     }
 
