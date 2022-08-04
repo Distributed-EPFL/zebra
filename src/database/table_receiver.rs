@@ -257,8 +257,6 @@ mod tests {
 
     use crate::database::{sync::ANSWER_DEPTH, Database, TableSender};
 
-    use std::array::IntoIter;
-
     enum Transfer<'a, Key, Value>
     where
         Key: Field,
@@ -320,7 +318,7 @@ mod tests {
         I: IntoIterator<Item = &'a Table<Key, Value>>,
     {
         let mut transfers: [Transfer<Key, Value>; N] =
-            array_init::from_iter(IntoIter::new(transfers).map(|(sender, receiver)| {
+            array_init::from_iter(IntoIterator::into_iter(transfers).map(|(sender, receiver)| {
                 let hello = sender.hello();
                 Transfer::Incomplete(sender, receiver, hello)
             }))
@@ -334,7 +332,7 @@ mod tests {
             steps += 1;
 
             transfers =
-                array_init::from_iter(IntoIter::new(transfers).map(|transfer| match transfer {
+                array_init::from_iter(IntoIterator::into_iter(transfers).map(|transfer| match transfer {
                     Transfer::Incomplete(sender, receiver, answer) => {
                         run_for(receiver, sender, answer, 1)
                     }
@@ -368,7 +366,7 @@ mod tests {
         }
 
         let received: [Table<Key, Value>; N] =
-            array_init::from_iter(IntoIter::new(transfers).map(|transfer| match transfer {
+            array_init::from_iter(IntoIterator::into_iter(transfers).map(|transfer| match transfer {
                 Transfer::Complete(table) => table,
                 Transfer::Incomplete(..) => unreachable!(),
             }))
