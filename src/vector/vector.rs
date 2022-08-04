@@ -28,9 +28,7 @@ where
 
         let mut nodes = items
             .iter()
-            .map(|element| {
-                hash::hash(&Node::Item(element)).pot(VectorError::HashError, here!())
-            })
+            .map(|element| hash::hash(&Node::Item(element)).pot(VectorError::HashError, here!()))
             .collect::<Result<Vec<Hash>, Top<VectorError>>>()?;
 
         let pow = std::cmp::max(
@@ -118,7 +116,7 @@ where
             layer_index = layer_index / 2;
         }
 
-        Proof::new(path, proof)
+        Proof::new::<_, ()>(path, proof, None)
     }
 }
 
@@ -187,15 +185,9 @@ mod tests {
             .unwrap()
         );
 
-        assert_eq!(
-            vector.layers[0][0],
-            hash::hash(&Node::Item(0u32)).unwrap(),
-        );
+        assert_eq!(vector.layers[0][0], hash::hash(&Node::Item(0u32)).unwrap(),);
 
-        assert_eq!(
-            vector.layers[0][1],
-            hash::hash(&Node::Item(1u32)).unwrap(),
-        );
+        assert_eq!(vector.layers[0][1], hash::hash(&Node::Item(1u32)).unwrap(),);
     }
 
     #[test]
@@ -229,20 +221,11 @@ mod tests {
             .unwrap(),
         );
 
-        assert_eq!(
-            vector.layers[1][1],
-            hash::hash(&Node::Item(2u32)).unwrap(),
-        );
+        assert_eq!(vector.layers[1][1], hash::hash(&Node::Item(2u32)).unwrap(),);
 
-        assert_eq!(
-            vector.layers[0][0],
-            hash::hash(&Node::Item(0u32)).unwrap(),
-        );
+        assert_eq!(vector.layers[0][0], hash::hash(&Node::Item(0u32)).unwrap(),);
 
-        assert_eq!(
-            vector.layers[0][1],
-            hash::hash(&Node::Item(1u32)).unwrap(),
-        );
+        assert_eq!(vector.layers[0][1], hash::hash(&Node::Item(1u32)).unwrap(),);
     }
 
     #[test]
