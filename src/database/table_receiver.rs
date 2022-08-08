@@ -317,12 +317,13 @@ mod tests {
         Value: Field,
         I: IntoIterator<Item = &'a Table<Key, Value>>,
     {
-        let mut transfers: [Transfer<Key, Value>; N] =
-            array_init::from_iter(IntoIterator::into_iter(transfers).map(|(sender, receiver)| {
+        let mut transfers: [Transfer<Key, Value>; N] = array_init::from_iter(
+            IntoIterator::into_iter(transfers).map(|(sender, receiver)| {
                 let hello = sender.hello();
                 Transfer::Incomplete(sender, receiver, hello)
-            }))
-            .unwrap();
+            }),
+        )
+        .unwrap();
 
         let tables: Vec<&Table<Key, Value>> = tables.into_iter().collect();
 
@@ -331,14 +332,15 @@ mod tests {
         loop {
             steps += 1;
 
-            transfers =
-                array_init::from_iter(IntoIterator::into_iter(transfers).map(|transfer| match transfer {
+            transfers = array_init::from_iter(IntoIterator::into_iter(transfers).map(|transfer| {
+                match transfer {
                     Transfer::Incomplete(sender, receiver, answer) => {
                         run_for(receiver, sender, answer, 1)
                     }
                     complete => complete,
-                }))
-                .unwrap();
+                }
+            }))
+            .unwrap();
 
             let receivers = transfers.iter().filter_map(|transfer| match transfer {
                 Transfer::Complete(..) => None,
@@ -365,12 +367,13 @@ mod tests {
             }
         }
 
-        let received: [Table<Key, Value>; N] =
-            array_init::from_iter(IntoIterator::into_iter(transfers).map(|transfer| match transfer {
+        let received: [Table<Key, Value>; N] = array_init::from_iter(
+            IntoIterator::into_iter(transfers).map(|transfer| match transfer {
                 Transfer::Complete(table) => table,
                 Transfer::Incomplete(..) => unreachable!(),
-            }))
-            .unwrap();
+            }),
+        )
+        .unwrap();
 
         (received, steps)
     }
