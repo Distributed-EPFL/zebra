@@ -37,9 +37,12 @@ impl Proof {
         let siblings = match siblings {
             None => None,
             Some((vec, pos)) => {
-                let vec: Vec<ByteBuf> = vec.into_iter().map(|item| ByteBuf::from(bincode::serialize(item).unwrap())).collect();
+                let vec: Vec<ByteBuf> = vec
+                    .into_iter()
+                    .map(|item| ByteBuf::from(bincode::serialize(item).unwrap()))
+                    .collect();
                 Some((vec, pos))
-            },
+            }
         };
 
         Proof {
@@ -49,18 +52,23 @@ impl Proof {
         }
     }
 
-    pub fn verify<Item: Serialize + for<'de> Deserialize<'de>>(&self, root: Hash, item: &Item) -> Result<(), Top<ProofError>> {
+    pub fn verify<Item: Serialize + for<'de> Deserialize<'de>>(
+        &self,
+        root: Hash,
+        item: &Item,
+    ) -> Result<(), Top<ProofError>> {
         let mut hash = match &self.siblings {
             Some((vec, pos)) => {
-                let vec: Vec<Item> = vec.iter().map(|item| bincode::deserialize::<Item>(item.as_ref()).unwrap()).collect();
+                let vec: Vec<Item> = vec
+                    .iter()
+                    .map(|item| bincode::deserialize::<Item>(item.as_ref()).unwrap())
+                    .collect();
                 let mut vec: Vec<&Item> = vec.iter().collect();
                 vec.insert(*pos, item);
                 hash::hash(&Node::<&[&Item]>::Item(vec.as_slice()))
                     .pot(ProofError::HashError, here!())?
             }
-            None => {
-                hash::hash(&Node::<&Item>::Item(item)).pot(ProofError::HashError, here!())?
-            }
+            None => hash::hash(&Node::<&Item>::Item(item)).pot(ProofError::HashError, here!())?,
         };
 
         for (direction, sibling_hash) in self.path.iter().zip(self.proof.iter().cloned()) {

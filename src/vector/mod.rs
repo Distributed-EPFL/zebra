@@ -1,6 +1,6 @@
 mod node;
-mod vector;
 mod proof;
+mod vector;
 
 pub mod errors;
 

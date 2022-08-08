@@ -34,7 +34,9 @@ where
 
         let mut layers = Vec::new();
 
-        let mut nodes = items.iter().collect::<Vec<&Item>>()
+        let mut nodes = items
+            .iter()
+            .collect::<Vec<&Item>>()
             .chunks(packing)
             .map(|chunk| {
                 if packing == 1 {
@@ -104,12 +106,14 @@ where
     }
 
     pub fn prove(&self, index: usize) -> Proof {
+        assert!(index < self.items.len());
+
         let mut path: Vec<Direction> = Vec::new();
         let mut proof: Vec<Hash> = Vec::new();
 
         let mut layers = self.layers.iter();
 
-        let index_shift = index/PACKING;
+        let index_shift = index / PACKING;
 
         let mut layer_index = if index_shift < self.layers[0].len() {
             index_shift
@@ -136,13 +140,15 @@ where
         let siblings = if PACKING == 1 {
             None
         } else {
-            let mut siblings = vec!();
-            for i in (index - index%PACKING)..std::cmp::min(index - index%PACKING + PACKING, self.items.len()) {
+            let mut siblings = vec![];
+            for i in (index - index % PACKING)
+                ..std::cmp::min(index - index % PACKING + PACKING, self.items.len())
+            {
                 if i != index {
                     siblings.push(&self.items()[i])
                 }
             }
-            Some((siblings, index%PACKING))
+            Some((siblings, index % PACKING))
         };
 
         Proof::new(path, proof, siblings)
@@ -324,9 +330,15 @@ mod tests {
             .unwrap()
         );
 
-        assert_eq!(vector.layers[0][1], hash::hash(&Node::<&[u32]>::Item(&[2u32])).unwrap());
+        assert_eq!(
+            vector.layers[0][1],
+            hash::hash(&Node::<&[u32]>::Item(&[2u32])).unwrap()
+        );
 
-        assert_eq!(vector.layers[0][0], hash::hash(&Node::<&[u32]>::Item(&[0u32, 1u32])).unwrap());
+        assert_eq!(
+            vector.layers[0][0],
+            hash::hash(&Node::<&[u32]>::Item(&[0u32, 1u32])).unwrap()
+        );
     }
 
     #[test]
