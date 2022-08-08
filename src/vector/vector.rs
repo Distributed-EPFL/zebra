@@ -93,6 +93,52 @@ where
         Ok(Vector { layers, items })
     }
 
+    pub fn set(&mut self, index: usize, item: Item) -> Result<(), Top<VectorError>> {
+        assert!(index < self.items.len());
+
+        self.items[index] = item;
+
+        let mut node_hash = if PACKING == 1 {
+            hash::hash(&Node::<&Item>::Item(self.items.get(index).unwrap()))
+                .pot(VectorError::HashError, here!())?
+        } else {
+            let chunk = ((index - index % PACKING)
+                ..std::cmp::min(index - index % PACKING + PACKING, self.items.len()))
+                .map(|index| self.items.get(index).unwrap())
+                .collect::<Vec<_>>();
+
+            hash::hash(&Node::<&[&Item]>::Item(chunk.as_slice())).pot(VectorError::HashError, here!())?
+        };
+
+        let node_index = index/PACKING;
+
+        let first_layer_len = self.layers[0].len();
+        let mut layers = self.layers.iter_mut();
+
+        let mut layer_index = if node_index < first_layer_len {
+            node_index
+        } else {
+            layers.next();
+            node_index - first_layer_len / 2
+        };
+
+        for layer in layers {
+            layer[layer_index] = node_hash;
+
+            if layer.len() > 1 {
+                node_hash = if layer_index % 2 == 0 {
+                    hash::hash(&Node::<Item>::Internal(node_hash, layer[layer_index + 1])).unwrap()
+                } else {
+                    hash::hash(&Node::<Item>::Internal(layer[layer_index - 1], node_hash)).unwrap()
+                };
+            }
+
+            layer_index = layer_index / 2;
+        }
+
+        Ok(())
+    }
+
     pub fn len(&self) -> usize {
         self.items.len()
     }
@@ -399,6 +445,20 @@ mod tests {
                 let proof = vector.prove(item);
                 proof.verify(vector.root(), &item).unwrap();
             }
+        }
+    }
+
+    #[test]
+    fn set_stress() {
+        for len in 1..128 {
+            let control = Vector::<_, 1>::new((0..len).collect()).unwrap();
+            let mut vector = Vector::<_, 1>::new(std::iter::repeat(0).take(len).collect()).unwrap();
+
+            for index in 0..len {
+                vector.set(index, index).unwrap();
+            }
+
+            assert_eq!(vector.root(), control.root());
         }
     }
 
