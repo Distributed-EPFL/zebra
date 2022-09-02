@@ -107,10 +107,11 @@ where
                 .map(|index| self.items.get(index).unwrap())
                 .collect::<Vec<_>>();
 
-            hash::hash(&Node::<&[&Item]>::Item(chunk.as_slice())).pot(VectorError::HashError, here!())?
+            hash::hash(&Node::<&[&Item]>::Item(chunk.as_slice()))
+                .pot(VectorError::HashError, here!())?
         };
 
-        let node_index = index/PACKING;
+        let node_index = index / PACKING;
 
         let first_layer_len = self.layers[0].len();
         let mut layers = self.layers.iter_mut();
@@ -223,6 +224,15 @@ where
     {
         let items = Vec::<Item>::deserialize(deserializer)?;
         Ok(Vector::new(items).map_err(|err| DeError::custom(err))?)
+    }
+}
+
+impl<Item, const PACKING: usize> From<Vector<Item, PACKING>> for Vec<Item>
+where
+    Item: Serialize,
+{
+    fn from(vector: Vector<Item, PACKING>) -> Self {
+        vector.items
     }
 }
 
